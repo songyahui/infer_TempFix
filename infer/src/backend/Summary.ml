@@ -245,6 +245,7 @@ module OnDisk = struct
 
   (** Save summary for the procedure into the spec database *)
   let store (summary : t) =
+    print_string("<<<SYH:Summary.OnDisk.store summary>>>\n");
     let proc_name = get_proc_name summary in
     (* Make sure the summary in memory is identical to the saved one *)
     add proc_name summary ;

@@ -127,7 +127,7 @@ let analyze exe_env callee_summary =
 
 
 let run_proc_analysis exe_env ~caller_pdesc callee_pdesc =
-  print_string("<<<SYH:run_proc_analysis>>>\n");
+  print_string("<<<SYH:Ondemand.run_proc_analysis>>>\n");
   let callee_pname = Procdesc.get_proc_name callee_pdesc in
   let callee_attributes = Procdesc.get_attributes callee_pdesc in
   let log_elapsed_time =
@@ -157,6 +157,7 @@ let run_proc_analysis exe_env ~caller_pdesc callee_pdesc =
     initial_callee_summary
   in
   let postprocess summary =
+    print_string("<<<SYH:run_proc_analysis.postprocess()>>>\n");
     decr nesting ;
     Summary.OnDisk.store summary ;
     remove_active callee_pname ;
@@ -186,12 +187,18 @@ let run_proc_analysis exe_env ~caller_pdesc callee_pdesc =
   let initial_callee_summary = preprocess () in
   try
     let callee_summary =
-      if callee_attributes.ProcAttributes.is_defined then analyze exe_env initial_callee_summary
+      if callee_attributes.ProcAttributes.is_defined then 
+        (print_string ("callee_attributes.ProcAttributes.is_defined\n");
+        analyze exe_env initial_callee_summary)
       else initial_callee_summary
     in
+    print_string("===========Preanal.postprocess===========\n");
     let final_callee_summary = postprocess callee_summary in
     (* don't forget to reset this so we output messages for future errors too *)
     logged_error := false ;
+    print_string (".........................................\n");
+    print_string ("...............store_issues..............\n");
+    print_string (".........................................\n");
     final_callee_summary
   with exn -> (
     let backtrace = Printexc.get_backtrace () in
@@ -283,11 +290,11 @@ let analyze_callee exe_env ~lazy_payloads ?caller_summary callee_pname =
   else
     match Summary.OnDisk.get ~lazy_payloads callee_pname with
     | Some _ as summ_opt ->
-        print_string("<<<SYH:analyze_callee1>>>\n");
+        print_string("<<<SYH:procedure_should_NOT_be_analyzed>>>\n");
 
         summ_opt
     | None when procedure_should_be_analyzed callee_pname ->
-        print_string("<<<SYH:analyze_callee2>>>\n");
+        print_string("<<<SYH:procedure_should_be_analyzed>>>\n");
 
         get_proc_desc callee_pname
         |> Option.bind ~f:(fun callee_pdesc ->
@@ -323,6 +330,8 @@ let analyze_proc_name exe_env ~caller_summary callee_pname =
 
 
 let analyze_proc_name_no_caller exe_env callee_pname =
+  print_string("<<<SYH:Ondemand.analyze_proc_name_no_caller>>>\n");
+
   (* load payloads lazily (and thus field by field as needed): we are either doing a file analysis
      and we don't want to load all payloads at once (to avoid high memory usage when only a few of
      the payloads are actually needed), or we are starting a procedure analysis in which case we're
@@ -346,7 +355,6 @@ let analyze_procedures exe_env procs_to_analyze source_file_opt =
 
 (** Invoke all procedure-level and file-level callbacks on a given environment. *)
 let analyze_file exe_env source_file =
-  print_string("<<<SYH:Ondemand.analyze_file>>>\n");
   update_taskbar None (Some source_file) ;
   let procs_to_analyze = SourceFiles.proc_names_of_source source_file in
   analyze_procedures exe_env procs_to_analyze (Some source_file)

@@ -64,9 +64,10 @@ let proc_name_of_uid uid =
 
 let analyze_target : (TaskSchedulerTypes.target, string) Tasks.doer =
 
-  print_string("<<<SYH:analyze_target>>>\n");
 
   let analyze_source_file exe_env source_file =
+    print_string("<<<SYH:analyze_target-analyze_source_file>>>\n");
+
     DB.Results_dir.init source_file ;
     L.task_progress SourceFile.pp source_file ~f:(fun () ->
         try
@@ -138,7 +139,7 @@ let register_active_checkers () =
 
 
 let get_source_files_to_analyze ~changed_files =
-  print_string("<<<SYH:get_source_files_to_analyze>>>\n");
+  (*  print_string("<<<SYH:get_source_files_to_analyze>>>\n"); *)
 
   let n_all_source_files = ref 0 in
   let n_source_files_to_analyze = ref 0 in
@@ -178,8 +179,6 @@ let tasks_generator_builder_for sources =
 
 
 let analyze source_files_to_analyze =
-  print_string("<<<SYH:InferAnalyse.analyze>>>\n");
-
   if Config.is_checker_enabled ConfigImpactAnalysis then
     L.debug Analysis Quiet "Config impact strict mode: %a@." ConfigImpactAnalysis.pp_mode
       ConfigImpactAnalysis.mode ;

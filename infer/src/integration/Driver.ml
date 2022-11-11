@@ -522,7 +522,7 @@ let run_prologue mode =
 
 
 let run_epilogue () =
-    print_string("<<<SYH:run_epilogue1>>>\n");
+    print_string("<<<SYH:run_epilogue>>>\n");
 
   if Config.is_originator then (
     if Config.fail_on_bug then fail_on_issue_epilogue () ;
@@ -532,7 +532,6 @@ let run_epilogue () =
 
 
 let run_epilogue () =
-    print_string("<<<SYH:run_epilogue2>>>\n");
 
   GCStats.log ~name:"main_process_full" Analysis (GCStats.get ~since:ProgramStart) ;
   ScubaLogging.execute_with_time_logging "run_epilogue" run_epilogue
