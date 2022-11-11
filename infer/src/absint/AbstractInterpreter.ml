@@ -691,8 +691,8 @@ struct
 
   (** compute and return an invariant map for [cfg] *)
   let exec_cfg_internal ~pp_instr cfg analysis_data ~do_narrowing:_ ~initial =
-    print_string("<<<SYH:AbstractInterpreter.exec_cfg_internal >>>\n");
-
+    (* print_string("<<<SYH:AbstractInterpreter.exec_cfg_internal >>>\n");
+ *)
     let start_node = CFG.start_node cfg in
     let inv_map, _did_not_reach_fix_point =
       exec_node ~pp_instr analysis_data start_node ~is_loop_head:false ~is_narrowing:false initial

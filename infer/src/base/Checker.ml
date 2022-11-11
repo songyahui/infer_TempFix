@@ -83,6 +83,8 @@ type config =
    callbacks registered. Or maybe with the issues reported in link
    with each analysis. Some runtime check probably needed. *)
 let config_unsafe checker =
+  (*print_string("<<<SYH:Checker.config_unsafe>>>\n");
+*)
   match checker with
   | AnnotationReachability ->
       { id= "annotation-reachability"
@@ -97,6 +99,7 @@ let config_unsafe checker =
       ; enabled_by_default= false
       ; activates= [] }
   | Biabduction ->
+  (* This leads to nullpointer error *)
       { id= "biabduction"
       ; kind=
           UserFacing

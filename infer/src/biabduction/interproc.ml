@@ -1073,6 +1073,8 @@ let perform_transition ({InterproceduralAnalysis.tenv; _} as analysis_data) proc
 
 let analyze_procedure_aux ({InterproceduralAnalysis.proc_desc; _} as analysis_data) :
     BiabductionSummary.t =
+  print_string("<<<SYH:Interproc.analyze_procedure>>>\n");
+
   let proc_name = Procdesc.get_proc_name proc_desc in
   let proc_cfg = ProcCfg.Exceptional.from_pdesc proc_desc in
   let summaryfp =

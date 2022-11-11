@@ -222,6 +222,8 @@ module Exceptional = struct
   let fold_exceptional_succs _ n ~init ~f = n |> Procdesc.Node.get_exn |> List.fold ~init ~f
 
   let from_pdesc pdesc =
+    print_string("<<<SYH:ProcCfg.Exceptional.from_pdesc>>>\n");
+
     (* map from a node to its exceptional predecessors *)
     let add_exn_preds exn_preds_acc n =
       let add_exn_pred exn_preds_acc exn_succ_node =

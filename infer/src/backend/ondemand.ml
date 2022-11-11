@@ -188,17 +188,17 @@ let run_proc_analysis exe_env ~caller_pdesc callee_pdesc =
   try
     let callee_summary =
       if callee_attributes.ProcAttributes.is_defined then 
-        (print_string ("callee_attributes.ProcAttributes.is_defined\n");
-        analyze exe_env initial_callee_summary)
+        (print_string ("\n-------------------------------------\n");
+        print_string ("++++++++++++++++Analyze+++++++++++++++\n\n");
+        analyze exe_env initial_callee_summary;
+        )
       else initial_callee_summary
     in
     print_string("===========Preanal.postprocess===========\n");
     let final_callee_summary = postprocess callee_summary in
     (* don't forget to reset this so we output messages for future errors too *)
     logged_error := false ;
-    print_string (".........................................\n");
-    print_string ("...............store_issues..............\n");
-    print_string (".........................................\n");
+    print_string ("\n...............store_issues..............\n");
     final_callee_summary
   with exn -> (
     let backtrace = Printexc.get_backtrace () in

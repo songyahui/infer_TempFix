@@ -4790,6 +4790,8 @@ module CTrans_funct (F : CModule_type.CFrontend) : CModule_type.CTranslation = s
 
 
   and instruction_translate trans_state (instr : Clang_ast_t.stmt) =
+  print_string("<<<SYH:cTrans.instruction_translate>>>\n");
+
     match instr with
     | GotoStmt (stmt_info, _, {Clang_ast_t.gsi_label= label_name; _}) ->
         gotoStmt_trans trans_state stmt_info label_name
