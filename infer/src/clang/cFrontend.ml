@@ -40,8 +40,22 @@ let init_global_state_capture () =
   CFrontend_config.global_translation_unit_decls := [] ;
   CFrontend_config.reset_block_counter ()
 
+let rec string_of_decl (dec :Clang_ast_t.decl) : string = 
+  match dec with 
+  | VarDecl (_, ndi, qt, vdi) -> 
+    ndi.ni_name ^ "::" ^ Clang_ast_extend.type_ptr_to_string qt.qt_type_ptr
+    ^" "^ (match vdi.vdi_init_expr with 
+    | None -> "none"
+    | Some stmt -> string_of_stmt stmt)
+  | _ ->  Clang_ast_proj.get_decl_kind_string dec
 
-let rec string_of_stmt (instr: Clang_ast_t.stmt) : string = 
+and string_of_stmt (instr: Clang_ast_t.stmt) : string = 
+  let rec helper_decl li sep = 
+    match li with 
+  | [] -> ""
+  | [x] -> string_of_decl  x 
+  | x::xs -> string_of_decl  x ^ sep ^ helper_decl xs sep
+  in 
   let rec helper li sep = 
     match li with 
   | [] -> ""
@@ -69,13 +83,25 @@ let rec string_of_stmt (instr: Clang_ast_t.stmt) : string =
         | Some named_decl_info -> named_decl_info.ni_name
       )
     )
+
+  | ParenExpr ({Clang_ast_t.si_source_range}, stmt_list, _) ->
+    "ParenExpr " ^ helper stmt_list " " ^ "\n"
+
+    
+  | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
+  "CStyleCastExpr " ^ helper stmt_list " " ^ "\n"
+
+
+
     
   | CompoundStmt (_, stmt_list) -> helper stmt_list ";\n" 
 
   | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info) -> 
     helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^"\n"
 
-  | DeclStmt (stmt_info, stmt_list, decl_list) -> "DeclStmt " ^ helper stmt_list " " ^ "\n"
+  | DeclStmt (stmt_info, stmt_list, decl_list) -> 
+  "DeclStmt " ^ helper stmt_list " " ^ "\n"^
+    "/\\ " ^ helper_decl decl_list " " ^ "\n" 
 
 
   | _ -> "not yet " ^ Clang_ast_proj.get_stmt_kind_string instr;;
@@ -158,7 +184,6 @@ match stmt_list with
 | UnaryExprOrTypeTraitExpr (_, _, _, unary_expr_or_type_trait_expr_info) ->
   unaryExprOrTypeTraitExpr_trans trans_state unary_expr_or_type_trait_expr_info
 | BuiltinBitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _)
-| CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _)
 | CXXReinterpretCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _, _)
 | CXXConstCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _, _)
 | CXXStaticCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _, _)
@@ -198,7 +223,6 @@ match stmt_list with
   returnStmt_trans trans_state stmt_info stmt_list
 | ExprWithCleanups (stmt_info, stmt_list, _, _) ->
   exprWithCleanups_trans trans_state stmt_info stmt_list
-| ParenExpr ({Clang_ast_t.si_source_range}, stmt_list, _) ->
   parenExpr_trans trans_state si_source_range stmt_list
 | ObjCBoolLiteralExpr (_, _, expr_info, n)
 | CharacterLiteral (_, _, expr_info, n)
@@ -496,12 +520,15 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
             | dec::rest -> 
             (
               match dec with
-              | FunctionDecl (_, _, _, function_decl_info) ->
+              | FunctionDecl (_, named_decl_info, _, function_decl_info) ->
+                if String.compare named_decl_info.ni_name "test" == 0 then 
                 (match function_decl_info.fdi_body with 
                 | None -> "none"
                 | Some stmt -> string_of_stmt stmt
                 )
-              | ObjCInterfaceDecl _ -> "ObjCInterfaceDecl"
+                else ""
+              | _ -> ""
+              (*| ObjCInterfaceDecl _ -> "ObjCInterfaceDecl"
               | ObjCProtocolDecl _ -> "ObjCProtocolDecl"
               | ObjCCategoryDecl _ -> "ObjCCategoryDecl"
               | ObjCCategoryImplDecl _ -> "ObjCCategoryImplDecl"
@@ -514,8 +541,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
               | ClassTemplateSpecializationDecl _ -> "ClassTemplateSpecializationDecl"
               | CXXRecordDecl _ -> "CXXRecordDecl"
               | RecordDecl _ -> "RecordDecl"
-              | _ -> "not yet"
-            ) ^ "\n" ^ helper rest 
+              | _ -> "not yet" ^ Clang_ast_proj.get_decl_kind_string dec
+              *)
+            )  ^ helper rest 
           in helper decl_list
         (*
         let source_file = SourceFile.from_abs_path info.Clang_ast_t.tudi_input_path in

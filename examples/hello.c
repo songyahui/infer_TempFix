@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <stdlib.h>
 
 void test() {
   int* s = NULL;
