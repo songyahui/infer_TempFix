@@ -42,6 +42,8 @@ let init_global_state_capture () =
 
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
+  print_string("<<<SYH:cFrontend.do_source_file>>>\n");
+
   let tenv = Tenv.create () in
   CType_decl.add_predefined_types tenv ;
   init_global_state_capture () ;

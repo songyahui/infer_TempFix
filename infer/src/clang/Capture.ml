@@ -6,6 +6,7 @@
  *)
 open! IStd
 module L = Logging
+module F = Format
 
 (** enable debug mode (to get more data saved to disk for future inspections) *)
 let debug_mode = Config.debug_mode || Config.frontend_stats
@@ -33,12 +34,14 @@ let init_global_state_for_capture_and_linters source_file =
   CFrontend_config.reset_global_state ()
 
 
-let run_clang_frontend ast_source =
+  let run_clang_frontend ast_source =
+  print_string("<<<SYH:capture.run_clang_frontend>>>\n");
+
   let init_time = Mtime_clock.counter () in
   let print_elapsed () =
     L.(debug Capture Quiet) "Elapsed: %a.@\n" Mtime.Span.pp (Mtime_clock.count init_time)
   in
-  let ast_decl =
+  let (ast_decl:Clang_ast_t.decl) =
     match ast_source with
     | `File file ->
         validate_decl_from_file file
@@ -83,6 +86,53 @@ let run_clang_frontend ast_source =
     | `BiniouPipe _ ->
         Format.fprintf fmt "stdin of %a" SourceFile.pp trans_unit_ctx.CFrontend_config.source_file
   in
+  
+
+  (*print_string ("\n======== Here is Yahui's Code =========\n");
+  let syh_pp_Clang_ast_t_decl: string = 
+    match ast_decl with
+    | Clang_ast_t.TranslationUnitDecl (_, decl_list, _, info) ->
+          (match info.Clang_ast_t.tudi_input_kind with
+          | `IK_C ->
+              "CFrontend_config.C"
+          | _ ->
+              assert false) 
+        (*
+        let source_file = SourceFile.from_abs_path info.Clang_ast_t.tudi_input_path in
+        init_global_state_for_capture_and_linters source_file ;
+
+        let lang =
+          match info.Clang_ast_t.tudi_input_kind with
+          | `IK_C ->
+              CFrontend_config.C
+          | `IK_CXX ->
+              CFrontend_config.CPP
+          | `IK_ObjC ->
+              CFrontend_config.ObjC
+          | `IK_ObjCXX ->
+              CFrontend_config.ObjCPP
+          | _ ->
+              assert false
+        in
+        let integer_type_widths =
+          let widths = info.Clang_ast_t.tudi_integer_type_widths in
+          { Typ.IntegerWidths.char_width= widths.itw_char_type
+          ; short_width= widths.itw_short_type
+          ; int_width= widths.itw_int_type
+          ; long_width= widths.itw_long_type
+          ; longlong_width= widths.itw_longlong_type }
+        in
+        let is_objc_arc_on = info.Clang_ast_t.tudi_is_objc_arc_on in
+        {CFrontend_config.source_file; lang; integer_type_widths; is_objc_arc_on}*)
+    | _ ->
+        assert false
+  in 
+
+  print_string (syh_pp_Clang_ast_t_decl ^ "\n");
+
+  print_string ("\n======== Here is the end of Yahui's Code =========\n\n");
+  *)
+
   ClangPointers.populate_all_tables ast_decl ;
   L.(debug Capture Medium)
     "Start %s the AST of %a@\n" Config.clang_frontend_action_string pp_ast_filename ast_source ;
@@ -104,6 +154,8 @@ let run_clang_frontend ast_source =
 
 
 let run_and_validate_clang_frontend ast_source =
+  print_string("<<<SYH:capture.run_and_validate_clang_frontend>>>\n");
+
   try run_clang_frontend ast_source
   with exc ->
     IExn.reraise_if exc ~f:(fun () -> not Config.keep_going) ;
@@ -120,6 +172,8 @@ let run_clang clang_command read =
   match Utils.with_process_in (ClangCommand.command_to_run clang_command) read with
   | res, Ok () ->
   (print_string("<<<SYH:Clang.Capture.run_clang-OK>>>\n");
+   print_string(ClangCommand.command_to_run clang_command ^"\n" );
+
   
       res)
   | _, Error (`Exit_non_zero n) ->
@@ -163,6 +217,8 @@ let run_plugin_and_frontend source_path frontend clang_cmd =
 
 
 let cc1_capture clang_cmd =
+  print_string("<<<SYH:capture.cc1_capture>>>\n");
+
   let source_path =
     let root = Unix.getcwd () in
     let orig_argv = ClangCommand.get_orig_argv clang_cmd in

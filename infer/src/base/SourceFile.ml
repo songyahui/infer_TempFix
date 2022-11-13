@@ -160,6 +160,8 @@ let to_string ?(force_relative = false) fname =
   | RelativeProjectRoot rel_path ->
       reroot_rel_path ~foreign_rel_project_root:None rel_path
   | Absolute path ->
+  (*print_string ("to_string.Absolute \n");*)
+
       if force_relative then
         let open IOption.Let_syntax in
         (let* isysroot_suffix = Config.xcode_isysroot_suffix in
