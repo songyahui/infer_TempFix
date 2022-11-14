@@ -19,6 +19,8 @@ end
 
 (* Translates a file by translating the ast into a cfg. *)
 let compute_icfg trans_unit_ctx tenv ast =
+  print_string ("<<<SYH:cFrontend.compute_icfg>>>\n");
+  print_string ("<<<SYH:look for -> cTrans.instruction_translate>>>\n");
   match ast with
   | Clang_ast_t.TranslationUnitDecl (_, decl_list, _, _) ->
       CFrontend_config.global_translation_unit_decls := decl_list ;
@@ -47,6 +49,8 @@ let rec string_of_decl (dec :Clang_ast_t.decl) : string =
     ^" "^ (match vdi.vdi_init_expr with 
     | None -> "none"
     | Some stmt -> string_of_stmt stmt)
+
+    (* clang_prt_raw 1305- int, 901 - char *)
   | _ ->  Clang_ast_proj.get_decl_kind_string dec
 
 and string_of_stmt (instr: Clang_ast_t.stmt) : string = 
@@ -100,18 +104,20 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
     helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^"\n"
 
   | DeclStmt (stmt_info, stmt_list, decl_list) -> 
-  "DeclStmt " ^ helper stmt_list " " ^ "\n"^
-    "/\\ " ^ helper_decl decl_list " " ^ "\n" 
-
+  "DeclStmt " (*  ^ helper stmt_list " " ^ "\n"^
+    "/\\ " *) ^ string_of_int stmt_info.si_pointer^ " " ^ helper_decl decl_list " " ^ "\n" 
+  
+  | CallExpr (stmt_info, stmt_list, ei) -> 
+    "CallExpr " ^  helper stmt_list " " 
 
   | _ -> "not yet " ^ Clang_ast_proj.get_stmt_kind_string instr;;
 (*  
   match stmt with 
 | GotoStmt (stmt_info, _, {Clang_ast_t.gsi_label= label_name; _}) ->
   gotoStmt_trans trans_state stmt_info label_name
-| LabelStmt (stmt_info, stmt_list, label_name) ->
+| LabelStmt (stmt_info, stmt_list, label_name) -> 
   labelStmt_trans trans_state stmt_info stmt_list label_name
-| ArraySubscriptExpr (_, stmt_list, expr_info) ->
+| ArraySubscriptExpr (_, stmt_list, expr_info) -> 
   arraySubscriptExpr_trans trans_state expr_info stmt_list
   binaryOperator_trans_with_cond trans_state stmt_info stmt_list expr_info binop_info
 | AtomicExpr (stmt_info, stmt_list, expr_info, atomic_info) ->
@@ -505,7 +511,8 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   L.(debug Capture Verbose)
     "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;
 
-  print_string ("\n======== Here is Yahui's Code =========\n");
+  print_string ("\n=======================================================\n");
+  print_string ("\n================ Here is Yahui's Code =================\n");
   let syh_pp_Clang_ast_t_decl ast_decl: string = 
     match ast_decl with
     | Clang_ast_t.TranslationUnitDecl (_, decl_list, _, _) ->
@@ -578,8 +585,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
   print_string (syh_pp_Clang_ast_t_decl ast ^ "\n");
 
-  print_string ("\n======== Here is the end of Yahui's Code =========\n\n");
-  
+  print_string ("\n=========== Here is the end of Yahui's Code ============\n");
+  print_string ("\n========================================================\n\n");
+
 
   let cfg = compute_icfg translation_unit_context tenv ast in
   CAddImplicitDeallocImpl.process cfg tenv ;

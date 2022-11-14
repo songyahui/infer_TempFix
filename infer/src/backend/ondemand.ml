@@ -188,7 +188,7 @@ let run_proc_analysis exe_env ~caller_pdesc callee_pdesc =
   try
     let callee_summary =
       if callee_attributes.ProcAttributes.is_defined then 
-        (print_string ("\n-------------------------------------\n");
+        (print_string ("\n\n");
         print_string ("++++++++++++++++Analyze+++++++++++++++\n\n");
         analyze exe_env initial_callee_summary;
         )

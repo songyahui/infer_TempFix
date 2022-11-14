@@ -46,16 +46,15 @@ let iterate_procedure_callbacks exe_env summary =
   List.fold_right ~init:summary !procedure_callbacks_rev
     ~f:(fun {checker_name; dynamic_dispatch; language; callback} summary ->
       
-      print_string("SYH!!! Checker_name:" ^ checker_name ^ " -> SYH:Checker.config_unsafe\n" );
-      
+      (*print_string("SYH!!! Checker_name:" ^ checker_name ^ " -> SYH:Checker.config_unsafe\n" );
+      *)
       if Language.equal language procedure_language && (dynamic_dispatch || not is_specialized) then (
         PerfEvent.(
           log (fun logger ->
               log_begin_event logger ~name:checker_name ~categories:["backend"]
                 ~arguments:[("proc", `String (Procname.to_string proc_name))]
                 () )) ;
-        (*print_string ("SYH!!!!!\n "^SourceFile.to_string ~force_relative:false (Procdesc.get_attributes proc_desc).translation_unit ^"\n");
-        *)
+
         let summary =
           Timer.protect
             ~f:(fun () -> callback {summary; exe_env})

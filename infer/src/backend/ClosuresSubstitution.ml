@@ -162,7 +162,7 @@ let replace_closure_param node (astate : Domain.t) (instr : Sil.instr) : Sil.ins
 
 
 let process_common replace_instr pdesc =
-  print_string("<<<SYH:ClosuresSubstitution.process_common>>>\n");
+  (*print_string("<<<SYH:ClosuresSubstitution.process_common>>>\n");*)
 
   let node_cfg = CFG.from_pdesc pdesc in
 
@@ -176,7 +176,7 @@ let process_common replace_instr pdesc =
 
 
 let process_closure_call pdesc = 
-  print_string("<<<SYH:ClosuresSubstitution.process_closure_call>>>\n");
+  (*print_string("<<<SYH:ClosuresSubstitution.process_closure_call>>>\n");*)
 
   process_common replace_closure_call pdesc
 

@@ -458,7 +458,7 @@ let mode_of_build_command build_cmd (buck_mode : BuckMode.t option) =
       | BBuck2, _ ->
           Buck2 {build_cmd}
       | BClang, _ ->
-          print_string("<<<SYH:mode_of_build_command BClang>>>\n");
+          (*print_string("<<<SYH:mode_of_build_command BClang>>>\n");*)
           Clang {compiler= Clang.Clang; prog; args}
       | BGradle, _ ->
           Gradle {prog; args}
@@ -506,7 +506,7 @@ let mode_from_command_line =
         assert_supported_mode `Java "Buck genrule" ;
         BuckGenrule {prog= path}
     | None ->
-        print_string("<<<SYH:mode_from_command_line>>>\n");
+        (*print_string("<<<SYH:mode_from_command_line>>>\n"); *)
         mode_of_build_command Config.rest Config.buck_mode )
 
 
@@ -522,7 +522,7 @@ let run_prologue mode =
 
 
 let run_epilogue () =
-    print_string("<<<SYH:run_epilogue>>>\n");
+    (*print_string("<<<SYH:run_epilogue>>>\n");*)
 
   if Config.is_originator then (
     if Config.fail_on_bug then fail_on_issue_epilogue () ;

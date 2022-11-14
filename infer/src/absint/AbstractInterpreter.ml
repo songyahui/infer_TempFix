@@ -703,7 +703,7 @@ struct
 
 
   let exec_cfg ?do_narrowing:_ = 
-    print_string("<<<SYH:AbstractInterpreter.exec_cfg1 >>>\n");
+    (*print_string("<<<SYH:AbstractInterpreter.exec_cfg1 >>>\n");*)
 
     exec_cfg_internal ~pp_instr:pp_sil_instr ~do_narrowing:false
 

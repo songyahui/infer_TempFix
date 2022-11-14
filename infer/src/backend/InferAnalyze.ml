@@ -323,7 +323,8 @@ let main ~changed_files =
   (* empty all caches to minimize the process heap to have less work to do when forking *)
   clear_caches () ;
   let backend_stats_list, gc_stats_list = analyze source_files in
-  print_string("<<<SYH:backend_stats_list, gc_stats_list = analyze source_files>>>\n");
+  (*print_string("<<<SYH:backend_stats_list, gc_stats_list = analyze source_files>>>\n");
+  *)
   Stats.log_aggregate backend_stats_list ;
   GCStats.log_aggregate ~prefix:"backend_stats." Analysis gc_stats_list ;
   let analysis_duration = ExecutionDuration.since start in
