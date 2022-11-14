@@ -29,3 +29,4 @@ components licensed under the GPL.
 ./build-infer.sh clang
 infer run -- javac examples/Hello.java
 infer/bin/infer run -- clang -c examples/Hello.c  
+infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/LightFTP/Source/ftpserv.c

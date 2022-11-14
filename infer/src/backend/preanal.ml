@@ -461,16 +461,16 @@ let do_preanalysis exe_env pdesc =
     InlineJavaSyntheticMethods.process pdesc ;
   (* NOTE: It is important that this preanalysis stays before Liveness *)
   if not (Procname.is_java proc_name || Procname.is_csharp proc_name) then (
-    print_string("---------------CCallSpecializedWithClosures-------------\n");
+    (*print_string("---------------CCallSpecializedWithClosures-------------\n");*)
     CCallSpecializedWithClosures.process pdesc ;
     (* Apply dynamic selection of copy and overriden methods *)
-    print_string("---------------ReplaceObjCMethodCall-------------\n");
+    (*print_string("---------------ReplaceObjCMethodCall-------------\n");*)
     ReplaceObjCMethodCall.process tenv pdesc proc_name );
-  print_string("---------------Liveness.process-------------\n");
+  (*print_string("---------------Liveness.process-------------\n");*)
   Liveness.process pdesc ;
-  print_string("---------------AddAbstractionInstructions-------------\n");
+  (*print_string("---------------AddAbstractionInstructions-------------\n");*)
   AddAbstractionInstructions.process pdesc ;
   if Procname.is_java proc_name then Devirtualizer.process pdesc tenv ;
-    print_string("---------------Procname.isNOT_java NoReturn.process-------------\n");
+    (*print_string("---------------Procname.isNOT_java NoReturn.process-------------\n");*)
     NoReturn.process tenv pdesc ;
   ()

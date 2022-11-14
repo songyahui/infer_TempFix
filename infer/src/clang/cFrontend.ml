@@ -42,12 +42,22 @@ let init_global_state_capture () =
   CFrontend_config.global_translation_unit_decls := [] ;
   CFrontend_config.reset_block_counter ()
 
+
+let string_of_source_location (s: Clang_ast_t.source_location):string = 
+    match s.sl_file with 
+  | Some name-> name ^ " "
+  | None -> "none " 
+
+let string_of_source_range ((s1, s2):Clang_ast_t.source_range) :string = 
+  string_of_source_location s1 (*^ string_of_source_location s2 *)
+
+
 let rec string_of_decl (dec :Clang_ast_t.decl) : string = 
   match dec with 
   | VarDecl (_, ndi, qt, vdi) -> 
     ndi.ni_name ^ "::" ^ Clang_ast_extend.type_ptr_to_string qt.qt_type_ptr
     ^" "^ (match vdi.vdi_init_expr with 
-    | None -> "none"
+    | None -> ""
     | Some stmt -> string_of_stmt stmt)
 
     (* clang_prt_raw 1305- int, 901 - char *)
@@ -67,6 +77,9 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
   | x::xs -> string_of_stmt x ^ sep ^ helper xs sep
   in 
   match instr with 
+  | ReturnStmt (stmt_info, stmt_list) ->
+    "ReturnStmt " ^ helper stmt_list " " ^ "\n"
+
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
     integer_literal_info.ili_value
 
@@ -88,8 +101,10 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
       )
     )
 
-  | ParenExpr ({Clang_ast_t.si_source_range}, stmt_list, _) ->
-    "ParenExpr " ^ helper stmt_list " " ^ "\n"
+  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
+
+    "ParenExpr " ^ string_of_source_range  stmt_info.si_source_range
+    ^ helper stmt_list " " ^ "\n"
 
     
   | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
@@ -225,7 +240,6 @@ match stmt_list with
     in
     instruction trans_state conditional
   else unaryOperator_trans trans_state stmt_info expr_info stmt_list unary_operator_info
-| ReturnStmt (stmt_info, stmt_list) ->
   returnStmt_trans trans_state stmt_info stmt_list
 | ExprWithCleanups (stmt_info, stmt_list, _, _) ->
   exprWithCleanups_trans trans_state stmt_info stmt_list
@@ -498,7 +512,22 @@ match gse_info.gse_value with
     trans_state stmt_info ret_typ stmts
 
 *)
-  
+
+let isLibFunction str : bool = 
+  let record_li = 
+    ["/Applications"; 
+     "/Users/yahuis/Desktop/git/LightFTP/Source/gnutls"] in 
+  let rec aux li:bool = 
+    match li with 
+    | [] ->  false 
+    | x :: xs -> 
+      (*print_string (str ^ "\n" ^ x ^ "\n" ^ string_of_int (String.compare (String.sub str 0 (String.length x)) x)^ "\n");
+    *)
+      if String.compare (String.sub str 0 (String.length x)) x  == 0 then 
+      true else aux xs 
+  in aux record_li
+
+
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
   print_string("<<<SYH:cFrontend.do_source_file>>>\n");
@@ -508,11 +537,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   init_global_state_capture () ;
   let source_file = translation_unit_context.CFrontend_config.source_file in
   let integer_type_widths = translation_unit_context.CFrontend_config.integer_type_widths in
-  L.(debug Capture Verbose)
-    "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;
 
   print_string ("\n=======================================================\n");
-  print_string ("\n================ Here is Yahui's Code =================\n");
+  print_string ("================ Here is Yahui's Code =================\n");
   let syh_pp_Clang_ast_t_decl ast_decl: string = 
     match ast_decl with
     | Clang_ast_t.TranslationUnitDecl (_, decl_list, _, _) ->
@@ -527,14 +554,17 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
             | dec::rest -> 
             (
               match dec with
-              | FunctionDecl (_, named_decl_info, _, function_decl_info) ->
-                if String.compare named_decl_info.ni_name "test" == 0 then 
-                (match function_decl_info.fdi_body with 
-                | None -> "none"
+              | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
+                let source = string_of_source_range  decl_info.di_source_range in 
+                if not (isLibFunction (source))  then 
+                (print_string (named_decl_info.ni_name ^ ":\n");
+                print_string (source ^ ":\n");
+                match function_decl_info.fdi_body with 
+                | None -> ""
                 | Some stmt -> string_of_stmt stmt
                 )
                 else ""
-              | _ -> ""
+              | _ -> "" (*Clang_ast_proj.get_decl_kind_string dec *)
               (*| ObjCInterfaceDecl _ -> "ObjCInterfaceDecl"
               | ObjCProtocolDecl _ -> "ObjCProtocolDecl"
               | ObjCCategoryDecl _ -> "ObjCCategoryDecl"
@@ -585,10 +615,13 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
   print_string (syh_pp_Clang_ast_t_decl ast ^ "\n");
 
-  print_string ("\n=========== Here is the end of Yahui's Code ============\n");
-  print_string ("\n========================================================\n\n");
+  print_string ("\n============ Here is the end of Yahui's Code ============\n");
+  print_string ("=========================================================\n\n");
 
 
+  (*
+  L.(debug Capture Verbose)
+    "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;
   let cfg = compute_icfg translation_unit_context tenv ast in
   CAddImplicitDeallocImpl.process cfg tenv ;
   CAddImplicitGettersSetters.process cfg tenv ;
@@ -601,4 +634,5 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     || Option.is_some Config.icfg_dotty_outfile
   then DotCfg.emit_frontend_cfg source_file cfg ;
   L.debug Capture Verbose "Stored on disk:@[<v>%a@]@." Cfg.pp_proc_signatures cfg ;
+  *)
   ()

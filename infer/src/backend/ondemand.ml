@@ -290,7 +290,7 @@ let analyze_callee exe_env ~lazy_payloads ?caller_summary callee_pname =
   else
     match Summary.OnDisk.get ~lazy_payloads callee_pname with
     | Some _ as summ_opt ->
-        print_string("<<<SYH:procedure_should_NOT_be_analyzed>>>\n");
+        (*print_string("<<<SYH:procedure_should_NOT_be_analyzed>>>\n");*)
 
         summ_opt
     | None when procedure_should_be_analyzed callee_pname ->
@@ -330,7 +330,7 @@ let analyze_proc_name exe_env ~caller_summary callee_pname =
 
 
 let analyze_proc_name_no_caller exe_env callee_pname =
-  print_string("<<<SYH:Ondemand.analyze_proc_name_no_caller>>>\n");
+  (*print_string("<<<SYH:Ondemand.analyze_proc_name_no_caller>>>\n");*)
 
   (* load payloads lazily (and thus field by field as needed): we are either doing a file analysis
      and we don't want to load all payloads at once (to avoid high memory usage when only a few of

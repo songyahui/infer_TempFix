@@ -9,7 +9,5 @@
 
 void test() {
   int* s = NULL;
-  //*s = 42;
-  test();
-
+  *s = 42;
 }
