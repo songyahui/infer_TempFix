@@ -6,7 +6,9 @@
  *)
 
 open! IStd
+open! Sys
 module L = Logging
+
 
 (* ocamlc gets confused by [module rec]: https://caml.inria.fr/mantis/view.php?id=6714 *)
 (* it also ignores the warning suppression at toplevel, hence the [include struct ... end] trick *)
@@ -528,6 +530,92 @@ let isLibFunction str : bool =
   in aux record_li
 
 
+type effects = Bot | Emp | Any | Singleton of string 
+              | Disj of effects * effects 
+              | Concatenate of effects * effects 
+              | Kleene of effects 
+
+let rec string_of_effects (eff:effects) : string = 
+  match eff with 
+  | Bot              -> "⏊ "
+  | Emp              -> "𝝐"
+  | Any -> "_"
+  | Singleton str          -> str 
+  | Concatenate (eff1, eff2) ->
+      string_of_effects eff1 ^ " · " ^ string_of_effects eff2 
+  | Disj (eff1, eff2) ->
+      string_of_effects eff1 ^ " + " ^ string_of_effects eff2 
+  | Kleene effIn          ->
+      "(" ^ string_of_effects effIn ^ ")﹡" 
+
+let rec normalise_effects (eff:effects) : effects = 
+  match eff with 
+  | Concatenate (Bot, _) -> Bot
+  | Concatenate (Emp, effIn) -> normalise_effects effIn
+  | Concatenate (eff1, eff2) -> Concatenate (normalise_effects eff1, normalise_effects eff2)
+  | Disj (eff1, eff2) -> Disj (normalise_effects eff1, normalise_effects eff2)
+  | Kleene effIn -> Kleene (normalise_effects effIn)
+  | _ -> eff 
+
+let rec syh_compute_pustcondition (instr: Clang_ast_t.stmt) : effects = 
+  let rec helper (li: Clang_ast_t.stmt list) = 
+    match li with
+    | [] -> Emp 
+    | x ::xs -> Concatenate (syh_compute_pustcondition x, helper xs)
+  in 
+  match instr with 
+  | ReturnStmt (stmt_info, stmt_list) -> 
+    helper stmt_list
+
+  (*| IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
+    integer_literal_info.ili_value
+
+  | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info) ->
+    "IntegerLiteral " ^ helper stmt_list " " ^ "\n"
+  
+  | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
+    "" ^ helper stmt_list " " ^ "\n"
+
+  | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) ->
+    "(DeclRefExpr)"^
+    (match decl_ref_expr_info.drti_decl_ref with 
+    | None -> "none"
+    | Some decl_ref ->
+      (
+        match decl_ref.dr_name with 
+        | None -> "none1"
+        | Some named_decl_info -> named_decl_info.ni_name
+      )
+    )
+
+  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
+
+    "ParenExpr " ^ string_of_source_range  stmt_info.si_source_range
+    ^ helper stmt_list " " ^ "\n"
+
+    
+  | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
+  "CStyleCastExpr " ^ helper stmt_list " " ^ "\n"
+
+
+
+    
+  | CompoundStmt (_, stmt_list) -> helper stmt_list ";\n" 
+
+  | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info) -> 
+    helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^"\n"
+
+  | DeclStmt (stmt_info, stmt_list, decl_list) -> 
+  "DeclStmt " (*  ^ helper stmt_list " " ^ "\n"^
+    "/\\ " *) ^ string_of_int stmt_info.si_pointer^ " " ^ helper_decl decl_list " " ^ "\n" 
+  
+  | CallExpr (stmt_info, stmt_list, ei) -> 
+    "CallExpr " ^  helper stmt_list " " 
+
+    *)
+  | _ -> Singleton ("not yet " ^ Clang_ast_proj.get_stmt_kind_string instr)
+
+
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
   print_string("<<<SYH:cFrontend.do_source_file>>>\n");
@@ -557,11 +645,23 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
               | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
                 let source = string_of_source_range  decl_info.di_source_range in 
                 if not (isLibFunction (source))  then 
-                (print_string (named_decl_info.ni_name ^ ":\n");
-                print_string (source ^ ":\n");
+                (*print_string (named_decl_info.ni_name ^ ":\n");*)
                 match function_decl_info.fdi_body with 
                 | None -> ""
-                | Some stmt -> string_of_stmt stmt
+                | Some stmt -> 
+                let open Sys in 
+                (*let startTimeStamp = Sys.time() in*)
+                let postcondition = normalise_effects (syh_compute_pustcondition stmt) in 
+                (*let startTimeStamp01 = Sys.time() in *)
+    ("\n========== Module: "^ named_decl_info.ni_name ^" ==========\n" ^
+    (*"[Post Condition] " ^ show_effects_list_list posts ^"\n"^ *)
+    "[Inferred Final  Effects] " ^ string_of_effects postcondition  ^"\n" (*^
+    "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000.0)^ " ms" ^"\n" ^
+
+    "[TOTAL TRS TIME] " ^ string_of_float (totol proves +. totol disproves) ^ " ms \n" ^ 
+    "[Proving   Time] " ^ printing proves ^
+    "[Disprove  Time] " ^ printing disproves ^"\n" 
+    *)
                 )
                 else ""
               | _ -> "" (*Clang_ast_proj.get_decl_kind_string dec *)
