@@ -204,7 +204,6 @@ match stmt_list with
     stmt_info.Clang_ast_t.si_source_range
 | PseudoObjectExpr (_, stmt_list, _) ->
   pseudoObjectExpr_trans trans_state stmt_list
-| UnaryExprOrTypeTraitExpr (_, _, _, unary_expr_or_type_trait_expr_info) ->
   unaryExprOrTypeTraitExpr_trans trans_state unary_expr_or_type_trait_expr_info
 | BuiltinBitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _)
 | CXXReinterpretCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _, _)
@@ -218,7 +217,6 @@ match stmt_list with
   integerLiteral_trans trans_state expr_info integer_literal_info
 | OffsetOfExpr (stmt_info, _, expr_info, offset_of_expr_info) ->
   offsetOf_trans trans_state expr_info offset_of_expr_info stmt_info
-| StringLiteral (_, _, expr_info, str_list) ->
   stringLiteral_trans trans_state expr_info (String.concat ~sep:"" str_list)
 | GNUNullExpr (_, _, expr_info) ->
   gNUNullExpr_trans trans_state expr_info
@@ -232,7 +230,6 @@ match stmt_list with
   objCProtocolExpr_trans trans_state expr_info decl_ref
 | ObjCIvarRefExpr (stmt_info, stmt_list, _, obj_c_ivar_ref_expr_info) ->
   objCIvarRefExpr_trans trans_state stmt_info stmt_list obj_c_ivar_ref_expr_info
-| MemberExpr (stmt_info, stmt_list, _, member_expr_info) ->
   memberExpr_trans trans_state stmt_info stmt_list member_expr_info
   if
     is_logical_negation_of_int trans_state.context.CContext.tenv expr_info unary_operator_info
@@ -247,7 +244,6 @@ match stmt_list with
   exprWithCleanups_trans trans_state stmt_info stmt_list
   parenExpr_trans trans_state si_source_range stmt_list
 | ObjCBoolLiteralExpr (_, _, expr_info, n)
-| CharacterLiteral (_, _, expr_info, n)
 | CXXBoolLiteralExpr (_, _, expr_info, n) ->
   characterLiteral_trans trans_state expr_info n
 | FixedPointLiteral (_, _, expr_info, float_string)
@@ -550,57 +546,137 @@ let rec string_of_effects (eff:effects) : string =
 
 let rec normalise_effects (eff:effects) : effects = 
   match eff with 
-  | Concatenate (Bot, _) -> Bot
-  | Concatenate (Emp, effIn) -> normalise_effects effIn
-  | Concatenate (eff1, eff2) -> Concatenate (normalise_effects eff1, normalise_effects eff2)
-  | Disj (eff1, eff2) -> Disj (normalise_effects eff1, normalise_effects eff2)
+  | Disj(es1, es2) -> 
+    (match (es1, es2) with 
+    | (Bot, es) -> normalise_effects es 
+    | (es, Bot) -> normalise_effects es 
+    | (Disj (es11, es12), es3) -> Disj (es11, Disj (es12, es3))
+    | _ -> normalise_effects (Disj (normalise_effects es1, normalise_effects es2))
+    )
+  | Concatenate (es1, es2) -> 
+    let es1 = normalise_effects es1 in 
+    let es2 = normalise_effects es2 in 
+    (match (es1, es2) with 
+    | (Emp, _) -> normalise_effects es2
+    | (_, Emp) -> normalise_effects es1
+    | (Bot, _) -> Bot
+    | (_, Bot) -> Bot
+    (*| (Concatenate (es11, es12), es3) -> (Concatenate (es11, Concatenate (es12, es3)))*)
+    | _ -> (Concatenate (es1, es2))
+    )
   | Kleene effIn -> Kleene (normalise_effects effIn)
   | _ -> eff 
 
-let rec syh_compute_pustcondition (instr: Clang_ast_t.stmt) : effects = 
+let rec syh_compute_decl_pustcondition (decl: Clang_ast_t.decl) : effects = 
+  match decl with
+  | VarDecl (_, ndi, qt, vdi) -> 
+    Emp
+  (* clang_prt_raw 1305- int, 901 - char *)
+  | _ -> Emp
+
+
+
+let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects = 
   let rec helper (li: Clang_ast_t.stmt list) = 
     match li with
     | [] -> Emp 
-    | x ::xs -> Concatenate (syh_compute_pustcondition x, helper xs)
+    | x ::xs -> Concatenate (syh_compute_stmt_pustcondition x, helper xs)
   in 
   match instr with 
-  | ReturnStmt (stmt_info, stmt_list) -> 
+  | ReturnStmt (stmt_info, stmt_list) ->
+  helper stmt_list
+  | CompoundStmt (stmt_info, stmt_list) ->
+  helper stmt_list
+  | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info)   ->
+  helper stmt_list
+  | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) ->
+  helper stmt_list
+  | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info)->
+  helper stmt_list
+  | CallExpr (stmt_info, stmt_list, ei) ->
+  helper stmt_list
+  | MemberExpr (stmt_info, stmt_list, _, member_expr_info) ->
+  helper stmt_list
+  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
+  helper stmt_list
+  | ArraySubscriptExpr (_, stmt_list, expr_info) -> 
+  helper stmt_list
+  | NullStmt (stmt_info, stmt_list) -> 
+    Singleton ("NullStmt")
+
+  | CharacterLiteral _ -> Emp
+  | IntegerLiteral (stmt_info, stmt_list, expr_info, integer_literal_info) ->
+    helper stmt_list
+  | StringLiteral (_, stmt_list, expr_info, str_list) ->
     helper stmt_list
 
-  (*| IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
-    integer_literal_info.ili_value
+  | UnaryExprOrTypeTraitExpr (_, stmt_list, _, unary_expr_or_type_trait_expr_info) ->
+    helper stmt_list
+  | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
+    let collection = List.map stmt_list ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
+    let rec ifstmtDisj (li: effects list) = 
+      match li with 
+      | [] -> Bot 
+      | x :: xs -> Disj (x, ifstmtDisj xs)
+    in ifstmtDisj collection
+    
 
-  | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info) ->
-    "IntegerLiteral " ^ helper stmt_list " " ^ "\n"
   
-  | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
-    "" ^ helper stmt_list " " ^ "\n"
-
-  | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) ->
-    "(DeclRefExpr)"^
+  
+  | DeclStmt (stmt_info, stmt_list, decl_list) -> 
+      (match decl_list with 
+      | [] -> Emp
+      | x :: _  ->syh_compute_decl_pustcondition x )
+  
+  | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
+  helper stmt_list
+  
+  | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
     (match decl_ref_expr_info.drti_decl_ref with 
-    | None -> "none"
+    | None -> Emp
     | Some decl_ref ->
       (
         match decl_ref.dr_name with 
-        | None -> "none1"
-        | Some named_decl_info -> named_decl_info.ni_name
+        | None -> Emp
+        | Some named_decl_info -> Singleton (named_decl_info.ni_name)
       )
     )
+  | WhileStmt (stmt_info, stmt_list) ->
+    (match stmt_list with 
+    | decl_stmt::condition:: [body] -> 
+      let temp = syh_compute_stmt_pustcondition body in 
+      Kleene temp
+    | condition:: [body]  -> 
+      let temp = syh_compute_stmt_pustcondition body in 
+      Kleene temp
+    | _ -> assert false 
+      )
+    
 
-  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
+  | ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
+    let temp = syh_compute_stmt_pustcondition body in 
+      Kleene temp
 
-    "ParenExpr " ^ string_of_source_range  stmt_info.si_source_range
-    ^ helper stmt_list " " ^ "\n"
+
+
+
+  (*
+  forStmt_trans trans_state ~init ~decl_stmt ~condition ~increment ~body stmt_info
+  whileStmt_trans trans_state ~decl_stmt:None ~condition ~body stmt_info
+
+
+    "IntegerLiteral " ^ helper stmt_list " " ^ "\n"
+  
+    "" ^ helper stmt_list " " ^ "\n"
+
+    "(DeclRefExpr)"^
+
+
 
     
-  | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
-  "CStyleCastExpr " ^ helper stmt_list " " ^ "\n"
-
 
 
     
-  | CompoundStmt (_, stmt_list) -> helper stmt_list ";\n" 
 
   | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info) -> 
     helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^"\n"
@@ -609,11 +685,9 @@ let rec syh_compute_pustcondition (instr: Clang_ast_t.stmt) : effects =
   "DeclStmt " (*  ^ helper stmt_list " " ^ "\n"^
     "/\\ " *) ^ string_of_int stmt_info.si_pointer^ " " ^ helper_decl decl_list " " ^ "\n" 
   
-  | CallExpr (stmt_info, stmt_list, ei) -> 
-    "CallExpr " ^  helper stmt_list " " 
 
     *)
-  | _ -> Singleton ("not yet " ^ Clang_ast_proj.get_stmt_kind_string instr)
+  | _ -> Singleton ( Clang_ast_proj.get_stmt_kind_string instr^ "'")
 
 
 
@@ -650,19 +724,19 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 | None -> ""
                 | Some stmt -> 
                 let open Sys in 
-                (*let startTimeStamp = Sys.time() in*)
-                let postcondition = normalise_effects (syh_compute_pustcondition stmt) in 
-                (*let startTimeStamp01 = Sys.time() in *)
+                let startTimeStamp = Unix.time() in
+                let postcondition = normalise_effects (syh_compute_stmt_pustcondition stmt) in 
+                let startTimeStamp01 = Unix.time() in
     ("\n========== Module: "^ named_decl_info.ni_name ^" ==========\n" ^
     (*"[Post Condition] " ^ show_effects_list_list posts ^"\n"^ *)
-    "[Inferred Final  Effects] " ^ string_of_effects postcondition  ^"\n" (*^
-    "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000.0)^ " ms" ^"\n" ^
+    "[Inferred Final  Effects] " ^ string_of_effects postcondition  ^"\n"^
+    "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" (*^
 
     "[TOTAL TRS TIME] " ^ string_of_float (totol proves +. totol disproves) ^ " ms \n" ^ 
     "[Proving   Time] " ^ printing proves ^
     "[Disprove  Time] " ^ printing disproves ^"\n" 
     *)
-                )
+    )
                 else ""
               | _ -> "" (*Clang_ast_proj.get_decl_kind_string dec *)
               (*| ObjCInterfaceDecl _ -> "ObjCInterfaceDecl"
