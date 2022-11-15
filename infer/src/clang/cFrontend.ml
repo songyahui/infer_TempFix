@@ -80,17 +80,27 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
   in 
   match instr with 
   | ReturnStmt (stmt_info, stmt_list) ->
-    "ReturnStmt " ^ helper stmt_list " " ^ "\n"
+    "ReturnStmt " ^ helper stmt_list " " 
+
+  | MemberExpr (stmt_info, stmt_list, _, member_expr_info) ->
+    "MemberExpr " ^ helper stmt_list " " 
 
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
     integer_literal_info.ili_value
 
+  | StringLiteral (_, stmt_list, expr_info, str_list) -> 
+    let rec straux li = 
+      match li with 
+      | [] -> ""
+      | x :: xs  -> x  ^ " " ^ straux xs 
+    in straux str_list
+
+
   | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info) ->
-    "IntegerLiteral " ^ helper stmt_list " " ^ "\n"
+    "IntegerLiteral " ^ helper stmt_list " " ^ ""
   
   | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
-    "" ^ helper stmt_list " " ^ "\n"
-
+    "" ^ helper stmt_list " " 
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) ->
     "(DeclRefExpr)"^
     (match decl_ref_expr_info.drti_decl_ref with 
@@ -106,26 +116,37 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
   | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
 
     "ParenExpr " ^ string_of_source_range  stmt_info.si_source_range
-    ^ helper stmt_list " " ^ "\n"
+    ^ helper stmt_list " " 
 
     
   | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
-  "CStyleCastExpr " ^ helper stmt_list " " ^ "\n"
+  "CStyleCastExpr " ^ helper stmt_list " " ^ ""
 
 
+  | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
 
-    
-  | CompoundStmt (_, stmt_list) -> helper stmt_list ";\n" 
+  "IfStmt " ^ helper stmt_list " " ^ ""
+ 
+  | CompoundStmt (_, stmt_list) -> helper stmt_list ";" 
 
   | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info) -> 
-    helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^"\n"
+    helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^""
 
   | DeclStmt (stmt_info, stmt_list, decl_list) -> 
   "DeclStmt " (*  ^ helper stmt_list " " ^ "\n"^
-    "/\\ " *) ^ string_of_int stmt_info.si_pointer^ " " ^ helper_decl decl_list " " ^ "\n" 
+    "/\\ "^ string_of_int stmt_info.si_pointer^ " " *)  ^ helper_decl decl_list " " ^ "" 
   
   | CallExpr (stmt_info, stmt_list, ei) -> 
     "CallExpr " ^  helper stmt_list " " 
+
+
+  | ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
+    "ForStmt " ^  helper ([body]) " " 
+
+  | WhileStmt (stmt_info, [condition; body]) ->
+    "WhileStmt " ^  helper ([body]) " " 
+  | WhileStmt (stmt_info, [decl_stmt; condition; body]) ->
+    "WhileStmt " ^  helper ([body]) " " 
 
   | _ -> "not yet " ^ Clang_ast_proj.get_stmt_kind_string instr;;
 (*  
@@ -168,9 +189,7 @@ match stmt_list with
 | ConditionalOperator (stmt_info, stmt_list, expr_info) ->
   (* Ternary operator "cond ? exp1 : exp2" *)
   conditionalOperator_trans trans_state stmt_info stmt_list expr_info
-| IfStmt (stmt_info, _, if_stmt_info) ->
   ifStmt_trans trans_state stmt_info if_stmt_info
-| SwitchStmt (stmt_info, _, switch_stmt_info) ->
   switchStmt_trans trans_state stmt_info switch_stmt_info
 | CaseStmt (stmt_info, stmt_list) ->
   caseStmt_trans trans_state stmt_info stmt_list
@@ -184,7 +203,6 @@ match stmt_list with
   whileStmt_trans trans_state ~decl_stmt:None ~condition ~body stmt_info
 | WhileStmt (stmt_info, [decl_stmt; condition; body]) ->
   whileStmt_trans trans_state ~decl_stmt:(Some decl_stmt) ~condition ~body stmt_info
-| DoStmt (stmt_info, [body; condition]) ->
   doStmt_trans trans_state ~condition ~body stmt_info
 | CXXForRangeStmt (stmt_info, stmt_list) ->
   cxxForRangeStmt_trans trans_state stmt_info stmt_list
@@ -548,10 +566,11 @@ let rec normalise_effects (eff:effects) : effects =
   match eff with 
   | Disj(es1, es2) -> 
     (match (es1, es2) with 
+    | (Emp, Emp) -> Emp
     | (Bot, es) -> normalise_effects es 
     | (es, Bot) -> normalise_effects es 
     | (Disj (es11, es12), es3) -> Disj (es11, Disj (es12, es3))
-    | _ -> normalise_effects (Disj (normalise_effects es1, normalise_effects es2))
+    | _ -> (Disj (normalise_effects es1, normalise_effects es2))
     )
   | Concatenate (es1, es2) -> 
     let es1 = normalise_effects es1 in 
@@ -593,10 +612,13 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
   helper stmt_list
   | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info)->
   helper stmt_list
-  | CallExpr (stmt_info, stmt_list, ei) ->
-  helper stmt_list
-  | MemberExpr (stmt_info, stmt_list, _, member_expr_info) ->
-  helper stmt_list
+  | CallExpr (stmt_info, stmt_list, ei) -> 
+    (
+      match stmt_list with 
+      | [] -> Emp 
+      | x :: xs -> syh_compute_stmt_pustcondition x 
+    )
+  | MemberExpr (stmt_info, stmt_list, _, member_expr_info) -> Emp 
   | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
   helper stmt_list
   | ArraySubscriptExpr (_, stmt_list, expr_info) -> 
@@ -605,23 +627,34 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
     Singleton ("NullStmt")
 
   | CharacterLiteral _ -> Emp
-  | IntegerLiteral (stmt_info, stmt_list, expr_info, integer_literal_info) ->
-    helper stmt_list
-  | StringLiteral (_, stmt_list, expr_info, str_list) ->
-    helper stmt_list
+  | IntegerLiteral (stmt_info, stmt_list, expr_info, integer_literal_info) -> Emp
+  | StringLiteral (_, stmt_list, expr_info, str_list) -> Emp
 
   | UnaryExprOrTypeTraitExpr (_, stmt_list, _, unary_expr_or_type_trait_expr_info) ->
     helper stmt_list
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
-    let collection = List.map stmt_list ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
-    let rec ifstmtDisj (li: effects list) = 
-      match li with 
-      | [] -> Bot 
-      | x :: xs -> Disj (x, ifstmtDisj xs)
-    in ifstmtDisj collection
+    (match stmt_list with 
+    | [x] ->  Disj (syh_compute_stmt_pustcondition x, Emp)
+    | x::rest -> 
+      let collection = List.map rest ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
+      let rec ifstmtDisj (li: effects list) = 
+        match li with 
+        | [] -> Bot 
+        | x :: xs -> Disj (x, ifstmtDisj xs)
+      in ifstmtDisj collection
+    | _ -> assert false )
     
 
   
+  | SwitchStmt (stmt_info, stmt_list, switch_stmt_info) -> 
+      let collection = List.map stmt_list ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
+      let rec ifstmtDisj (li: effects list) = 
+        match li with 
+        | [] -> Emp 
+        | x :: xs -> Disj (x, ifstmtDisj xs)
+      in ifstmtDisj collection
+
+
   
   | DeclStmt (stmt_info, stmt_list, decl_list) -> 
       (match decl_list with 
@@ -653,41 +686,12 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
       )
     
 
+  | DoStmt (stmt_info, [body; condition]) ->
+    let temp = syh_compute_stmt_pustcondition body in Kleene temp
   | ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
-    let temp = syh_compute_stmt_pustcondition body in 
-      Kleene temp
+    let temp = syh_compute_stmt_pustcondition body in Kleene temp
 
-
-
-
-  (*
-  forStmt_trans trans_state ~init ~decl_stmt ~condition ~increment ~body stmt_info
-  whileStmt_trans trans_state ~decl_stmt:None ~condition ~body stmt_info
-
-
-    "IntegerLiteral " ^ helper stmt_list " " ^ "\n"
-  
-    "" ^ helper stmt_list " " ^ "\n"
-
-    "(DeclRefExpr)"^
-
-
-
-    
-
-
-    
-
-  | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info) -> 
-    helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^"\n"
-
-  | DeclStmt (stmt_info, stmt_list, decl_list) -> 
-  "DeclStmt " (*  ^ helper stmt_list " " ^ "\n"^
-    "/\\ " *) ^ string_of_int stmt_info.si_pointer^ " " ^ helper_decl decl_list " " ^ "\n" 
-  
-
-    *)
-  | _ -> Singleton ( Clang_ast_proj.get_stmt_kind_string instr^ "'")
+  | _ -> Singleton (Clang_ast_proj.get_stmt_kind_string instr)
 
 
 
@@ -727,11 +731,11 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let startTimeStamp = Unix.time() in
                 let postcondition = normalise_effects (syh_compute_stmt_pustcondition stmt) in 
                 let startTimeStamp01 = Unix.time() in
-    ("\n========== Module: "^ named_decl_info.ni_name ^" ==========\n" ^
+    ("\n\n========== Module: "^ named_decl_info.ni_name ^" ==========\n" ^
     (*"[Post Condition] " ^ show_effects_list_list posts ^"\n"^ *)
     "[Inferred Final  Effects] " ^ string_of_effects postcondition  ^"\n"^
-    "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" (*^
-
+    "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
+    "[AST] " ^  string_of_stmt stmt  (*^ 
     "[TOTAL TRS TIME] " ^ string_of_float (totol proves +. totol disproves) ^ " ms \n" ^ 
     "[Proving   Time] " ^ printing proves ^
     "[Disprove  Time] " ^ printing disproves ^"\n" 
