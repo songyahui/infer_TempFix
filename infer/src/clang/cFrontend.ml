@@ -125,12 +125,12 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
 
-  "IfStmt " ^ helper stmt_list " " ^ ""
+  "IfStmt " ^ helper stmt_list "," ^ ""
  
   | CompoundStmt (_, stmt_list) -> helper stmt_list ";" 
 
   | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info) -> 
-    helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^""
+   "BinaryOperator " ^ helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^""
 
   | DeclStmt (stmt_info, stmt_list, decl_list) -> 
   "DeclStmt " (*  ^ helper stmt_list " " ^ "\n"^
@@ -147,6 +147,9 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
     "WhileStmt " ^  helper ([body]) " " 
   | WhileStmt (stmt_info, [decl_stmt; condition; body]) ->
     "WhileStmt " ^  helper ([body]) " " 
+
+  | RecoveryExpr _ -> "RecoveryExpr"
+
 
   | _ -> "not yet " ^ Clang_ast_proj.get_stmt_kind_string instr;;
 (*  
@@ -499,7 +502,6 @@ match gse_info.gse_value with
 | OMPUnrollDirective _
 | PackExpansionExpr _
 | ParenListExpr _
-| RecoveryExpr _
 | RequiresExpr _
 | SEHExceptStmt _
 | SEHFinallyStmt _
@@ -558,7 +560,7 @@ let rec string_of_effects (eff:effects) : string =
   | Concatenate (eff1, eff2) ->
       string_of_effects eff1 ^ " · " ^ string_of_effects eff2 
   | Disj (eff1, eff2) ->
-      string_of_effects eff1 ^ " + " ^ string_of_effects eff2 
+      "(" ^ string_of_effects eff1 ^ " + " ^ string_of_effects eff2 ^ ")"
   | Kleene effIn          ->
       "(" ^ string_of_effects effIn ^ ")﹡" 
 
@@ -594,6 +596,38 @@ let rec syh_compute_decl_pustcondition (decl: Clang_ast_t.decl) : effects =
   | _ -> Emp
 
 
+let rec dealwithBreadkStmt (eff:effects) (acc:effects): (effects * bool) list =
+  match eff with 
+  | Singleton str -> 
+    if String.compare str "BreakStmt" == 0 then [(acc, true)]
+    else [(Concatenate (acc, eff), false)]
+  | Bot   
+  | Emp   
+  | Any -> [(Concatenate (acc, eff), false )]
+  | Concatenate (eff1, eff2) -> 
+    let temp = dealwithBreadkStmt eff1 acc in 
+    let rec flatten li =
+      match li with 
+      | [] -> []
+      | x :: xs -> List.append x (flatten xs)
+    in 
+    flatten (List.map temp (fun (acc1, b1) -> 
+      (match b1 with 
+      | false -> dealwithBreadkStmt eff2 acc1
+      | true -> [(acc1, b1)])
+    ))
+    
+  | Disj (eff1, eff2) ->
+    let temp1 = dealwithBreadkStmt eff1 acc in 
+    let temp2 = dealwithBreadkStmt eff2 acc in 
+    List.append temp1 temp2
+  | Kleene effIn   -> 
+    let temp = dealwithBreadkStmt effIn acc in 
+    List.map temp (fun (acc1, b1) -> 
+      (Kleene(acc1), b1)
+    )
+
+
 
 let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects = 
   let rec helper (li: Clang_ast_t.stmt list) = 
@@ -601,22 +635,33 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
     | [] -> Emp 
     | x ::xs -> Concatenate (syh_compute_stmt_pustcondition x, helper xs)
   in 
+  let rec helperfunctionCall (li: Clang_ast_t.stmt list) = 
+    match li with
+    | [] -> Emp 
+    | x ::xs -> 
+      (
+        match x with 
+        | CallExpr _ -> Concatenate (syh_compute_stmt_pustcondition x, helperfunctionCall xs)
+        | _ -> helperfunctionCall xs
+      )
+      
+  in 
   match instr with 
   | ReturnStmt (stmt_info, stmt_list) ->
-  helper stmt_list
+    helper stmt_list
   | CompoundStmt (stmt_info, stmt_list) ->
-  helper stmt_list
+    helper stmt_list
   | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info)   ->
-  helper stmt_list
+    helperfunctionCall stmt_list
   | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) ->
-  helper stmt_list
+    helper stmt_list
   | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info)->
-  helper stmt_list
+    helperfunctionCall stmt_list 
   | CallExpr (stmt_info, stmt_list, ei) -> 
     (
       match stmt_list with 
-      | [] -> Emp 
-      | x :: xs -> syh_compute_stmt_pustcondition x 
+      | [] -> assert false  
+      | x::_ -> syh_compute_stmt_pustcondition x
     )
   | MemberExpr (stmt_info, stmt_list, _, member_expr_info) -> Emp 
   | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
@@ -634,14 +679,14 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
     helper stmt_list
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
     (match stmt_list with 
-    | [x] ->  Disj (syh_compute_stmt_pustcondition x, Emp)
+    | [x; y] -> Concatenate (syh_compute_stmt_pustcondition x, Disj (syh_compute_stmt_pustcondition y, Emp))
     | x::rest -> 
       let collection = List.map rest ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
       let rec ifstmtDisj (li: effects list) = 
         match li with 
         | [] -> Bot 
         | x :: xs -> Disj (x, ifstmtDisj xs)
-      in ifstmtDisj collection
+      in Concatenate (syh_compute_stmt_pustcondition x, ifstmtDisj collection)
     | _ -> assert false )
     
 
@@ -665,8 +710,9 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
   helper stmt_list
   
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
+    
     (match decl_ref_expr_info.drti_decl_ref with 
-    | None -> Emp
+    | None -> Emp 
     | Some decl_ref ->
       (
         match decl_ref.dr_name with 
@@ -674,23 +720,34 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
         | Some named_decl_info -> Singleton (named_decl_info.ni_name)
       )
     )
-  | WhileStmt (stmt_info, stmt_list) ->
-    (match stmt_list with 
+  | WhileStmt (stmt_info, [_;condition;body]) 
+  | WhileStmt (stmt_info, [condition;body]) ->
+
+    let temp = syh_compute_stmt_pustcondition body in 
+    let interleavings = dealwithBreadkStmt temp Emp in 
+    let filterout = List.map interleavings (fun (a, _) -> a) in 
+    let rec whildRec li = 
+      match li with 
+      | [] -> Bot
+      | x::xs -> Disj (x, whildRec xs)
+    in 
+      Kleene (whildRec filterout)  (*temp*)
+    (*match stmt_list with 
     | decl_stmt::condition:: [body] -> 
-      let temp = syh_compute_stmt_pustcondition body in 
-      Kleene temp
+      
     | condition:: [body]  -> 
       let temp = syh_compute_stmt_pustcondition body in 
       Kleene temp
     | _ -> assert false 
-      )
+      *)
     
 
   | DoStmt (stmt_info, [body; condition]) ->
-    let temp = syh_compute_stmt_pustcondition body in Kleene temp
+    let temp = syh_compute_stmt_pustcondition body in (Concatenate(temp, Kleene temp))
   | ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
     let temp = syh_compute_stmt_pustcondition body in Kleene temp
 
+  | RecoveryExpr _ -> Emp
   | _ -> Singleton (Clang_ast_proj.get_stmt_kind_string instr)
 
 
