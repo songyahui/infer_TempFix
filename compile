@@ -1,0 +1,3 @@
+./infer/src/clang/compile
+
+./build-infer.sh clang

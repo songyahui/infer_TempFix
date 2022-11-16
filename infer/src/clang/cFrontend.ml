@@ -779,6 +779,31 @@ let rec input_lines file =
 ;;
 
 
+let retriveComments (source:string) : (string list) = 
+  let partitions = Str.split (Str.regexp "/\*@") source in 
+  match partitions with 
+  | [] -> assert false 
+  | _ :: rest -> 
+  let partitionEnd = List.map rest ~f:(fun a -> Str.split (Str.regexp "@\*/")  a) in 
+  let rec helper (li: string list list): string list = 
+    match li with 
+    | [] -> []
+    | x :: xs  -> 
+      print_string (string_of_int(List.length x) ^ "\n");
+      (match List.hd x with
+      | None -> helper xs 
+      | Some head -> 
+        if String.compare head "" ==0 then helper xs 
+        else 
+          let ele = ("/*@" ^ head ^ "@*/") in 
+          (*print_string ("SYH!!!!!!! " ^ ele ^ "\n");*)
+          (ele :: helper xs)  ) 
+  in 
+  let temp = helper partitionEnd in 
+  temp
+  
+  (*  ["/*@ test: require emp ensure emp @*/"]
+ *)
 
 let retriveSpecifications (source:string) : (specification list) = 
   let ic = open_in source in
@@ -790,10 +815,9 @@ let retriveSpecifications (source:string) : (specification list) =
         | x :: xs -> x ^ "\n" ^ helper xs 
       in 
       let line = helper lines in
-      let partitions = ["/*@ test: require emp ensure emp @*/"] in 
+      let partitions = retriveComments line in (*in *)
       let sepcifications = List.map partitions ~f:(fun singlespec -> Parser.specification Lexer.token (Lexing.from_string singlespec)) in
-      print_string (line ^"\n");
-      []
+      sepcifications
       (*
       
       print_string (List.fold_left (fun acc a -> acc ^ forward_verification a progs) "" progs ) ; 
@@ -807,6 +831,17 @@ let retriveSpecifications (source:string) : (specification list) =
 
    ;;
 
+let show_effects_option (eff:effects option): string = 
+  match eff with
+  | None -> "None"
+  | Some eff -> string_of_effects eff 
+;;
+
+let rec findSpecFrom (specs:specification list) (fName: string): (effects option * effects option)  = 
+  match specs with 
+  | [] -> (None, None) 
+  | (str, a, b):: rest -> if String.compare str fName == 0 then   (Some a,Some b) else findSpecFrom rest 
+  ;;
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
   print_string("<<<SYH:cFrontend.do_source_file>>>\n");
@@ -844,14 +879,19 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 | None -> ""
                 | Some stmt -> 
                 let open Sys in 
+                let funcName = named_decl_info.ni_name in 
+                let (precondition, postcondition) = findSpecFrom specifications funcName in 
                 let startTimeStamp = Unix.time() in
                 let postcondition = normalise_effects (syh_compute_stmt_pustcondition stmt) in 
                 let startTimeStamp01 = Unix.time() in
-    ("\n\n========== Module: "^ named_decl_info.ni_name ^" ==========\n" ^
-    (*"[Post Condition] " ^ show_effects_list_list posts ^"\n"^ *)
+    ("\n\n========== Module: "^ funcName ^" ==========\n" ^
+    "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
+    "[Post Condition] " ^ show_effects_option postcondition ^"\n"^ 
     "[Inferred Final  Effects] " ^ string_of_effects postcondition  ^"\n"^
     "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" 
      (*^ 
+
+     specifications
     
      "[AST] " ^  string_of_stmt stmt 
      
@@ -879,7 +919,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
               *)
             )  ^ helper rest 
           in 
-          print_string (source^ "\n");
           helper decl_list
         (*
         let source_file = SourceFile.from_abs_path info.Clang_ast_t.tudi_input_path in
