@@ -888,7 +888,14 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
     "[Post Condition] " ^ show_effects_option postcondition ^"\n"^ 
     "[Inferred Post Effects] " ^ string_of_effects final  ^"\n"^
-    "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" 
+    "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
+    (match postcondition with 
+    | None -> ""
+    | Some postcondition -> 
+      let (result, tree) = inclusion final postcondition [] in 
+      "[Verification "^ (if result then "SUCEED" else "FAILED") ^"]\n\n " ^
+      string_of_binary_tree  tree   
+    )
      (*^ 
 
      specifications
