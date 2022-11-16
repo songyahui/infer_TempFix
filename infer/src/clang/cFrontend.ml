@@ -7,6 +7,9 @@
 
 open! IStd
 open! Sys
+open Ast
+open Parser
+open Lexer
 module L = Logging
 
 
@@ -544,47 +547,7 @@ let isLibFunction str : bool =
   in aux record_li
 
 
-type effects = Bot | Emp | Any | Singleton of string 
-              | Disj of effects * effects 
-              | Concatenate of effects * effects 
-              | Kleene of effects 
 
-let rec string_of_effects (eff:effects) : string = 
-  match eff with 
-  | Bot              -> "⏊"
-  | Emp              -> "𝝐"
-  | Any -> "_"
-  | Singleton str          -> str 
-  | Concatenate (eff1, eff2) ->
-      string_of_effects eff1 ^ " · " ^ string_of_effects eff2 
-  | Disj (eff1, eff2) ->
-      "(" ^ string_of_effects eff1 ^ " + " ^ string_of_effects eff2 ^ ")"
-  | Kleene effIn          ->
-      "(" ^ string_of_effects effIn ^ ")﹡" 
-
-let rec normalise_effects (eff:effects) : effects = 
-  match eff with 
-  | Disj(es1, es2) -> 
-    (match (es1, es2) with 
-    | (Emp, Emp) -> Emp
-    | (Bot, es) -> normalise_effects es 
-    | (es, Bot) -> normalise_effects es 
-    | (Disj (es11, es12), es3) -> Disj (es11, Disj (es12, es3))
-    | _ -> (Disj (normalise_effects es1, normalise_effects es2))
-    )
-  | Concatenate (es1, es2) -> 
-    let es1 = normalise_effects es1 in 
-    let es2 = normalise_effects es2 in 
-    (match (es1, es2) with 
-    | (Emp, _) -> normalise_effects es2
-    | (_, Emp) -> normalise_effects es1
-    | (Bot, _) -> Bot
-    | (_, Bot) -> Bot
-    (*| (Concatenate (es11, es12), es3) -> (Concatenate (es11, Concatenate (es12, es3)))*)
-    | _ -> (Concatenate (es1, es2))
-    )
-  | Kleene effIn -> Kleene (normalise_effects effIn)
-  | _ -> eff 
 
 let rec syh_compute_decl_pustcondition (decl: Clang_ast_t.decl) : effects = 
   match decl with
@@ -609,7 +572,7 @@ let rec dealwithBreadkStmt (eff:effects) (acc:effects): (effects * bool) list =
       | [] -> []
       | x :: xs -> List.append x (flatten xs)
     in 
-    flatten (List.map temp (fun (acc1, b1) -> 
+    flatten (List.map temp ~f:(fun (acc1, b1) -> 
       (match b1 with 
       | false -> dealwithBreadkStmt eff2 acc1
       | true -> [(acc1, b1)])
@@ -621,7 +584,7 @@ let rec dealwithBreadkStmt (eff:effects) (acc:effects): (effects * bool) list =
     List.append temp1 temp2
   | Kleene effIn   -> 
     let temp = dealwithBreadkStmt effIn Emp in 
-    List.map temp (fun (acc1, b1) -> 
+    List.map temp ~f:(fun (acc1, b1) -> 
       (Concatenate(acc, Kleene(acc1)), false)
     )
 
@@ -757,8 +720,8 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
   | WhileStmt (stmt_info, [condition;body]) ->
 
     let temp = syh_compute_stmt_pustcondition body in 
-    let interleavings = dealwithBreadkStmt temp Emp in 
-    let filterout = List.map interleavings (fun (a, _) -> a) in 
+    let interleavings = dealwithBreadkStmt (normalise_effects temp) Emp in 
+    let filterout = List.map interleavings ~f:(fun (a, _) -> a) in 
 
     let rec whildRec li = 
       match li with 
@@ -787,6 +750,64 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
 
 
 
+let syhtrim str =
+  if String.compare str "" == 0 then "" else
+  let search_pos init p next =
+    let rec search i =
+      if p i then raise(Failure "empty") else
+      match str.[i] with
+      | ' ' | '\n' | '\r' | '\t' -> search (next i)
+      | _ -> i
+    in
+    search init
+  in
+  let len = String.length str in
+  try
+    let left = search_pos 0 (fun i -> i >= len) (succ)
+    and right = search_pos (len - 1) (fun i -> i < 0) (pred)
+    in
+    String.sub str left (right - left + 1)
+  with
+  | Failure "empty" -> ""
+;;
+
+let rec input_lines file =
+  match try [input_line file] with End_of_file -> [] with
+   [] -> []
+  | [line] -> (syhtrim line) :: input_lines file
+  | _ -> assert false 
+;;
+
+
+
+let retriveSpecifications (source:string) : (specification list) = 
+  let ic = open_in source in
+  try
+      let lines =  (input_lines ic ) in
+      let rec helper (li:string list) = 
+        match li with 
+        | [] -> ""
+        | x :: xs -> x ^ "\n" ^ helper xs 
+      in 
+      let line = helper lines in
+      let partitions = ["/*@ test: require emp ensure emp @*/"] in 
+      let sepcifications = List.map partitions ~f:(fun singlespec -> Parser.specification Lexer.token (Lexing.from_string singlespec)) in
+      print_string (line ^"\n");
+      []
+      (*
+      
+      print_string (List.fold_left (fun acc a -> acc ^ forward_verification a progs) "" progs ) ; 
+      flush stdout;                (* 现在写入默认设备 *)
+      close_in ic                  (* 关闭输入通道 *)
+      *)
+
+    with e ->                      (* 一些不可预见的异常发生 *)
+      close_in_noerr ic;           (* 紧急关闭 *)
+      raise e                      (* 以出错的形式退出: 文件已关闭,但通道没有写入东西 *)
+
+   ;;
+
+
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
   print_string("<<<SYH:cFrontend.do_source_file>>>\n");
 
@@ -800,7 +821,10 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   print_string ("================ Here is Yahui's Code =================\n");
   let syh_pp_Clang_ast_t_decl ast_decl: string = 
     match ast_decl with
-    | Clang_ast_t.TranslationUnitDecl (_, decl_list, _, _) ->
+    | Clang_ast_t.TranslationUnitDecl (decl_info, decl_list, _, translation_unit_decl_info) ->
+        let source =  translation_unit_decl_info.tudi_input_path in 
+          
+          let specifications = retriveSpecifications source in 
           (*match info.Clang_ast_t.tudi_input_kind with
           | `IK_C ->
               "CFrontend_config.C"
@@ -854,7 +878,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
               | _ -> "not yet" ^ Clang_ast_proj.get_decl_kind_string dec
               *)
             )  ^ helper rest 
-          in helper decl_list
+          in 
+          print_string (source^ "\n");
+          helper decl_list
         (*
         let source_file = SourceFile.from_abs_path info.Clang_ast_t.tudi_input_path in
         init_global_state_for_capture_and_linters source_file ;

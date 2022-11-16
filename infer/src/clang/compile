@@ -1,0 +1,5 @@
+#!/bin/bash
+# My first script
+
+ocamllex ./infer/src/clang/lexer.mll
+menhir ./infer/src/clang/parser.mly

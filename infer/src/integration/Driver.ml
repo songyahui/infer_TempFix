@@ -153,7 +153,7 @@ let capture ~changed_files mode =
         L.progress "Capturing for BuckJavaFlavor integration...@." ;
         BuckJavaFlavor.capture build_cmd
     | Clang {compiler; prog; args} ->
-        if Config.is_originator then L.progress "Capturing in make/cc mode lueluelueluelye...@." ;
+        if Config.is_originator then L.progress "Capturing in make/cc mode ...@." ;
         Clang.capture compiler ~prog ~args
     | ClangCompilationDB {db_files} ->
         L.progress "Capturing using compilation database...@." ;
@@ -162,7 +162,7 @@ let capture ~changed_files mode =
         L.progress "Capturing in gradle mode...@." ;
         Gradle.capture ~prog ~args
     | Javac {compiler; prog; args} ->
-        if Config.is_originator then L.progress "Capturing in javac mode lueluelueluelye ...@." ;
+        if Config.is_originator then L.progress "Capturing in javac mode ...@." ;
         Javac.capture compiler ~prog ~args
     | JsonSIL {cfg_json; tenv_json} ->
         L.progress "Capturing using JSON mode...@." ;
