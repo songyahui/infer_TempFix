@@ -7,7 +7,7 @@
 
 open! IStd
 open! Sys
-open Ast
+open Ast_utility
 open Parser
 open Lexer
 module L = Logging
@@ -796,7 +796,7 @@ let retriveComments (source:string) : (string list) =
         if String.compare head "" ==0 then helper xs 
         else 
           let ele = ("/*@" ^ head ^ "@*/") in 
-          (*print_string ("SYH!!!!!!! " ^ ele ^ "\n");*)
+          print_string ("SYH!!!!!!! " ^ ele ^ "\n");
           (ele :: helper xs)  ) 
   in 
   let temp = helper partitionEnd in 
@@ -840,7 +840,7 @@ let show_effects_option (eff:effects option): string =
 let rec findSpecFrom (specs:specification list) (fName: string): (effects option * effects option)  = 
   match specs with 
   | [] -> (None, None) 
-  | (str, a, b):: rest -> if String.compare str fName == 0 then   (Some a,Some b) else findSpecFrom rest 
+  | (str, a, b):: rest -> if String.compare str fName == 0 then   (Some a,Some b) else findSpecFrom rest fName
   ;;
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
@@ -882,12 +882,12 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let funcName = named_decl_info.ni_name in 
                 let (precondition, postcondition) = findSpecFrom specifications funcName in 
                 let startTimeStamp = Unix.time() in
-                let postcondition = normalise_effects (syh_compute_stmt_pustcondition stmt) in 
+                let final = normalise_effects (syh_compute_stmt_pustcondition stmt) in 
                 let startTimeStamp01 = Unix.time() in
     ("\n\n========== Module: "^ funcName ^" ==========\n" ^
     "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
     "[Post Condition] " ^ show_effects_option postcondition ^"\n"^ 
-    "[Inferred Final  Effects] " ^ string_of_effects postcondition  ^"\n"^
+    "[Inferred Post Effects] " ^ string_of_effects final  ^"\n"^
     "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" 
      (*^ 
 

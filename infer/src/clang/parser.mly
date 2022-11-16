@@ -1,7 +1,7 @@
-%{ open Ast %}
+%{ open Ast_utility %}
 %{ open List %}
 
-%token <string> EVENT
+(*%token <string> EVENT*)
 %token <string> VAR
 (*%token <int> INTE*)
 %token EMPTY LPAR RPAR CONCAT  POWER  DISJ   
@@ -12,9 +12,8 @@
 %left CONCAT
 
 
-
 %start specification
-%type <(Ast.specification)> specification
+%type <(Ast_utility.specification)> specification
 
 %%
 
@@ -26,7 +25,7 @@
 
 es:
 | EMPTY { Emp }
-| str = EVENT (*p=parm*) { Singleton ( str) }
+| str = VAR (*p=parm*) { Singleton ( str) }
 | LPAR r = es RPAR { r }
 | a = es DISJ b = es { Disj(a, b) }
 | UNDERLINE {Any}
@@ -37,4 +36,5 @@ es:
 specification: 
 | EOF {("", Emp, Emp)}
 | LSPEC str = VAR COLON REQUIRE e1 = es  ENSURE e2 = es RSPEC {(str, e1, e2)}
+
 

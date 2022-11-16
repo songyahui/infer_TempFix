@@ -16,18 +16,18 @@ let next_line lexbuf =
 (* part 3 *)
 let white = [' ' '\t']+
 let newline = '\n' | '\r' | "\r\n" 
-let id = ['a'-'v' 'x'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let id = ['a'-'v' 'x'-'z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 
 rule token = parse
 | white    { token lexbuf }
 | newline  { next_line lexbuf; token lexbuf }
-| "emp" { EMPTY }
+| "𝝐" { EMPTY }
 | "/*@" {LSPEC}
 | "@*/" {RSPEC}
-| "require" {REQUIRE}
-| "ensure" {ENSURE}
-| ['A'-'T' 'V' 'W' 'Y' 'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']* as str { EVENT str }
+| "Require" {REQUIRE}
+| "Ensure" {ENSURE}
+
 | id as str { VAR str }
 
 | '^' { POWER }
@@ -59,4 +59,6 @@ rule token = parse
     }
   | _ { raise (SyntaxError ("Illegal string character: " ^ Lexing.lexeme lexbuf)) }
   | eof { raise (SyntaxError ("String is not terminated")) }
+*)
+(*| ['A'-'T' 'V' 'W' 'Y' 'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']* as str { EVENT str }
 *)
