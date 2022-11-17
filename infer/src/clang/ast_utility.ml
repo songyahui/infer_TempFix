@@ -201,6 +201,7 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
   let lhs = normalise_effects lhs in 
   let rhs = normalise_effects rhs in  
   let entailent = showEntailemnt lhs rhs in 
+  (*print_string (entailent ^ "\n");*)
   if isBot lhs then (true, Node (entailent ^ "  [False LHS]", []) )
   else if nullable lhs && (not (nullable rhs)) then 
     (false, Node (entailent ^ "  [Disprove]", []) )
@@ -211,6 +212,21 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
     if List.length fstSet == 0 then 
       (true, Node (entailent ^ "  [Prove]", []) )
     else 
+      match (lhs, rhs) with 
+      | (Disj (lhs1, lhs2), _) -> 
+        let (result1, tree1) = inclusion lhs1 rhs ((lhs, rhs):: ctx) in 
+        if not result1 then (result1, tree1) 
+        else 
+          let (result2, tree2) = inclusion lhs2 rhs ((lhs1,rhs)::(lhs, rhs):: ctx) in 
+          (result2, Node (entailent ^ "  [DisjL]",[tree1; tree2]))
+
+      | (_, Disj (rhs1, rhs2)) -> 
+        let (result1, tree1) = inclusion lhs rhs1 ((lhs, rhs):: ctx) in 
+        if result1 then (result1, tree1) 
+        else 
+          let (result2, tree2) = inclusion lhs rhs2 ((lhs, rhs):: ctx) in 
+          (result2, Node (entailent ^ "  [DisjR]",[tree1; tree2]))
+      | _ -> 
       let rec ietrater fList : (bool* binary_tree) = 
         match fList with 
         | [] -> assert false 
@@ -226,7 +242,7 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
           (match result with 
           | true -> 
             let (resultRest, treeRest)  = ietrater restF in 
-            (resultRest, Node (entailent ^ "  [Disj]",[tree; treeRest]))
+            (resultRest, Node (entailent ^ "  [DisjL]",[tree; treeRest]))
           | false -> (result, tree)) 
       in ietrater fstSet 
     

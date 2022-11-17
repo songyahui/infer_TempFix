@@ -589,7 +589,8 @@ let rec dealwithContinuekStmt (eff:effects) (acc:effects): (effects * bool) list
       (Concatenate(acc, Kleene(acc1)), false)
     )
 
-let primaryFunctions = ["setsockopt"; "close"; "accept"; "listen"; "malloc"; "free"]
+let primaryFunctions = ["setsockopt"; "close"; "accept"; "listen"; "malloc"; "free";
+"sendstring"]
 
 let rec wantToCapture (fName: string) (li:string list) : bool =
   match li with 
@@ -597,6 +598,36 @@ let rec wantToCapture (fName: string) (li:string list) : bool =
   | x::xs -> if String.compare fName x == 0 then true else wantToCapture fName xs 
 
 
+let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt list) : effects = 
+(match x with
+| DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
+
+  (match decl_ref_expr_info.drti_decl_ref with 
+  | None -> Emp 
+  | Some decl_ref ->
+    (
+    match decl_ref.dr_name with 
+    | None -> Emp
+    | Some named_decl_info -> 
+      if wantToCapture (named_decl_info.ni_name) primaryFunctions then 
+        if String.compare (named_decl_info.ni_name) "sendstring" == 0 then 
+          (match rest with 
+          | []
+          | [_] ->  Singleton("sendstring(false)")
+          | _::m::rest -> 
+          Singleton("sendstring(" ^ string_of_stmt m ^")"))
+        else 
+        Singleton (named_decl_info.ni_name)
+      else Emp 
+    )
+  )
+  
+| ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) ->
+  (match stmt_list with 
+  | [] -> Emp 
+  | y :: restY -> extractEventFromFUnctionCall y restY )
+| _ -> Emp
+)
 
 
 let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects = 
@@ -633,44 +664,7 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
     (
       match stmt_list with 
       | [] -> assert false  
-      | x::_ -> 
-        (match x with
-        | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
-    
-          (match decl_ref_expr_info.drti_decl_ref with 
-          | None -> Emp 
-          | Some decl_ref ->
-            (
-            match decl_ref.dr_name with 
-            | None -> Emp
-            | Some named_decl_info -> 
-              if wantToCapture (named_decl_info.ni_name) primaryFunctions then 
-                Singleton (named_decl_info.ni_name)
-              else Emp 
-            )
-          )
-        | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) ->
-          let y = List.hd stmt_list in 
-          (
-            match y with
-            | Some (DeclRefExpr (stmt_info, _, _, decl_ref_expr_info)) -> 
-    
-            (match decl_ref_expr_info.drti_decl_ref with 
-            | None -> Emp 
-            | Some decl_ref ->
-              (
-              match decl_ref.dr_name with 
-              | None -> Emp
-              | Some named_decl_info -> 
-                if wantToCapture (named_decl_info.ni_name) primaryFunctions then 
-                Singleton (named_decl_info.ni_name)
-                else Emp 
-              )
-            )
-            | _ -> Emp
-          )
-        | _ -> Emp
-        )
+      | x::rest -> extractEventFromFUnctionCall x rest
     )
   | MemberExpr (stmt_info, stmt_list, _, member_expr_info) -> Emp 
   | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
@@ -902,18 +896,20 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let startTimeStamp = Unix.time() in
                 let final = normalise_effects (syh_compute_stmt_pustcondition stmt) in 
                 let startTimeStamp01 = Unix.time() in
-    ("\n\n========== Module: "^ funcName ^" ==========\n" ^
-    "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
-    "[Post Condition] " ^ show_effects_option postcondition ^"\n"^ 
-    "[Inferred Post Effects] " ^ string_of_effects final  ^"\n"^
-    "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
     (match postcondition with 
     | None -> ""
     | Some postcondition -> 
+      ("\n\n========== Module: "^ funcName ^" ==========\n" ^
+      "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
+      "[Post Condition] " ^ string_of_effects postcondition ^"\n"^ 
+      "[Inferred Post Effects] " ^ string_of_effects final  ^"\n"^
+      "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
+   
+    
       let (result, tree) = inclusion final postcondition [] in 
       "[Verification "^ (if result then "SUCEED" else "FAILED") ^"]\n\n" ^
       string_of_binary_tree  tree   
-    )
+      )
      (*^ 
 
      specifications
