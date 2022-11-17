@@ -68,6 +68,12 @@ let rec string_of_decl (dec :Clang_ast_t.decl) : string =
     (* clang_prt_raw 1305- int, 901 - char *)
   | _ ->  Clang_ast_proj.get_decl_kind_string dec
 
+and string_of_stmt_list (li: Clang_ast_t.stmt list) sep : string = 
+    match li with 
+  | [] -> ""
+  | [x] -> string_of_stmt x 
+  | x::xs -> string_of_stmt x ^ sep ^ string_of_stmt_list xs sep
+
 and string_of_stmt (instr: Clang_ast_t.stmt) : string = 
   let rec helper_decl li sep = 
     match li with 
@@ -75,18 +81,20 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
   | [x] -> string_of_decl  x 
   | x::xs -> string_of_decl  x ^ sep ^ helper_decl xs sep
   in 
+(*
   let rec helper li sep = 
     match li with 
   | [] -> ""
   | [x] -> string_of_stmt x 
   | x::xs -> string_of_stmt x ^ sep ^ helper xs sep
   in 
+*)
   match instr with 
   | ReturnStmt (stmt_info, stmt_list) ->
-    "ReturnStmt " ^ helper stmt_list " " 
+    "ReturnStmt " ^ string_of_stmt_list stmt_list " " 
 
   | MemberExpr (stmt_info, stmt_list, _, member_expr_info) ->
-    "MemberExpr " ^ helper stmt_list " " 
+    "MemberExpr " ^ string_of_stmt_list stmt_list " " 
 
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
     "IntegerLiteral " ^ integer_literal_info.ili_value
@@ -96,16 +104,16 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
       match li with 
       | [] -> ""
       | x :: xs  -> x  ^ " " ^ straux xs 
-    in "StringLiteral " ^  straux str_list
+    in (* "StringLiteral " ^ string_of_int (List.length stmt_list)  ^ ": " ^ *) straux str_list
 
 
   | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info) ->
-    "IntegerLiteral " ^ helper stmt_list " " ^ ""
+    "UnaryOperator " ^ string_of_stmt_list stmt_list " " ^ ""
   
   | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
-    "ImplicitCastExpr " ^ helper stmt_list " " 
+    (*"ImplicitCastExpr " ^*) string_of_stmt_list stmt_list " " 
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) ->
-    "DeclRefExpr "^
+    (*"DeclRefExpr "^*)
     (match decl_ref_expr_info.drti_decl_ref with 
     | None -> "none"
     | Some decl_ref ->
@@ -119,37 +127,40 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
   | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
 
     "ParenExpr " ^ string_of_source_range  stmt_info.si_source_range
-    ^ helper stmt_list " " 
+    ^ string_of_stmt_list stmt_list " " 
 
     
   | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
-  "CStyleCastExpr " ^ helper stmt_list " " ^ ""
+  "CStyleCastExpr " ^ string_of_stmt_list stmt_list " " ^ ""
 
 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
 
-  "IfStmt " ^ helper stmt_list "," ^ ""
+  "IfStmt " ^ string_of_stmt_list stmt_list "," ^ ""
  
-  | CompoundStmt (_, stmt_list) -> helper stmt_list "; " 
+  | CompoundStmt (_, stmt_list) -> string_of_stmt_list stmt_list "; " 
 
   | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info) -> 
-   "BinaryOperator " ^ helper stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^""
+   "BinaryOperator " ^ string_of_stmt_list stmt_list (" "^ Clang_ast_proj.string_of_binop_kind binop_info.boi_kind ^" ")  ^""
 
   | DeclStmt (stmt_info, stmt_list, decl_list) -> 
-  "DeclStmt " (*  ^ helper stmt_list " " ^ "\n"^
+  "DeclStmt " (*  ^ string_of_stmt_list stmt_list " " ^ "\n"^
     "/\\ "^ string_of_int stmt_info.si_pointer^ " " *)  ^ helper_decl decl_list " " ^ "" 
   
   | CallExpr (stmt_info, stmt_list, ei) -> 
-    "CallExpr (" ^  helper stmt_list ", " ^ ") "
-
+      (match stmt_list with
+      | [] -> assert false 
+      | x :: rest -> 
+    "CallExpr " ^ string_of_stmt x ^" (" ^  string_of_stmt_list rest ", " ^ ") "
+)
 
   | ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
-    "ForStmt " ^  helper ([body]) " " 
+    "ForStmt " ^  string_of_stmt_list ([body]) " " 
 
   | WhileStmt (stmt_info, [condition; body]) ->
-    "WhileStmt " ^  helper ([body]) " " 
+    "WhileStmt " ^  string_of_stmt_list ([body]) " " 
   | WhileStmt (stmt_info, [decl_stmt; condition; body]) ->
-    "WhileStmt " ^  helper ([body]) " " 
+    "WhileStmt " ^  string_of_stmt_list ([body]) " " 
 
   | RecoveryExpr _ -> "RecoveryExpr"
   | BreakStmt _ -> "BreakStmt"
@@ -600,7 +611,7 @@ let rec wantToCapture (fName: string) (li:string list) : bool =
 
 let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt list) : effects = 
 (match x with
-| DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
+| DeclRefExpr (_, _, _, decl_ref_expr_info) -> 
 
   (match decl_ref_expr_info.drti_decl_ref with 
   | None -> Emp 
@@ -611,21 +622,21 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
     | Some named_decl_info -> 
       if wantToCapture (named_decl_info.ni_name) primaryFunctions then 
         if String.compare (named_decl_info.ni_name) "sendstring" == 0 then 
-          (match rest with 
+          match rest with 
           | []
-          | [_] ->  Singleton("sendstring(false)")
-          | _::m::rest -> 
-          Singleton("sendstring(" ^ string_of_stmt m ^")"))
+          | [_] -> Singleton("sendstring()")
+          | y::ys -> 
+          Singleton("sendstring(" ^ String.sub ((string_of_stmt_list ys ",")) 0 3 ^")")
         else 
         Singleton (named_decl_info.ni_name)
       else Emp 
     )
   )
-  
-| ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) ->
+
+| ImplicitCastExpr (_, stmt_list, _, _, _) ->
   (match stmt_list with 
   | [] -> Emp 
-  | y :: restY -> extractEventFromFUnctionCall y restY )
+  | y :: restY -> extractEventFromFUnctionCall y rest)
 | _ -> Emp
 )
 
@@ -636,19 +647,6 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
     | [] -> Emp 
     | x ::xs -> Concatenate (syh_compute_stmt_pustcondition x, helper xs)
   in 
-  (*let rec helperfunctionCall (li: Clang_ast_t.stmt list) = 
-    match li with
-    | [] -> Emp 
-    | x ::xs -> 
-      (
-        match x with 
-        | CallExpr _ 
-        | ImplicitCastExpr _-> Concatenate (syh_compute_stmt_pustcondition x, helperfunctionCall xs)
-        | _ -> helperfunctionCall xs
-      )
-      
-  in 
-  *)
   match instr with 
   | ReturnStmt (stmt_info, stmt_list) ->
     helper stmt_list
@@ -908,13 +906,14 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     
       let (result, tree) = inclusion final postcondition [] in 
       "[Verification "^ (if result then "SUCEED" else "FAILED") ^"]\n\n" ^
-      string_of_binary_tree  tree   
+      string_of_binary_tree  tree   ^ 
+      "\n[AST] " ^  string_of_stmt stmt 
       )
      (*^ 
 
      specifications
     
-     "[AST] " ^  string_of_stmt stmt 
+    
      
     "[TOTAL TRS TIME] " ^ string_of_float (totol proves +. totol disproves) ^ " ms \n" ^ 
     "[Proving   Time] " ^ printing proves ^

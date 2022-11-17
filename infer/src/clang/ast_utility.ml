@@ -197,6 +197,18 @@ let rec isBot (eff:effects) : bool =
   | Bot -> true 
   | _ -> false 
 
+(*specLHS ｜- specRHS；
+-
+-
+A.b.c |- A.M.C
+b.c ｜- M.C
+
+A . C.  B |- B .C. A
+
+A =B
+B =A
+*)
+
 let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bool* binary_tree) =
   let lhs = normalise_effects lhs in 
   let rhs = normalise_effects rhs in  
