@@ -6,7 +6,7 @@
 (*%token <int> INTE*)
 %token EMPTY LPAR RPAR CONCAT  POWER  DISJ   
 %token   COLON  REQUIRE ENSURE LSPEC RSPEC
-%token UNDERLINE KLEENE EOF
+%token UNDERLINE KLEENE EOF BOTTOM
 
 %left DISJ
 %left CONCAT
@@ -24,13 +24,14 @@
 *)
 
 es:
+| BOTTOM {Bot}
 | EMPTY { Emp }
 | str = VAR (*p=parm*) { Singleton ( str) }
 | LPAR r = es RPAR { r }
 | a = es DISJ b = es { Disj(a, b) }
 | UNDERLINE {Any}
 | a = es CONCAT b = es { Concatenate (a, b) } 
-| LPAR a = es POWER KLEENE RPAR{Kleene a}
+| LPAR a = es  RPAR POWER KLEENE {Kleene a}
 
 
 specification: 

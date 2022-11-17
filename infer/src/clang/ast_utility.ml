@@ -5,6 +5,7 @@ type effects = Bot | Emp | Any | Singleton of string
 
 type specification = (string * effects * effects)
 
+type fstElem = Wildcard | Event of string 
 
 let rec iter f = function
   | [] -> ()
@@ -58,7 +59,6 @@ let get_children = function
       | Leaf -> false 
       | _ -> true ) li;;
 
-
 let string_of_binary_tree tree = printTree ~line_prefix:"* " ~get_name ~get_children tree;; 
 
 let rec string_of_effects (eff:effects) : string = 
@@ -72,7 +72,7 @@ let rec string_of_effects (eff:effects) : string =
   | Disj (eff1, eff2) ->
       "(" ^ string_of_effects eff1 ^ " \\/ " ^ string_of_effects eff2 ^ ")"
   | Kleene effIn          ->
-      "(" ^ string_of_effects effIn ^ ")﹡" 
+      "(" ^ string_of_effects effIn ^ ")^*" 
 
 let rec normalise_effects (eff:effects) : effects = 
   match eff with 
@@ -94,7 +94,7 @@ let rec normalise_effects (eff:effects) : effects =
     | (_, Emp) -> normalise_effects es1
     | (Bot, _) -> Bot
     | (_, Bot) -> Bot
-    (*| (Concatenate (es11, es12), es3) -> (Concatenate (es11, Concatenate (es12, es3)))*)
+    | (Concatenate (es11, es12), es3) -> (Concatenate (es11, Concatenate (es12, es3)))
     | _ -> (Concatenate (es1, es2))
     )
   | Kleene effIn -> 
@@ -117,32 +117,36 @@ let rec nullable (eff:effects) : bool =
   | Disj (eff1, eff2) -> nullable eff1 || nullable eff2  
   | Kleene effIn      -> true
 
-let rec fst (eff:effects) : (string list) = 
+let rec fst (eff:effects) : (fstElem list) = 
   match eff with 
   | Bot              
   | Emp              
-  | Any             -> []  
-  | Singleton str   -> [str] 
+  | Any             -> [ Wildcard ]  
+  | Singleton str   -> [(Event str)] 
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then List.append (fst eff1) (fst eff2)
     else (fst eff1)
   | Disj (eff1, eff2) -> List.append (fst eff1) (fst eff2)
   | Kleene effIn      -> (fst effIn) 
 
-let rec derivitives (event:string) (eff:effects) : effects = 
+let rec derivitives (f:fstElem) (eff:effects) : effects = 
   match eff with 
   | Bot        
   | Emp   -> Bot                
   | Any   -> Emp
-  | Singleton str -> if String.compare str event == 0 then Emp else Bot 
+  | Singleton str -> 
+    (match f with 
+    | Wildcard _ -> Bot 
+    | Event event -> if String.compare str event == 0 then Emp else Bot 
+    )
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then 
       Disj (
-        Concatenate (derivitives event eff1, eff2), 
-                     derivitives event eff2)
-    else Concatenate (derivitives event eff1, eff2)
-  | Disj (eff1, eff2) -> Disj (derivitives event eff1, derivitives event eff2)
-  | Kleene effIn      -> Concatenate (derivitives event effIn, eff)
+        Concatenate (derivitives f eff1, eff2), 
+                     derivitives f eff2)
+    else Concatenate (derivitives f eff1, eff2)
+  | Disj (eff1, eff2) -> Disj (derivitives f eff1, derivitives f eff2)
+  | Kleene effIn      -> Concatenate (derivitives f effIn, eff)
 
 
 let showEntailemnt (lhs:effects) (rhs:effects) : string =
@@ -197,7 +201,8 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
         | [f] -> 
           let derL = derivitives f lhs in 
           let derR = derivitives f rhs in 
-          inclusion derL derR ((lhs, rhs):: ctx) 
+          let (result, tree) = inclusion derL derR ((lhs, rhs):: ctx) in 
+          (result, Node(entailent ^ "   [Unfold]" , [tree])) 
         | f :: restF -> 
           let derL = derivitives f lhs in 
           let derR = derivitives f rhs in 
@@ -205,8 +210,8 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
           (match result with 
           | true -> 
             let (resultRest, treeRest)  = ietrater restF in 
-            (resultRest, Node (entailent ^ "   [Dis]",[tree; treeRest]))
-          | false -> (result, Node(entailent, [tree])) )
+            (resultRest, Node (entailent ^ "   [Disj]",[tree; treeRest]))
+          | false -> (result, tree)) 
       in ietrater fstSet 
     
 

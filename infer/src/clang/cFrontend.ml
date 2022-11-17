@@ -789,14 +789,14 @@ let retriveComments (source:string) : (string list) =
     match li with 
     | [] -> []
     | x :: xs  -> 
-      print_string (string_of_int(List.length x) ^ "\n");
+      (*print_string (string_of_int(List.length x) ^ "\n");*)
       (match List.hd x with
       | None -> helper xs 
       | Some head -> 
         if String.compare head "" ==0 then helper xs 
         else 
           let ele = ("/*@" ^ head ^ "@*/") in 
-          print_string ("SYH!!!!!!! " ^ ele ^ "\n");
+          (*print_string ("SYH!!!!!!! " ^ ele ^ "\n");*)
           (ele :: helper xs)  ) 
   in 
   let temp = helper partitionEnd in 
@@ -893,7 +893,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     | None -> ""
     | Some postcondition -> 
       let (result, tree) = inclusion final postcondition [] in 
-      "[Verification "^ (if result then "SUCEED" else "FAILED") ^"]\n\n " ^
+      "[Verification "^ (if result then "SUCEED" else "FAILED") ^"]\n\n" ^
       string_of_binary_tree  tree   
     )
      (*^ 

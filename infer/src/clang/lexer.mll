@@ -29,9 +29,9 @@ rule token = parse
 | "Ensure" {ENSURE}
 
 | id as str { VAR str }
-
+| "⏊" {BOTTOM}
 | '^' { POWER }
-| '.' { CONCAT }
+| "·" { CONCAT }
 | '(' { LPAR }
 | ')' { RPAR }
 | ':' { COLON }
