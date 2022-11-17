@@ -557,16 +557,17 @@ let rec syh_compute_decl_pustcondition (decl: Clang_ast_t.decl) : effects =
   | _ -> Emp
 
 
-let rec dealwithBreadkStmt (eff:effects) (acc:effects): (effects * bool) list =
+let rec dealwithContinuekStmt (eff:effects) (acc:effects): (effects * bool) list =
   match eff with 
   | Singleton str -> 
-    if String.compare str "BreakStmt" == 0 then [(acc, true)]
+    if String.compare str "ContinueStmt" == 0 then [(acc, true)]
     else [(Concatenate (acc, eff), false)]
   | Bot   
   | Emp   
+  | NotSingleton _ 
   | Any -> [(Concatenate (acc, eff), false )]
   | Concatenate (eff1, eff2) -> 
-    let temp = dealwithBreadkStmt eff1 acc in 
+    let temp = dealwithContinuekStmt eff1 acc in 
     let rec flatten li =
       match li with 
       | [] -> []
@@ -574,19 +575,27 @@ let rec dealwithBreadkStmt (eff:effects) (acc:effects): (effects * bool) list =
     in 
     flatten (List.map temp ~f:(fun (acc1, b1) -> 
       (match b1 with 
-      | false -> dealwithBreadkStmt eff2 acc1
+      | false -> dealwithContinuekStmt eff2 acc1
       | true -> [(acc1, b1)])
     ))
     
   | Disj (eff1, eff2) ->
-    let temp1 = dealwithBreadkStmt eff1 acc in 
-    let temp2 = dealwithBreadkStmt eff2 acc in 
+    let temp1 = dealwithContinuekStmt eff1 acc in 
+    let temp2 = dealwithContinuekStmt eff2 acc in 
     List.append temp1 temp2
   | Kleene effIn   -> 
-    let temp = dealwithBreadkStmt effIn Emp in 
+    let temp = dealwithContinuekStmt effIn Emp in 
     List.map temp ~f:(fun (acc1, b1) -> 
       (Concatenate(acc, Kleene(acc1)), false)
     )
+
+let primaryFunctions = ["setsockopt"; "close"; "accept"; "listen"; "malloc"; "free"]
+
+let rec wantToCapture (fName: string) (li:string list) : bool =
+  match li with 
+  | [] -> false 
+  | x::xs -> if String.compare fName x == 0 then true else wantToCapture fName xs 
+
 
 
 
@@ -634,7 +643,10 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
             (
             match decl_ref.dr_name with 
             | None -> Emp
-            | Some named_decl_info -> Singleton (named_decl_info.ni_name)
+            | Some named_decl_info -> 
+              if wantToCapture (named_decl_info.ni_name) primaryFunctions then 
+                Singleton (named_decl_info.ni_name)
+              else Emp 
             )
           )
         | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) ->
@@ -649,7 +661,10 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
               (
               match decl_ref.dr_name with 
               | None -> Emp
-              | Some named_decl_info -> Singleton (named_decl_info.ni_name)
+              | Some named_decl_info -> 
+                if wantToCapture (named_decl_info.ni_name) primaryFunctions then 
+                Singleton (named_decl_info.ni_name)
+                else Emp 
               )
             )
             | _ -> Emp
@@ -720,7 +735,7 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
   | WhileStmt (stmt_info, [condition;body]) ->
 
     let temp = syh_compute_stmt_pustcondition body in 
-    let interleavings = dealwithBreadkStmt (normalise_effects temp) Emp in 
+    let interleavings = dealwithContinuekStmt (normalise_effects temp) Emp in 
     let filterout = List.map interleavings ~f:(fun (a, _) -> a) in 
 
     let rec whildRec li = 
@@ -746,7 +761,10 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
     let temp = syh_compute_stmt_pustcondition body in Kleene temp
 
   | RecoveryExpr _ -> Emp
-  | _ -> Singleton (Clang_ast_proj.get_stmt_kind_string instr)
+  | ContinueStmt (stmt_info, _) ->
+    Singleton (Clang_ast_proj.get_stmt_kind_string instr)
+
+  | _ -> Emp (*Singleton (Clang_ast_proj.get_stmt_kind_string instr)*)
 
 
 

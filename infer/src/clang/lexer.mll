@@ -37,6 +37,7 @@ rule token = parse
 | ':' { COLON }
 | '_' {UNDERLINE}
 | '*' {KLEENE}
+| '!' {NOTSINGLE}
 
 | "\\/" {DISJ}
 | eof { EOF }

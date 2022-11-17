@@ -1,11 +1,13 @@
-type effects = Bot | Emp | Any | Singleton of string 
+type effects = Bot | Emp | Any 
+              | Singleton of string 
+              | NotSingleton of string 
               | Disj of effects * effects 
               | Concatenate of effects * effects 
               | Kleene of effects 
 
 type specification = (string * effects * effects)
 
-type fstElem = Wildcard | Event of string 
+type fstElem = Wildcard | Event of string | NotEvent of string
 
 let rec iter f = function
   | [] -> ()
@@ -67,6 +69,7 @@ let rec string_of_effects (eff:effects) : string =
   | Emp              -> "𝝐"
   | Any -> "_"
   | Singleton str          -> str 
+  | NotSingleton str          -> "!" ^ str 
   | Concatenate (eff1, eff2) ->
       string_of_effects eff1 ^ " · " ^ string_of_effects eff2 
   | Disj (eff1, eff2) ->
@@ -113,16 +116,18 @@ let rec nullable (eff:effects) : bool =
   | Emp              -> true 
   | Any 
   | Singleton _          -> false 
+  | NotSingleton str          -> false
   | Concatenate (eff1, eff2) -> nullable eff1 && nullable eff2  
   | Disj (eff1, eff2) -> nullable eff1 || nullable eff2  
   | Kleene effIn      -> true
 
 let rec fst (eff:effects) : (fstElem list) = 
   match eff with 
-  | Bot              
-  | Emp              
+  | Bot                
+  | Emp             -> []
   | Any             -> [ Wildcard ]  
   | Singleton str   -> [(Event str)] 
+  | NotSingleton str          -> [(NotEvent str)] 
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then List.append (fst eff1) (fst eff2)
     else (fst eff1)
@@ -138,6 +143,11 @@ let rec derivitives (f:fstElem) (eff:effects) : effects =
     (match f with 
     | Wildcard _ -> Bot 
     | Event event -> if String.compare str event == 0 then Emp else Bot 
+    )
+  | NotSingleton str -> 
+    (match f with 
+    | Wildcard _ -> Bot 
+    | Event event -> if String.compare str event == 0 then Bot  else Emp
     )
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then 
@@ -158,6 +168,8 @@ let rec compareEffects (eff1:effects) (eff2:effects): bool =
   | (Any, Any) 
   | (Emp, Emp) -> true 
   | (Singleton s1, Singleton s2) -> 
+    if String.compare s1 s2 == 0  then true else false 
+  | (NotSingleton s1, NotSingleton s2) -> 
     if String.compare s1 s2 == 0  then true else false 
   | (Concatenate (a1, a2), Concatenate(a3, a4)) 
   | (Disj (a1, a2), Disj(a3, a4)) -> 
@@ -180,20 +192,24 @@ let rec reoccur (lhs:effects) (rhs:effects) (ctx: (effects*effects)list): bool =
   ;;
 
 
-
+let rec isBot (eff:effects) : bool =
+  match eff with 
+  | Bot -> true 
+  | _ -> false 
 
 let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bool* binary_tree) =
   let lhs = normalise_effects lhs in 
   let rhs = normalise_effects rhs in  
   let entailent = showEntailemnt lhs rhs in 
-  if nullable lhs && (not (nullable rhs)) then 
-    (false, Node (entailent ^ "   [Disprove]", []) )
+  if isBot lhs then (true, Node (entailent ^ "  [False LHS]", []) )
+  else if nullable lhs && (not (nullable rhs)) then 
+    (false, Node (entailent ^ "  [Disprove]", []) )
   else if reoccur lhs rhs ctx then 
-    (true, Node (entailent ^ "   [Reoccur]", []) )
+    (true, Node (entailent ^ "  [Reoccur]", []) )
   else 
     let fstSet = fst lhs in 
     if List.length fstSet == 0 then 
-      (true, Node (entailent ^ "   [Prove]", []) )
+      (true, Node (entailent ^ "  [Prove]", []) )
     else 
       let rec ietrater fList : (bool* binary_tree) = 
         match fList with 
@@ -202,7 +218,7 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
           let derL = derivitives f lhs in 
           let derR = derivitives f rhs in 
           let (result, tree) = inclusion derL derR ((lhs, rhs):: ctx) in 
-          (result, Node(entailent ^ "   [Unfold]" , [tree])) 
+          (result, Node(entailent ^ "  [Unfold]" , [tree])) 
         | f :: restF -> 
           let derL = derivitives f lhs in 
           let derR = derivitives f rhs in 
@@ -210,7 +226,7 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
           (match result with 
           | true -> 
             let (resultRest, treeRest)  = ietrater restF in 
-            (resultRest, Node (entailent ^ "   [Disj]",[tree; treeRest]))
+            (resultRest, Node (entailent ^ "  [Disj]",[tree; treeRest]))
           | false -> (result, tree)) 
       in ietrater fstSet 
     

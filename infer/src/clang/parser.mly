@@ -6,7 +6,7 @@
 (*%token <int> INTE*)
 %token EMPTY LPAR RPAR CONCAT  POWER  DISJ   
 %token   COLON  REQUIRE ENSURE LSPEC RSPEC
-%token UNDERLINE KLEENE EOF BOTTOM
+%token UNDERLINE KLEENE EOF BOTTOM NOTSINGLE
 
 %left DISJ
 %left CONCAT
@@ -26,6 +26,7 @@
 es:
 | BOTTOM {Bot}
 | EMPTY { Emp }
+| NOTSINGLE str = VAR (*p=parm*) { NotSingleton ( str) }
 | str = VAR (*p=parm*) { Singleton ( str) }
 | LPAR r = es RPAR { r }
 | a = es DISJ b = es { Disj(a, b) }
