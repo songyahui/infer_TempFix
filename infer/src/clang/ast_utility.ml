@@ -203,7 +203,9 @@ let rec isBot (eff:effects) : bool =
 A.b.c |- A.M.C
 b.c ｜- M.C
 
-A . C.  B |- B .C. A
+A . C.  B |- B .C. A \/ F.G.H
+
+find the most similar trace to repair
 
 A =B
 B =A

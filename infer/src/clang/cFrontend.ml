@@ -567,6 +567,39 @@ let rec syh_compute_decl_pustcondition (decl: Clang_ast_t.decl) : effects =
   (* clang_prt_raw 1305- int, 901 - char *)
   | _ -> Emp
 
+let rec dealwithBreakStmt (eff:effects) (acc:effects) : (effects * bool) list = 
+  match eff with 
+  | Singleton str -> 
+    if String.compare str "BreakStmt" == 0 then [(acc, true)]
+    else [(Concatenate (acc, eff), false)]
+  | Bot   
+  | Emp   
+  | NotSingleton _ 
+  | Any -> [(Concatenate (acc, eff), false )]
+  | Concatenate (eff1, eff2) -> 
+    let temp = dealwithBreakStmt eff1 acc in 
+    let rec flatten li =
+      match li with 
+      | [] -> []
+      | x :: xs -> List.append x (flatten xs)
+    in 
+    flatten (List.map temp ~f:(fun (acc1, b1) -> 
+      (match b1 with 
+      | false -> dealwithBreakStmt eff2 acc1
+      | true -> [(acc1, b1)])
+    ))
+    
+  | Disj (eff1, eff2) ->
+    let temp1 = dealwithBreakStmt eff1 acc in 
+    let temp2 = dealwithBreakStmt eff2 acc in 
+    List.append temp1 temp2
+  | Kleene effIn   -> 
+    let temp = dealwithBreakStmt effIn Emp in 
+    List.map temp ~f:(fun (acc1, b1) -> 
+      (Concatenate(acc, Kleene(acc1)), false)
+    )
+
+
 
 let rec dealwithContinuekStmt (eff:effects) (acc:effects): (effects * bool) list =
   match eff with 
@@ -600,8 +633,7 @@ let rec dealwithContinuekStmt (eff:effects) (acc:effects): (effects * bool) list
       (Concatenate(acc, Kleene(acc1)), false)
     )
 
-let primaryFunctions = ["setsockopt"; "close"; "accept"; "listen"; "malloc"; "free";
-"sendstring"]
+let primaryFunctions = ["setsockopt"; "close"; "accept"; "listen"; "malloc"; "free"; "sendstring"; "BreakStmt"]
 
 let rec wantToCapture (fName: string) (li:string list) : bool =
   match li with 
@@ -736,7 +768,13 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
       | x::xs -> Disj (x, whildRec xs)
       | _ -> assert false 
     in 
-    Kleene (whildRec filterout)  (*temp *)
+    let withBreakStmt = whildRec filterout in 
+    let moreBranches = dealwithBreakStmt withBreakStmt Emp in 
+    let filteroutAgain = List.filter interleavings ~f:(fun (_, b) -> b) in 
+    let postppendBreakBranches = List.map filteroutAgain ~f:(fun (a, _)-> Concatenate (Kleene (withBreakStmt), a))  in 
+    if List.length postppendBreakBranches ==0 then Kleene (withBreakStmt) else whildRec postppendBreakBranches
+    
+    (*temp *)
     (*match stmt_list with 
     | decl_stmt::condition:: [body] -> 
       
@@ -752,10 +790,11 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
   | ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
     let temp = syh_compute_stmt_pustcondition body in Kleene temp
 
-  | RecoveryExpr _ -> Emp
-  | ContinueStmt (stmt_info, _) ->
+  | ContinueStmt _ 
+  | BreakStmt _ ->
     Singleton (Clang_ast_proj.get_stmt_kind_string instr)
-
+    
+  | RecoveryExpr _ 
   | _ -> Emp (*Singleton (Clang_ast_proj.get_stmt_kind_string instr)*)
 
 

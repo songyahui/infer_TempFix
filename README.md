@@ -32,41 +32,9 @@ infer/bin/infer run -- clang -c examples/Hello.c
 infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/LightFTP/Source/ftpserv.c
 
 
-gnutls_init · (gnutls_priority_set · (BreakStmt + 𝝐) · 
-gnutls_credentials_set · (BreakStmt + 𝝐) · 
-gnutls_certificate_server_set_request · 
-gnutls_handshake_set_timeout · gnutls_transport_set_int2 · 
-gnutls_session_ticket_enable_server · 
-(sendstring_plaintext + 𝝐) · gnutls_handshake · 
-(gnutls_handshake)﹡ · (BreakStmt + 𝝐))﹡ · gnutls_deinit · 
-(sendstring_plaintext + 𝝐)
+git ls-files | xargs cat | wc -l
+git ls-files | xargs wc -l
 
-
-gnutls_init · 
-((gnutls_priority_set + 
-
-(gnutls_priority_set · gnutls_credentials_set + 
-
-(gnutls_priority_set · gnutls_credentials_set · 
-gnutls_certificate_server_set_request · gnutls_handshake_set_timeout · 
-gnutls_transport_set_int2 · gnutls_session_ticket_enable_server · 
-sendstring_plaintext · gnutls_handshake · (gnutls_handshake)﹡ + 
-
-(gnutls_priority_set · gnutls_credentials_set · 
-gnutls_certificate_server_set_request · gnutls_handshake_set_timeout · 
-gnutls_transport_set_int2 · gnutls_session_ticket_enable_server · 
-sendstring_plaintext · gnutls_handshake · (gnutls_handshake)﹡ + 
-
-(gnutls_priority_set · gnutls_credentials_set · 
-gnutls_certificate_server_set_request · gnutls_handshake_set_timeout · 
-gnutls_transport_set_int2 · gnutls_session_ticket_enable_server · 
-gnutls_handshake · (gnutls_handshake)﹡ + 
-
-gnutls_priority_set · gnutls_credentials_set · 
-gnutls_certificate_server_set_request · gnutls_handshake_set_timeout · 
-gnutls_transport_set_int2 · gnutls_session_ticket_enable_server · 
-gnutls_handshake · (gnutls_handshake)﹡
-)
-)))))﹡ 
-
-· gnutls_deinit · (sendstring_plaintext + 𝝐)
+# BreakStmt
+# biabduction 
+# repair 
