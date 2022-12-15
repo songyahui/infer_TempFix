@@ -324,7 +324,33 @@ let rec inclusion' (lhs:effects) (rhs:effects) (ctx: (effects*effects) list) : (
       in ietrater fstSet 
 
 
+let rec reverseEffects (eff:effects) : effects = 
+  match eff with 
+  | Bot             
+  | Emp           
+  | Any 
+  | Singleton _   
+  | NotSingleton _        -> eff 
+  | Concatenate (eff1, eff2) ->
+    Concatenate (reverseEffects eff2, reverseEffects eff1)
+  | Disj (eff1, eff2) ->
+    Disj (reverseEffects eff1, reverseEffects eff2)
+  | Kleene effIn          ->Kleene (reverseEffects effIn)
 
 
-let bugLocalisation (paths: (effects * effects ) list): (int*int*effects) list = 
-  []
+let bugLocalisation (paths: (effects * effects ) list): (effects*effects) list = 
+  let rec helper li =
+    match li with 
+    | [] -> []
+    | (lhs, rhs):: rest -> 
+      let revlhs = reverseEffects lhs in 
+      let revrhs = reverseEffects rhs in 
+      let (result, tree) = inclusion' revlhs revrhs [] in 
+(*      print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
+*)
+      let temp = List.map result ~f:(fun (a, b)-> 
+(*        print_string (showEntailemnt (reverseEffects a) (reverseEffects b) ^ "\n ------- \n");
+*)
+        (reverseEffects a, reverseEffects b)) in 
+      List.append temp (helper rest)
+  in helper paths

@@ -947,17 +947,17 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       if List.length error_paths == 0 then ""
       else 
       let list_pairs = bugLocalisation error_paths in 
-      "\n[Bidirectional Bug Localisation] \n" ^  
-      (List.fold_left ~init:""
+      "\n[Bidirectional Bug Localisation & Possible Proof Repairs] \n\n" ^  
+      (*List.fold_left ~init:""
       ~f:(fun acc (lhs, rhs) -> acc ^ "\n" ^ (showEntailemnt lhs rhs))
-      error_paths) ^
+      error_paths*) 
       (
-      let rec helper li acc = 
+      let rec helper li = 
         match li with 
         | [] -> ""
-        | (s, e, spec):: res  -> helper res (acc 
-        ^ "\nline" ^ string_of_int s ^ " ~~ " ^ string_of_int e ^ " should have spec: " ^ string_of_effects spec )
-      in helper list_pairs "")
+        | [(realspec, spec)] -> string_of_effects realspec ^ " ~~~> " ^ string_of_effects spec 
+        | (realspec, spec):: res  -> (string_of_effects realspec ^ " ~~~> " ^ string_of_effects spec ) ^ ";\n" ^ helper res
+      in helper list_pairs)
       )
      (*^ 
 
