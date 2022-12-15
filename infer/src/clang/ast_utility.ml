@@ -1,5 +1,7 @@
+type line_number = int option
+
 type effects = Bot | Emp | Any 
-              | Singleton of string 
+              | Singleton of (string * line_number) 
               | NotSingleton of string 
               | Disj of effects * effects 
               | Concatenate of effects * effects 
@@ -7,7 +9,7 @@ type effects = Bot | Emp | Any
 
 type specification = (string * effects * effects)
 
-type fstElem = Wildcard | Event of string | NotEvent of string
+type fstElem = Wildcard | Event of (string * line_number)  | NotEvent of string
 
 let rec iter f = function
   | [] -> ()
@@ -67,8 +69,8 @@ let rec string_of_effects (eff:effects) : string =
   match eff with 
   | Bot              -> "⏊"
   | Emp              -> "𝝐"
-  | Any -> "_"
-  | Singleton str          -> str 
+  | Any -> "_" 
+  | Singleton (str, l)          -> str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)
   | NotSingleton str          -> "!" ^ str 
   | Concatenate (eff1, eff2) ->
       string_of_effects eff1 ^ " · " ^ string_of_effects eff2 
@@ -97,6 +99,7 @@ let rec normalise_effects (eff:effects) : effects =
     | (_, Emp) -> normalise_effects es1
     | (Bot, _) -> Bot
     | (_, Bot) -> Bot
+    | (Disj (es11, es12), es3) -> Disj(Concatenate (es11,es3),  Concatenate (es12, es3))
     | (Concatenate (es11, es12), es3) -> (Concatenate (es11, Concatenate (es12, es3)))
     | _ -> (Concatenate (es1, es2))
     )
@@ -126,7 +129,7 @@ let rec fst (eff:effects) : (fstElem list) =
   | Bot                
   | Emp             -> []
   | Any             -> [ Wildcard ]  
-  | Singleton str   -> [(Event str)] 
+  | Singleton s   -> [(Event s)] 
   | NotSingleton str          -> [(NotEvent str)] 
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then List.append (fst eff1) (fst eff2)
@@ -139,15 +142,15 @@ let rec derivitives (f:fstElem) (eff:effects) : effects =
   | Bot        
   | Emp   -> Bot                
   | Any   -> Emp
-  | Singleton str -> 
+  | Singleton (str, _) -> 
     (match f with 
     | Wildcard _ -> Bot 
-    | Event event -> if String.compare str event == 0 then Emp else Bot 
+    | Event (event, _) -> if String.compare str event == 0 then Emp else Bot 
     )
   | NotSingleton str -> 
     (match f with 
     | Wildcard _ -> Bot 
-    | Event event -> if String.compare str event == 0 then Bot  else Emp
+    | Event (event, _) -> if String.compare str event == 0 then Bot  else Emp
     )
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then 
@@ -167,7 +170,7 @@ let rec compareEffects (eff1:effects) (eff2:effects): bool =
   | (Bot, Bot) 
   | (Any, Any) 
   | (Emp, Emp) -> true 
-  | (Singleton s1, Singleton s2) -> 
+  | (Singleton (s1, _), Singleton (s2, _)) -> 
     if String.compare s1 s2 == 0  then true else false 
   | (NotSingleton s1, NotSingleton s2) -> 
     if String.compare s1 s2 == 0  then true else false 
@@ -229,14 +232,14 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
       match (lhs, rhs) with 
       | (Disj (lhs1, lhs2), _) -> 
         let (result1, tree1) = inclusion lhs1 rhs ((lhs, rhs):: ctx) in 
-        if not result1 then (result1, tree1) 
+        if not result1 then (result1, Node(entailent, [tree1])) 
         else 
           let (result2, tree2) = inclusion lhs2 rhs ((lhs1,rhs)::(lhs, rhs):: ctx) in 
           (result2, Node (entailent ^ "  [DisjL]",[tree1; tree2]))
 
       | (_, Disj (rhs1, rhs2)) -> 
         let (result1, tree1) = inclusion lhs rhs1 ((lhs, rhs):: ctx) in 
-        if result1 then (result1, tree1) 
+        if result1 then (result1, Node (entailent, [tree1])) 
         else 
           let (result2, tree2) = inclusion lhs rhs2 ((lhs, rhs):: ctx) in 
           (result2, Node (entailent ^ "  [DisjR]",[tree1; tree2]))
@@ -257,10 +260,71 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
           | true -> 
             let (resultRest, treeRest)  = ietrater restF in 
             (resultRest, Node (entailent ^ "  [DisjL]",[tree; treeRest]))
-          | false -> (result, tree)) 
+          | false -> (result, Node (entailent,[tree]))) 
       in ietrater fstSet 
     
 
         
     
   
+let rec inclusion' (lhs:effects) (rhs:effects) (ctx: (effects*effects) list) : (((effects * effects) list) * binary_tree ) =
+  let lhs = normalise_effects lhs in 
+  let rhs = normalise_effects rhs in  
+  let entailent = showEntailemnt lhs rhs in 
+  (*print_string (entailent ^ "\n");*)
+  if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
+  else if nullable lhs && (not (nullable rhs)) then 
+  ([(lhs, rhs)], Node (entailent ^ "  [Disprove]", []) )
+
+  else if reoccur lhs rhs ctx then 
+    ([], Node (entailent ^ "  [Reoccur]", []) )
+  else 
+    let fstSet = fst lhs in 
+    if List.length fstSet == 0 then 
+      ([], Node (entailent ^ "  [Prove]", []) )
+    else 
+      match (lhs, rhs) with 
+      | (Disj (lhs1, lhs2), _) -> 
+        let (result1, tree1) = inclusion' lhs1 rhs ((lhs, rhs):: ctx) in 
+        if List.length result1 > 0 then (result1, Node(entailent, [tree1])) 
+        else 
+          let (result2, tree2) = inclusion' lhs2 rhs ((lhs1,rhs)::(lhs, rhs):: ctx) in 
+          (result2, Node (entailent ^ "  [DisjL]",[tree1; tree2]))
+
+      | (_, Disj (rhs1, rhs2)) -> 
+        let (result1, tree1) = inclusion' lhs rhs1 ((lhs, rhs):: ctx) in 
+        if List.length result1 == 0 then (result1, Node (entailent, [tree1])) 
+        else 
+          let (result2, tree2) = inclusion' lhs rhs2 ((lhs, rhs):: ctx) in 
+          (List.append result1 result2, Node (entailent ^ "  [DisjR]",[tree1; tree2]))
+      | _ -> 
+      let rec ietrater fList : (((effects * effects) list)* binary_tree) = 
+        match fList with 
+        | [] -> assert false 
+        | [f] -> 
+          let derL = (derivitives f lhs) in 
+          let derR = normalise_effects (derivitives f rhs) in 
+          if (isBot derR) then 
+          ([(lhs, rhs)], Node (entailent ^ "  [Disprove]", []) )
+          else 
+            let (result, tree) = inclusion' derL derR ((lhs, rhs):: ctx) in 
+            (result, Node(entailent ^ "  [Unfold]" , [tree])) 
+        | f :: restF -> 
+          let derL = (derivitives f lhs) in 
+          let derR = normalise_effects (derivitives f rhs) in 
+          if (isBot derR) then 
+            ([(lhs, rhs)], Node (entailent ^ "  [Disprove]", []) )
+          else 
+          let (result, tree) = inclusion' derL derR ((lhs, rhs):: ctx) in 
+          (match result with 
+          | [] -> 
+            let (resultRest, treeRest)  = ietrater restF in 
+            (resultRest, Node (entailent ^ "  [DisjL]",[tree; treeRest]))
+          | _ -> (result, Node (entailent,[tree]))) 
+      in ietrater fstSet 
+
+
+
+
+let bugLocalisation (paths: (effects * effects ) list): (int*int*effects) list = 
+  []

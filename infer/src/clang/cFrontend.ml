@@ -569,7 +569,7 @@ let rec syh_compute_decl_pustcondition (decl: Clang_ast_t.decl) : effects =
 
 let rec dealwithBreakStmt (eff:effects) (acc:effects) : (effects * bool) list = 
   match eff with 
-  | Singleton str -> 
+  | Singleton (str, _) -> 
     if String.compare str "BreakStmt" == 0 then [(acc, true)]
     else [(Concatenate (acc, eff), false)]
   | Bot   
@@ -603,7 +603,7 @@ let rec dealwithBreakStmt (eff:effects) (acc:effects) : (effects * bool) list =
 
 let rec dealwithContinuekStmt (eff:effects) (acc:effects): (effects * bool) list =
   match eff with 
-  | Singleton str -> 
+  | Singleton (str, _) -> 
     if String.compare str "ContinueStmt" == 0 then [(acc, true)]
     else [(Concatenate (acc, eff), false)]
   | Bot   
@@ -643,7 +643,9 @@ let rec wantToCapture (fName: string) (li:string list) : bool =
 
 let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt list) : effects = 
 (match x with
-| DeclRefExpr (_, _, _, decl_ref_expr_info) -> 
+| DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
+  let (sl1, sl2) = stmt_info.si_source_range in 
+  let (lineLoc:int option) = sl1.sl_line in 
 
   (match decl_ref_expr_info.drti_decl_ref with 
   | None -> Emp 
@@ -656,11 +658,11 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
         if String.compare (named_decl_info.ni_name) "sendstring" == 0 then 
           match rest with 
           | []
-          | [_] -> Singleton("sendstring()")
+          | [_] -> Singleton("sendstring", lineLoc)
           | y::ys -> 
-          Singleton("sendstring(" ^ String.sub ((string_of_stmt_list ys ",")) 0 3 ^")")
+          Singleton("sendstring_" ^ String.sub ((string_of_stmt_list ys "_")) 0 3 ^"", lineLoc)
         else 
-        Singleton (named_decl_info.ni_name)
+        Singleton (named_decl_info.ni_name, lineLoc)
       else Emp 
     )
   )
@@ -746,15 +748,7 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
   
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> Emp
     
-    (*match decl_ref_expr_info.drti_decl_ref with 
-    | None -> Emp 
-    | Some decl_ref ->
-      (
-        match decl_ref.dr_name with 
-        | None -> Emp
-        | Some named_decl_info -> Singleton (named_decl_info.ni_name)
-      )
-    *)
+
   | WhileStmt (stmt_info, [_;condition;body]) 
   | WhileStmt (stmt_info, [condition;body]) ->
 
@@ -790,9 +784,12 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
   | ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
     let temp = syh_compute_stmt_pustcondition body in Kleene temp
 
-  | ContinueStmt _ 
-  | BreakStmt _ ->
-    Singleton (Clang_ast_proj.get_stmt_kind_string instr)
+  | ContinueStmt (stmt_info , _)  
+  | BreakStmt (stmt_info , _) ->
+    let (sl1, sl2) = stmt_info.si_source_range in 
+    let (lineLoc:int option) = sl1.sl_line in 
+
+    Singleton (Clang_ast_proj.get_stmt_kind_string instr, lineLoc)
     
   | RecoveryExpr _ 
   | _ -> Emp (*Singleton (Clang_ast_proj.get_stmt_kind_string instr)*)
@@ -941,17 +938,31 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       "[Post Condition] " ^ string_of_effects postcondition ^"\n"^ 
       "[Inferred Post Effects] " ^ string_of_effects final  ^"\n"^
       "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
-   
-    
-      let (result, tree) = inclusion final postcondition [] in 
-      "[Verification "^ (if result then "SUCEED" else "FAILED") ^"]\n\n" ^
-      string_of_binary_tree  tree   ^ 
-      "\n[AST] " ^  string_of_stmt stmt 
+
+        (*: (effects * effects ) list*)
+      let (error_paths, tree) = inclusion' final postcondition [] in 
+      "[Verification "^ (if List.length error_paths == 0 then "SUCEED" else "FAILED") ^"]\n\n" ^ 
+      string_of_binary_tree  tree    
+       ^ 
+      if List.length error_paths == 0 then ""
+      else 
+      let list_pairs = bugLocalisation error_paths in 
+      "\n[Bidirectional Bug Localisation] \n" ^  
+      (List.fold_left ~init:""
+      ~f:(fun acc (lhs, rhs) -> acc ^ "\n" ^ (showEntailemnt lhs rhs))
+      error_paths) ^
+      (
+      let rec helper li acc = 
+        match li with 
+        | [] -> ""
+        | (s, e, spec):: res  -> helper res (acc 
+        ^ "\nline" ^ string_of_int s ^ " ~~ " ^ string_of_int e ^ " should have spec: " ^ string_of_effects spec )
+      in helper list_pairs "")
       )
      (*^ 
 
      specifications
-    
+          "\n[AST] " ^  string_of_stmt stmt 
     
      
     "[TOTAL TRS TIME] " ^ string_of_float (totol proves +. totol disproves) ^ " ms \n" ^ 

@@ -27,7 +27,7 @@ es:
 | BOTTOM {Bot}
 | EMPTY { Emp }
 | NOTSINGLE str = VAR (*p=parm*) { NotSingleton ( str) }
-| str = VAR (*p=parm*) { Singleton ( str) }
+| str = VAR (*p=parm*) { Singleton (str, None) }
 | LPAR r = es RPAR { r }
 | a = es DISJ b = es { Disj(a, b) }
 | UNDERLINE {Any}

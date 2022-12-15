@@ -35,6 +35,8 @@ infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/LightFTP/Source/ftpser
 git ls-files | xargs cat | wc -l
 git ls-files | xargs wc -l
 
-# BreakStmt
 # biabduction 
 # repair 
+
+bidirectional bug localization. 
+program synthesis using deductions. 
