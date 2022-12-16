@@ -886,8 +886,30 @@ let show_effects_option (eff:effects option): string =
 let rec findSpecFrom (specs:specification list) (fName: string): (effects option * effects option)  = 
   match specs with 
   | [] -> (None, None) 
-  | (str, a, b):: rest -> if String.compare str fName == 0 then   (Some a,Some b) else findSpecFrom rest fName
+  | (str, a, b):: rest -> if String.compare str fName == 0 then (Some a,Some b) else findSpecFrom rest fName
   ;;
+
+let rec synthsisFromSpec (spec:effects) (specifications:(specification list)) : string option = 
+  Some "Not yet"
+
+(*
+  let spec = normalise_effects spec in 
+  let rec auc currectProof envli : specification list = 
+    match envli with 
+    | [] -> [] 
+    | x :: xs  -> let (fName, pre, post) = x in 
+      let (result, _) = inclusion' currectProof post in 
+      (x, result) :: 
+
+
+  and rec helper currectProof = 
+    match currectProof with 
+    | Emp -> ""
+    | _ -> 
+
+  
+*)
+
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
   print_string("<<<SYH:cFrontend.do_source_file>>>\n");
@@ -955,10 +977,29 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       let rec helper li = 
         match li with 
         | [] -> ""
-        | [(realspec, spec)] -> string_of_effects realspec ^ " ~~~> " ^ string_of_effects spec 
         | (realspec, spec):: res  -> (string_of_effects realspec ^ " ~~~> " ^ string_of_effects spec ) ^ ";\n" ^ helper res
       in helper list_pairs)
-      )
+      ^
+
+      "\n[Program Pathe Options] \n\n" ^  
+
+      (
+      let rec auc li = 
+        match li with 
+        | [] -> ""
+        | (realspec, spec):: res  -> 
+          let (startNum, endNum) = retriveLines realspec in 
+          let list_of_functionCalls = synthsisFromSpec spec specifications in
+          ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ " may be changed to " ^ 
+          (match list_of_functionCalls with 
+          | None -> "Sorry, there is no path from the environment!"
+          | Some str -> str)
+           ^ "\n\n" ^ auc res
+          ) 
+      in auc list_pairs)
+
+      ) 
+
      (*^ 
 
      specifications

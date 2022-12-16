@@ -354,3 +354,26 @@ let bugLocalisation (paths: (effects * effects ) list): (effects*effects) list =
         (reverseEffects a, reverseEffects b)) in 
       List.append temp (helper rest)
   in helper paths
+
+
+
+let getNumberFromfstElem (f:fstElem): int option = 
+  match f with 
+  | Event (_, n) -> n  
+  | Wildcard 
+  | NotEvent _ ->  None 
+
+
+let retriveLines (eff:effects) : (int*int) = 
+  let fstSetOrigin = fst eff in 
+  let startNum = List.fold_left ~init:0 ~f:(fun acc a -> 
+    match getNumberFromfstElem a with 
+    | None -> acc 
+    | Some a ->  if acc == 0 then a else if a < acc then a else acc) fstSetOrigin in 
+  let fstSetReversed = fst (reverseEffects eff) in 
+  let endNum = List.fold_left ~init:0 ~f:(fun acc a ->
+    match getNumberFromfstElem a with 
+    | None -> acc 
+    | Some a ->  if a > acc then a else acc) fstSetReversed in 
+  (startNum, endNum)
+
