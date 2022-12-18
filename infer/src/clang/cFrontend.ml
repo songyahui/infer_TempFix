@@ -889,26 +889,34 @@ let rec findSpecFrom (specs:specification list) (fName: string): (effects option
   | (str, a, b):: rest -> if String.compare str fName == 0 then (Some a,Some b) else findSpecFrom rest fName
   ;;
 
-let rec synthsisFromSpec (spec:effects) (specifications:(specification list)) : string option = 
-  Some "Not yet"
-
-(*
+let rec synthsisFromSpec (spec:effects) (env:(specification list)) : string option = 
   let spec = normalise_effects spec in 
-  let rec auc currectProof envli : specification list = 
-    match envli with 
-    | [] -> [] 
-    | x :: xs  -> let (fName, pre, post) = x in 
-      let (result, _) = inclusion' currectProof post in 
-      (x, result) :: 
-
-
-  and rec helper currectProof = 
-    match currectProof with 
-    | Emp -> ""
-    | _ -> 
+  (match spec with 
+  | Emp -> Some ""
+  | _ -> 
+    let rec auc currectProof envli : string option = 
+      match envli with 
+      | [] -> None 
+      | x :: xs  -> 
+        let (fName, pre, post) = x in 
+        let (result, _) = inclusion' currectProof post [] in 
+        let temp = 
+        match result with 
+        | [] -> Some (fName ^ "(); ") 
+        | (a, b):: _ -> 
+          (match normalise_effects b with 
+          | Emp -> 
+            (match synthsisFromSpec a env with 
+            | None  -> None 
+            | Some rest -> Some (fName ^ "(); " ^ rest))
+          | _ -> auc currectProof xs 
+          ) in 
+        (match temp with 
+        | None -> auc currectProof xs 
+        | _ -> temp)
+    in auc spec env)
 
   
-*)
 
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
