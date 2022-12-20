@@ -971,7 +971,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
         (*: (effects * effects ) list*)
       let (error_paths, tree) = inclusion' final postcondition [] in 
-      "[Verification "^ (if List.length error_paths == 0 then "SUCEED" else "FAILED") ^"]\n\n" ^ 
+      "[Verification "^ (if List.length error_paths == 0 then "SUCCEED" else "FAILED") ^"]\n\n" ^ 
       string_of_binary_tree  tree    
        ^ 
       if List.length error_paths == 0 then ""
@@ -998,10 +998,10 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
         | (realspec, spec):: res  -> 
           let (startNum, endNum) = retriveLines realspec in 
           let list_of_functionCalls = synthsisFromSpec spec specifications in
-          ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ " may be changed to " ^ 
+          ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
           (match list_of_functionCalls with 
           | None -> "Sorry, there is no path from the environment!"
-          | Some str -> str)
+          | Some str -> if String.compare str "" == 0 then " can be deleted." else  " can be changed to " ^  str ^ ".")
            ^ "\n\n" ^ auc res
           ) 
       in auc list_pairs)

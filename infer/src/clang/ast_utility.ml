@@ -296,6 +296,8 @@ let rec inclusion' (lhs:effects) (rhs:effects) (ctx: (effects*effects) list) : (
         if List.length result1 == 0 then (result1, Node (entailent, [tree1])) 
         else 
           let (result2, tree2) = inclusion' lhs rhs2 ((lhs, rhs):: ctx) in 
+          if List.length result2 == 0 then (result2, Node (entailent, [tree2])) 
+          else 
           (List.append result1 result2, Node (entailent ^ "  [DisjR]",[tree1; tree2]))
       | _ -> 
       let rec ietrater fList : (((effects * effects) list)* binary_tree) = 
