@@ -543,10 +543,13 @@ match gse_info.gse_value with
 
 *)
 
-let isLibFunction str : bool = 
+let isLibFunction str : bool = false 
+
+  (*
   let record_li = 
     ["/Applications"; 
-     "/Users/yahuis/Desktop/git/LightFTP/Source/gnutls"] in 
+     "/Users/yahuis/Desktop/git/LightFTP/Source/gnutls";
+     "/Users/yahuis/Desktop/git/LightFTP/Source/tinydtls"] in 
   let rec aux li:bool = 
     match li with 
     | [] ->  false 
@@ -556,7 +559,7 @@ let isLibFunction str : bool =
       if String.compare (String.sub str 0 (String.length x)) x  == 0 then 
       true else aux xs 
   in aux record_li
-
+*)
 
 
 
@@ -633,7 +636,7 @@ let rec dealwithContinuekStmt (eff:effects) (acc:effects): (effects * bool) list
       (Concatenate(acc, Kleene(acc1)), false)
     )
 
-let primaryFunctions = ["setsockopt"; "close"; "accept"; "listen"; "malloc"; "free"; "sendstring"; "BreakStmt"]
+let primaryFunctions = ["setsockopt"; "open"; "close"; "accept"; "listen"; "malloc"; "free"; "sendstring"; "BreakStmt"]
 
 let rec wantToCapture (fName: string) (li:string list) : bool =
   match li with 
@@ -674,60 +677,109 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
 | _ -> Emp
 )
 
+let getFirst (a, _) = a
 
-let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects = 
-  let rec helper (li: Clang_ast_t.stmt list) = 
+let rec flattenList lili = 
+  match lili with 
+  | [] -> []
+  | x :: xs -> List.append x (flattenList xs) 
+
+let concatenateTwoEffectswithFlag effectLi4X effectRest =  
+  flattenList (List.map  ~f:(
+        fun (eff_x, t_x) ->  
+        if t_x > 0 then [(eff_x, t_x)]
+        else 
+        List.map ~f:(fun (eff_Rest, t_Rest) -> 
+           (Concatenate (eff_x , eff_Rest), t_Rest)
+          ) effectRest
+      ) effectLi4X )
+
+
+let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : (effects * int) list = 
+  let rec helper (li: Clang_ast_t.stmt list): (effects * int) list  = 
     match li with
-    | [] -> Emp 
-    | x ::xs -> Concatenate (syh_compute_stmt_pustcondition x, helper xs)
+    | [] -> [(Emp, 0)]
+    | x ::xs -> 
+      let effectLi4X = syh_compute_stmt_pustcondition x in 
+      let effectRest = helper xs in 
+      concatenateTwoEffectswithFlag effectLi4X effectRest
+
   in 
   match instr with 
+  | CompoundStmt (stmt_info, stmt_list) -> helper stmt_list
+  | DeclStmt (stmt_info, stmt_list, decl_list) -> helper stmt_list
+  (*match decl_list with 
+  | [] -> Emp
+  | x :: _  ->syh_compute_decl_pustcondition x *)
   | ReturnStmt (stmt_info, stmt_list) ->
-    helper stmt_list
-  | CompoundStmt (stmt_info, stmt_list) ->
-    helper stmt_list
+    [(Emp, 1)]
+
   | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info)   ->
     helper stmt_list
   | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) ->
     helper stmt_list
   | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info)->
     helper stmt_list 
+
+  | CompoundAssignOperator (stmt_info, stmt_list, expr_info, binop_info, _) ->
+    helper stmt_list 
   | CallExpr (stmt_info, stmt_list, ei) -> 
     (
       match stmt_list with 
       | [] -> assert false  
-      | x::rest -> extractEventFromFUnctionCall x rest
+      | x::rest -> [(extractEventFromFUnctionCall x rest, 0)]
     )
-  | MemberExpr (stmt_info, stmt_list, _, member_expr_info) -> Emp 
   | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
   helper stmt_list
+
   | ArraySubscriptExpr (_, stmt_list, expr_info) -> 
   helper stmt_list
-  | NullStmt (stmt_info, stmt_list) -> Emp
 
-  | CharacterLiteral _ 
-  | FixedPointLiteral _ 
-  | FloatingLiteral _ -> Emp
-
-  | IntegerLiteral (stmt_info, stmt_list, expr_info, integer_literal_info) -> Emp
-  | StringLiteral (_, stmt_list, expr_info, str_list) -> Emp
 
   | UnaryExprOrTypeTraitExpr (_, stmt_list, _, unary_expr_or_type_trait_expr_info) ->
     helper stmt_list
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
     (match stmt_list with 
-    | [x; y] -> Concatenate (syh_compute_stmt_pustcondition x, Disj (syh_compute_stmt_pustcondition y, Emp))
+    | [x; y] -> 
+      let eff4X = syh_compute_stmt_pustcondition x in
+      let eff4Y = syh_compute_stmt_pustcondition y in
+      List.append eff4X (concatenateTwoEffectswithFlag eff4X eff4Y)
     | x::rest -> 
-      let collection = List.map rest ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
+      let eff4X = syh_compute_stmt_pustcondition x in
+      let effRest = List.map rest ~f:(fun a -> syh_compute_stmt_pustcondition a) in 
+      let concateConditional = List.map effRest ~f:(fun a -> concatenateTwoEffectswithFlag eff4X a) in 
+      flattenList concateConditional
+
+      (*let collection = List.map rest ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
       let rec ifstmtDisj (li: effects list) = 
         match li with 
         | [] -> Bot 
         | x :: xs -> Disj (x, ifstmtDisj xs)
       in Concatenate (syh_compute_stmt_pustcondition x, ifstmtDisj collection)
+      *)
     | _ -> assert false )
     
 
   
+
+  
+
+  
+  | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
+  helper stmt_list
+  
+  | MemberExpr _
+  | NullStmt _
+  | CharacterLiteral _ 
+  | FixedPointLiteral _ 
+  | FloatingLiteral _ 
+  | IntegerLiteral _ 
+  | StringLiteral _ 
+  | RecoveryExpr _ 
+  | DeclRefExpr _ -> [(Emp, 0)]
+    
+
+ (*
   | SwitchStmt (stmt_info, stmt_list, switch_stmt_info) -> 
       let collection = List.map stmt_list ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
       let rec ifstmtDisj (li: effects list) = 
@@ -736,18 +788,6 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
         | x :: xs -> Disj (x, ifstmtDisj xs)
       in ifstmtDisj collection
 
-
-  
-  | DeclStmt (stmt_info, stmt_list, decl_list) -> 
-      (match decl_list with 
-      | [] -> Emp
-      | x :: _  ->syh_compute_decl_pustcondition x )
-  
-  | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
-  helper stmt_list
-  
-  | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> Emp
-    
 
   | WhileStmt (stmt_info, [_;condition;body]) 
   | WhileStmt (stmt_info, [condition;body]) ->
@@ -768,31 +808,22 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : effects =
     let postppendBreakBranches = List.map filteroutAgain ~f:(fun (a, _)-> Concatenate (Kleene (withBreakStmt), a))  in 
     if List.length postppendBreakBranches ==0 then Kleene (withBreakStmt) else whildRec postppendBreakBranches
     
-    (*temp *)
-    (*match stmt_list with 
-    | decl_stmt::condition:: [body] -> 
-      
-    | condition:: [body]  -> 
-      let temp = syh_compute_stmt_pustcondition body in 
-      Kleene temp
-    | _ -> assert false 
-      *)
-    
+
 
   | DoStmt (stmt_info, [body; condition]) ->
     let temp = syh_compute_stmt_pustcondition body in (Concatenate(temp, Kleene temp))
   | ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
     let temp = syh_compute_stmt_pustcondition body in Kleene temp
-
+*)
   | ContinueStmt (stmt_info , _)  
   | BreakStmt (stmt_info , _) ->
     let (sl1, sl2) = stmt_info.si_source_range in 
     let (lineLoc:int option) = sl1.sl_line in 
 
-    Singleton (Clang_ast_proj.get_stmt_kind_string instr, lineLoc)
+    [(Singleton (Clang_ast_proj.get_stmt_kind_string instr, lineLoc), 0)]
     
-  | RecoveryExpr _ 
-  | _ -> Emp (*Singleton (Clang_ast_proj.get_stmt_kind_string instr)*)
+  
+  | _ -> [(Singleton (Clang_ast_proj.get_stmt_kind_string instr, None), 0)]
 
 
 
@@ -958,7 +989,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let funcName = named_decl_info.ni_name in 
                 let (precondition, postcondition) = findSpecFrom specifications funcName in 
                 let startTimeStamp = Unix.time() in
-                let final = normalise_effects (syh_compute_stmt_pustcondition stmt) in 
+                let final = normalise_effects (normaliseProgramStates (syh_compute_stmt_pustcondition stmt)) in 
+
+                
                 let startTimeStamp01 = Unix.time() in
     (match postcondition with 
     | None -> ""
@@ -1000,7 +1033,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
           let list_of_functionCalls = synthsisFromSpec spec specifications in
           ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
           (match list_of_functionCalls with 
-          | None -> "Sorry, there is no path from the environment!"
+          | None -> " Sorry, there is no path from the environment!"
           | Some str -> if String.compare str "" == 0 then " can be deleted." else  " can be changed to " ^  str ^ ".")
            ^ "\n\n" ^ auc res
           ) 

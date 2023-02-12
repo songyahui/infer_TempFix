@@ -379,3 +379,10 @@ let retriveLines (eff:effects) : (int*int) =
     | Some a ->  if a > acc then a else acc) fstSetReversed in 
   (startNum, endNum)
 
+  let normaliseProgramStates (li:(effects*int) list) : effects =
+    let temp = List.map li ~f:(fun (a, _) -> normalise_effects a) in 
+    let rec ifstmtDisj (li: effects list) = 
+      match li with 
+      | [] -> Bot 
+      | x :: xs -> Disj (x, ifstmtDisj xs) 
+    in ifstmtDisj temp

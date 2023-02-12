@@ -30,6 +30,7 @@ components licensed under the GPL.
 infer run -- javac examples/Hello.java
 infer/bin/infer run -- clang -c examples/Hello.c  
 infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/LightFTP/Source/ftpserv.c
+infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/pure-ftpd/src/main.c
 
 
 git ls-files | xargs cat | wc -l
@@ -40,3 +41,16 @@ git ls-files | xargs wc -l
 
 bidirectional bug localization. 
 program synthesis using deductions. 
+
+
+CVE-2019-18217:
+infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/proftpd/src/main.c
+
+CVE-2019-15232: 
+infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/live555/liveMedia/GenericMediaServer.cpp
+
+CVE-2016-6305:
+infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/openssl/ssl/record/rec_layer_s3.c
+
+CVE-2016-6309: 
+infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/openssl/ssl/statem/statem.c
