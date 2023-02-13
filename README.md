@@ -54,3 +54,6 @@ infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/openssl/ssl/record/rec
 
 CVE-2016-6309: 
 infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/openssl/ssl/statem/statem.c
+
+1. is that ok to extract the code and analyses it separately 
+2. most likely trace to have the repair. 

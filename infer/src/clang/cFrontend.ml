@@ -712,7 +712,9 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : (effects * in
   | [] -> Emp
   | x :: _  ->syh_compute_decl_pustcondition x *)
   | ReturnStmt (stmt_info, stmt_list) ->
-    [(Emp, 1)]
+    let (sl1, sl2) = stmt_info.si_source_range in 
+    let (lineLoc:int option) = sl1.sl_line in 
+    [(Singleton( "ret", lineLoc), 1)]
 
   | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info)   ->
     helper stmt_list
@@ -930,11 +932,12 @@ let rec synthsisFromSpec (spec:effects) (env:(specification list)) : string opti
       | [] -> None 
       | x :: xs  -> 
         let (fName, pre, post) = x in 
-        let (result, _) = inclusion' currectProof post [] in 
+        let (result, tree) = inclusion' 0 post currectProof [] in 
+        (*print_string (string_of_binary_tree  tree  ^ "\n");*)
         let temp = 
         match result with 
         | [] -> Some (fName ^ "(); ") 
-        | (a, b):: _ -> 
+        | (a, _, b):: _ -> 
           (match normalise_effects b with 
           | Emp -> 
             (match synthsisFromSpec a env with 
@@ -996,6 +999,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     (match postcondition with 
     | None -> ""
     | Some postcondition -> 
+      let postcondition = (Concatenate  (postcondition, Singleton ("ret", None))) in 
       ("\n\n========== Module: "^ funcName ^" ==========\n" ^
       "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
       "[Post Condition] " ^ string_of_effects postcondition ^"\n"^ 
@@ -1003,13 +1007,13 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
 
         (*: (effects * effects ) list*)
-      let (error_paths, tree) = inclusion' final postcondition [] in 
+      let (error_paths, tree) = inclusion' 0 final postcondition [] in 
       "[Verification "^ (if List.length error_paths == 0 then "SUCCEED" else "FAILED") ^"]\n\n" ^ 
       string_of_binary_tree  tree    
        ^ 
       if List.length error_paths == 0 then ""
       else 
-      let list_pairs = bugLocalisation error_paths in 
+      let error_lists = bugLocalisation error_paths in 
       "\n[Bidirectional Bug Localisation & Possible Proof Repairs] \n\n" ^  
       (*List.fold_left ~init:""
       ~f:(fun acc (lhs, rhs) -> acc ^ "\n" ^ (showEntailemnt lhs rhs))
@@ -1018,8 +1022,8 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       let rec helper li = 
         match li with 
         | [] -> ""
-        | (realspec, spec):: res  -> (string_of_effects realspec ^ " ~~~> " ^ string_of_effects spec ) ^ ";\n" ^ helper res
-      in helper list_pairs)
+        | (realspec, _, spec):: res  -> (string_of_effects realspec ^ " ~~~> " ^ string_of_effects spec ) ^ ";\n" ^ helper res
+      in helper error_lists)
       ^
 
       "\n[Program Pathe Options] \n\n" ^  
@@ -1028,16 +1032,16 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       let rec auc li = 
         match li with 
         | [] -> ""
-        | (realspec, spec):: res  -> 
-          let (startNum, endNum) = retriveLines realspec in 
+        | (realspec, (startNum ,endNum ),  spec):: res  -> 
+          (* let (startNum, endNum) = retriveLines realspec in *)
           let list_of_functionCalls = synthsisFromSpec spec specifications in
           ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
           (match list_of_functionCalls with 
           | None -> " Sorry, there is no path from the environment!"
-          | Some str -> if String.compare str "" == 0 then " can be deleted." else  " can be changed to " ^  str ^ ".")
+          | Some str -> if String.compare str "" == 0 then " can be deleted." else  " can have an assertion of " ^  str ^ ".")
            ^ "\n\n" ^ auc res
           ) 
-      in auc list_pairs)
+      in auc error_lists)
 
       ) 
 

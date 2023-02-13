@@ -264,60 +264,78 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
       in ietrater fstSet 
     
 
-        
+type error_info = (effects * int * effects)     
     
+let getLineNumFromfstElem (f:fstElem) = 
+  match f with 
+  | Event(_, Some i) -> i 
+  | Event (_, None ) 
+  | Wildcard 
+  | NotEvent _ -> -1
+
   
-let rec inclusion' (lhs:effects) (rhs:effects) (ctx: (effects*effects) list) : (((effects * effects) list) * binary_tree ) =
+let rec inclusion' 
+  (currentposition:int)
+  (lhs:effects) 
+  (rhs:effects) 
+  (ctx: (effects*effects) list) : ((error_info list) * binary_tree ) =
+
   let lhs = normalise_effects lhs in 
   let rhs = normalise_effects rhs in  
   let entailent = showEntailemnt lhs rhs in 
   (*print_string (entailent ^ "\n");*)
   if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
   else if nullable lhs && (not (nullable rhs)) then 
-  ([(lhs, rhs)], Node (entailent ^ "  [Disprove]", []) )
+  ([(lhs, currentposition ,rhs)], Node (entailent ^ "  [Disprove]", []) )
 
   else if reoccur lhs rhs ctx then 
     ([], Node (entailent ^ "  [Reoccur]", []) )
   else 
-    let fstSet = fst lhs in 
+    let (fstSet: fstElem list) = fst lhs in 
     if List.length fstSet == 0 then 
       ([], Node (entailent ^ "  [Prove]", []) )
     else 
       match (lhs, rhs) with 
       | (Disj (lhs1, lhs2), _) -> 
-        let (result1, tree1) = inclusion' lhs1 rhs ((lhs, rhs):: ctx) in 
+        let (result1, tree1) = inclusion' currentposition lhs1 rhs ((lhs, rhs):: ctx) in 
         if List.length result1 > 0 then (result1, Node(entailent, [tree1])) 
         else 
-          let (result2, tree2) = inclusion' lhs2 rhs ((lhs1,rhs)::(lhs, rhs):: ctx) in 
+          let (result2, tree2) = inclusion' currentposition lhs2 rhs ((lhs1,rhs)::(lhs, rhs):: ctx) in 
           (result2, Node (entailent ^ "  [DisjL]",[tree1; tree2]))
 
       | (_, Disj (rhs1, rhs2)) -> 
-        let (result1, tree1) = inclusion' lhs rhs1 ((lhs, rhs):: ctx) in 
+        let (result1, tree1) = inclusion' currentposition lhs rhs1 ((lhs, rhs):: ctx) in 
         if List.length result1 == 0 then (result1, Node (entailent, [tree1])) 
         else 
-          let (result2, tree2) = inclusion' lhs rhs2 ((lhs, rhs):: ctx) in 
+          let (result2, tree2) = inclusion' currentposition lhs rhs2 ((lhs, rhs):: ctx) in 
           if List.length result2 == 0 then (result2, Node (entailent, [tree2])) 
           else 
           (List.append result1 result2, Node (entailent ^ "  [DisjR]",[tree1; tree2]))
       | _ -> 
-      let rec ietrater fList : (((effects * effects) list)* binary_tree) = 
+      let rec ietrater fList : ((error_info list)* binary_tree) = 
         match fList with 
         | [] -> assert false 
         | [f] -> 
           let derL = (derivitives f lhs) in 
           let derR = normalise_effects (derivitives f rhs) in 
           if (isBot derR) then 
-          ([(lhs, rhs)], Node (entailent ^ "  [Disprove]", []) )
+            let currentposition = if currentposition == (-1000) then 
+            (print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");
+            (getLineNumFromfstElem f)) else currentposition in 
+            ([(lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
           else 
-            let (result, tree) = inclusion' derL derR ((lhs, rhs):: ctx) in 
+            let (result, tree) = inclusion' (getLineNumFromfstElem f) derL derR ((lhs, rhs):: ctx) in 
             (result, Node(entailent ^ "  [Unfold]" , [tree])) 
         | f :: restF -> 
           let derL = (derivitives f lhs) in 
           let derR = normalise_effects (derivitives f rhs) in 
           if (isBot derR) then 
-            ([(lhs, rhs)], Node (entailent ^ "  [Disprove]", []) )
+            let currentposition = if currentposition == (-1000) then 
+            (print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");
+            (getLineNumFromfstElem f)) else currentposition in 
+            ([(lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
           else 
-          let (result, tree) = inclusion' derL derR ((lhs, rhs):: ctx) in 
+          let (result, tree) = inclusion' (getLineNumFromfstElem f) derL derR ((lhs, rhs):: ctx) in 
           (match result with 
           | [] -> 
             let (resultRest, treeRest)  = ietrater restF in 
@@ -340,20 +358,22 @@ let rec reverseEffects (eff:effects) : effects =
   | Kleene effIn          ->Kleene (reverseEffects effIn)
 
 
-let bugLocalisation (paths: (effects * effects ) list): (effects*effects) list = 
+let bugLocalisation (paths: error_info list): (effects * (int * int) * effects) list = 
   let rec helper li =
     match li with 
     | [] -> []
-    | (lhs, rhs):: rest -> 
+    | (lhs, start, rhs):: rest -> 
       let revlhs = reverseEffects lhs in 
       let revrhs = reverseEffects rhs in 
-      let (result, tree) = inclusion' revlhs revrhs [] in 
-(*      print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
+      let (result, tree) = inclusion' (-1000) revlhs revrhs [] in 
+      print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
+
+      let temp = List.map result ~f:(fun (a, n, b)-> 
+(*      print_string (showEntailemnt (reverseEffects a) (reverseEffects b) ^ "\n ------- \n");
 *)
-      let temp = List.map result ~f:(fun (a, b)-> 
-(*        print_string (showEntailemnt (reverseEffects a) (reverseEffects b) ^ "\n ------- \n");
-*)
-        (reverseEffects a, reverseEffects b)) in 
+        (reverseEffects a, (start, n), reverseEffects b)) in 
+
+      
       List.append temp (helper rest)
   in helper paths
 
@@ -366,7 +386,7 @@ let getNumberFromfstElem (f:fstElem): int option =
   | NotEvent _ ->  None 
 
 
-let retriveLines (eff:effects) : (int*int) = 
+(*let retriveLines (eff:effects) : (int*int) = 
   let fstSetOrigin = fst eff in 
   let startNum = List.fold_left ~init:0 ~f:(fun acc a -> 
     match getNumberFromfstElem a with 
@@ -378,6 +398,7 @@ let retriveLines (eff:effects) : (int*int) =
     | None -> acc 
     | Some a ->  if a > acc then a else acc) fstSetReversed in 
   (startNum, endNum)
+  *)
 
   let normaliseProgramStates (li:(effects*int) list) : effects =
     let temp = List.map li ~f:(fun (a, _) -> normalise_effects a) in 
