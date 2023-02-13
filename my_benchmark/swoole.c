@@ -20,8 +20,8 @@ int swoole_error_log (level, error, str, str1){
 
 int insertclose (fd)
 /*@ insertclose: 
-    Require (TRUE, 𝝐) 
-    Ensure (TRUE, close) @*/
+    Require 𝝐 
+    Ensure close @*/
 {
     close(fd);
 }
@@ -29,8 +29,12 @@ int insertclose (fd)
 char* swoole_file_get_contents(char *filename)
 /*@ swoole_file_get_contents: 
     Require 𝝐 
-    Ensure (_)^* · open · (_)^* · close · (_)^*   @*/
+    Ensure (_)^* · open · (_)^* · close · (_)^*    @*/
 {
+    // !close^*
+     //(_)^* · open · (_)^* · close · (_)^* 
+     //(_)^* · open 
+     // forall x. open(x) ... (close(x))
     size_t filesize = swoole_file_size(filename);
 
 
@@ -55,11 +59,16 @@ char* swoole_file_get_contents(char *filename)
 
     int fd = open(filename, O_RDONLY);
     // this needs pure 
-    if (fd < 0)
+    
+    //fd>=0 /\ (_)^* · open · (_)^* · close · (_)^*, 
+    //fd<0 /\ open · (_)^* 
+    /*if (fd < 0)
     {
         swWarn("open(%s) failed. Error: %s[%d]", filename, strerror(errno), errno);
         return NULL;
     }
+    */
+    
     
     char * content = swString_new(filesize);
     if (!content)

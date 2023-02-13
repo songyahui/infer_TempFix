@@ -27,7 +27,8 @@ rule token = parse
 | "@*/" {RSPEC}
 | "Require" {REQUIRE}
 | "Ensure" {ENSURE}
-
+| "TRUE" { TRUE }
+| "FALSE" { FALSE }
 | id as str { VAR str }
 | "⏊" {BOTTOM}
 | '^' { POWER }
@@ -36,9 +37,17 @@ rule token = parse
 | ')' { RPAR }
 | ':' { COLON }
 | '_' {UNDERLINE}
+| '-' { MINUS }
+| '+' { PLUS }
 | '*' {KLEENE}
 | '!' {NOTSINGLE}
-
+| ',' {COMMA}
+| ">=" {GTEQ}
+| "<=" {LTEQ}
+| '>' {GT}
+| '<' {LT}
+| '=' {EQ}
+| "/\\" {CONJ}
 | "\\/" {DISJ}
 | eof { EOF }
 
