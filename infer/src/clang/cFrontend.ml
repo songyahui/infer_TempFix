@@ -563,14 +563,14 @@ let isLibFunction str : bool = false
 
 
 
-let rec syh_compute_decl_pustcondition (decl: Clang_ast_t.decl) : effects = 
+let rec syh_compute_decl_pustcondition (decl: Clang_ast_t.decl) : es = 
   match decl with
   | VarDecl (_, ndi, qt, vdi) -> 
     Emp
   (* clang_prt_raw 1305- int, 901 - char *)
   | _ -> Emp
 
-let rec dealwithBreakStmt (eff:effects) (acc:effects) : (effects * bool) list = 
+let rec dealwithBreakStmt (eff:es) (acc:es) : (es * bool) list = 
   match eff with 
   | Singleton (str, _) -> 
     if String.compare str "BreakStmt" == 0 then [(acc, true)]
@@ -604,7 +604,7 @@ let rec dealwithBreakStmt (eff:effects) (acc:effects) : (effects * bool) list =
 
 
 
-let rec dealwithContinuekStmt (eff:effects) (acc:effects): (effects * bool) list =
+let rec dealwithContinuekStmt (eff:es) (acc:es): (es * bool) list =
   match eff with 
   | Singleton (str, _) -> 
     if String.compare str "ContinueStmt" == 0 then [(acc, true)]
@@ -644,7 +644,7 @@ let rec wantToCapture (fName: string) (li:string list) : bool =
   | x::xs -> if String.compare fName x == 0 then true else wantToCapture fName xs 
 
 
-let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt list) : effects = 
+let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt list) : es = 
 (match x with
 | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
   let (sl1, sl2) = stmt_info.si_source_range in 
@@ -695,8 +695,8 @@ let concatenateTwoEffectswithFlag effectLi4X effectRest =
       ) effectLi4X )
 
 
-let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : (effects * int) list = 
-  let rec helper (li: Clang_ast_t.stmt list): (effects * int) list  = 
+let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : (es * int) list = 
+  let rec helper (li: Clang_ast_t.stmt list): (es * int) list  = 
     match li with
     | [] -> [(Emp, 0)]
     | x ::xs -> 
@@ -753,7 +753,7 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : (effects * in
       flattenList concateConditional
 
       (*let collection = List.map rest ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
-      let rec ifstmtDisj (li: effects list) = 
+      let rec ifstmtDisj (li: es list) = 
         match li with 
         | [] -> Bot 
         | x :: xs -> Disj (x, ifstmtDisj xs)
@@ -784,7 +784,7 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : (effects * in
  (*
   | SwitchStmt (stmt_info, stmt_list, switch_stmt_info) -> 
       let collection = List.map stmt_list ~f:(fun a -> syh_compute_stmt_pustcondition a ) in 
-      let rec ifstmtDisj (li: effects list) = 
+      let rec ifstmtDisj (li: es list) = 
         match li with 
         | [] -> Emp 
         | x :: xs -> Disj (x, ifstmtDisj xs)
@@ -795,7 +795,7 @@ let rec syh_compute_stmt_pustcondition (instr: Clang_ast_t.stmt) : (effects * in
   | WhileStmt (stmt_info, [condition;body]) ->
 
     let temp = syh_compute_stmt_pustcondition body in 
-    let interleavings = dealwithContinuekStmt (normalise_effects temp) Emp in 
+    let interleavings = dealwithContinuekStmt (normalise_es temp) Emp in 
     let filterout = List.map interleavings ~f:(fun (a, _) -> a) in 
 
     let rec whildRec li = 
@@ -910,20 +910,20 @@ let retriveSpecifications (source:string) : (specification list) =
 
    ;;
 
-let show_effects_option (eff:effects option): string = 
+let show_effects_option (eff:es option): string = 
   match eff with
   | None -> "None"
-  | Some eff -> string_of_effects eff 
+  | Some eff -> string_of_es eff 
 ;;
 
-let rec findSpecFrom (specs:specification list) (fName: string): (effects option * effects option)  = 
+let rec findSpecFrom (specs:specification list) (fName: string): (es option * es option)  = 
   match specs with 
   | [] -> (None, None) 
   | (str, a, b):: rest -> if String.compare str fName == 0 then (Some a,Some b) else findSpecFrom rest fName
   ;;
 
-let rec synthsisFromSpec (spec:effects) (env:(specification list)) : string option = 
-  let spec = normalise_effects spec in 
+let rec synthsisFromSpec (spec:es) (env:(specification list)) : string option = 
+  let spec = normalise_es spec in 
   (match spec with 
   | Emp -> Some ""
   | _ -> 
@@ -938,7 +938,7 @@ let rec synthsisFromSpec (spec:effects) (env:(specification list)) : string opti
         match result with 
         | [] -> Some (fName ^ "(); ") 
         | (a, _, b):: _ -> 
-          (match normalise_effects b with 
+          (match normalise_es b with 
           | Emp -> 
             (match synthsisFromSpec a env with 
             | None  -> None 
@@ -992,7 +992,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let funcName = named_decl_info.ni_name in 
                 let (precondition, postcondition) = findSpecFrom specifications funcName in 
                 let startTimeStamp = Unix.time() in
-                let final = normalise_effects (normaliseProgramStates (syh_compute_stmt_pustcondition stmt)) in 
+                let final = normalise_es (normaliseProgramStates (syh_compute_stmt_pustcondition stmt)) in 
 
                 
                 let startTimeStamp01 = Unix.time() in
@@ -1002,11 +1002,11 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       let postcondition = (Concatenate  (postcondition, Singleton ("ret", None))) in 
       ("\n\n========== Module: "^ funcName ^" ==========\n" ^
       "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
-      "[Post Condition] " ^ string_of_effects postcondition ^"\n"^ 
-      "[Inferred Post Effects] " ^ string_of_effects final  ^"\n"^
+      "[Post Condition] " ^ string_of_es postcondition ^"\n"^ 
+      "[Inferred Post Effects] " ^ string_of_es final  ^"\n"^
       "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
 
-        (*: (effects * effects ) list*)
+        (*: (es * es ) list*)
       let (error_paths, tree) = inclusion' 0 final postcondition [] in 
       "[Verification "^ (if List.length error_paths == 0 then "SUCCEED" else "FAILED") ^"]\n\n" ^ 
       string_of_binary_tree  tree    
@@ -1022,7 +1022,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       let rec helper li = 
         match li with 
         | [] -> ""
-        | (realspec, _, spec):: res  -> (string_of_effects realspec ^ " ~~~> " ^ string_of_effects spec ) ^ ";\n" ^ helper res
+        | (realspec, _, spec):: res  -> (string_of_es realspec ^ " ~~~> " ^ string_of_es spec ) ^ ";\n" ^ helper res
       in helper error_lists)
       ^
 

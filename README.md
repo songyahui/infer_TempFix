@@ -57,3 +57,5 @@ infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/openssl/ssl/statem/sta
 
 1. is that ok to extract the code and analyses it separately 
 2. most likely trace to have the repair. 
+3. related works derived by "Static automated program repair for heap properties"
+

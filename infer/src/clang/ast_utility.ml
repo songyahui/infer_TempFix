@@ -1,13 +1,15 @@
 type line_number = int option
 
-type effects = Bot | Emp | Any 
+
+           
+type es = Bot | Emp | Any 
               | Singleton of (string * line_number) 
               | NotSingleton of string 
-              | Disj of effects * effects 
-              | Concatenate of effects * effects 
-              | Kleene of effects 
+              | Disj of es * es 
+              | Concatenate of es * es 
+              | Kleene of es 
 
-type specification = (string * effects * effects)
+type specification = (string * es * es)
 
 type fstElem = Wildcard | Event of (string * line_number)  | NotEvent of string
 
@@ -65,7 +67,7 @@ let get_children = function
 
 let string_of_binary_tree tree = printTree ~line_prefix:"* " ~get_name ~get_children tree;; 
 
-let rec string_of_effects (eff:effects) : string = 
+let rec string_of_es (eff:es) : string = 
   match eff with 
   | Bot              -> "⏊"
   | Emp              -> "𝝐"
@@ -73,30 +75,30 @@ let rec string_of_effects (eff:effects) : string =
   | Singleton (str, l)          -> str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)
   | NotSingleton str          -> "!" ^ str 
   | Concatenate (eff1, eff2) ->
-      string_of_effects eff1 ^ " · " ^ string_of_effects eff2 
+      string_of_es eff1 ^ " · " ^ string_of_es eff2 
   | Disj (eff1, eff2) ->
-      "(" ^ string_of_effects eff1 ^ " \\/ " ^ string_of_effects eff2 ^ ")"
+      "(" ^ string_of_es eff1 ^ " \\/ " ^ string_of_es eff2 ^ ")"
   | Kleene effIn          ->
-      "(" ^ string_of_effects effIn ^ ")^*" 
+      "(" ^ string_of_es effIn ^ ")^*" 
 
-let rec normalise_effects (eff:effects) : effects = 
+let rec normalise_es (eff:es) : es = 
   match eff with 
   | Disj(es1, es2) -> 
-    let es1 = normalise_effects es1 in 
-    let es2 = normalise_effects es2 in 
+    let es1 = normalise_es es1 in 
+    let es2 = normalise_es es2 in 
     (match (es1, es2) with 
     | (Emp, Emp) -> Emp
-    | (Bot, es) -> normalise_effects es 
-    | (es, Bot) -> normalise_effects es 
+    | (Bot, es) -> normalise_es es 
+    | (es, Bot) -> normalise_es es 
     | (Disj (es11, es12), es3) -> Disj (es11, Disj (es12, es3))
     | _ -> (Disj (es1, es2))
     )
   | Concatenate (es1, es2) -> 
-    let es1 = normalise_effects es1 in 
-    let es2 = normalise_effects es2 in 
+    let es1 = normalise_es es1 in 
+    let es2 = normalise_es es2 in 
     (match (es1, es2) with 
-    | (Emp, _) -> normalise_effects es2
-    | (_, Emp) -> normalise_effects es1
+    | (Emp, _) -> normalise_es es2
+    | (_, Emp) -> normalise_es es1
     | (Bot, _) -> Bot
     | (_, Bot) -> Bot
     | (Disj (es11, es12), es3) -> Disj(Concatenate (es11,es3),  Concatenate (es12, es3))
@@ -104,7 +106,7 @@ let rec normalise_effects (eff:effects) : effects =
     | _ -> (Concatenate (es1, es2))
     )
   | Kleene effIn -> 
-    let effIn' = normalise_effects effIn in 
+    let effIn' = normalise_es effIn in 
     (match effIn' with 
     | Emp -> Emp 
     | _ ->  
@@ -113,7 +115,7 @@ let rec normalise_effects (eff:effects) : effects =
 
 
 
-let rec nullable (eff:effects) : bool = 
+let rec nullable (eff:es) : bool = 
   match eff with 
   | Bot              -> false 
   | Emp              -> true 
@@ -124,7 +126,7 @@ let rec nullable (eff:effects) : bool =
   | Disj (eff1, eff2) -> nullable eff1 || nullable eff2  
   | Kleene effIn      -> true
 
-let rec fst (eff:effects) : (fstElem list) = 
+let rec fst (eff:es) : (fstElem list) = 
   match eff with 
   | Bot                
   | Emp             -> []
@@ -137,7 +139,7 @@ let rec fst (eff:effects) : (fstElem list) =
   | Disj (eff1, eff2) -> List.append (fst eff1) (fst eff2)
   | Kleene effIn      -> (fst effIn) 
 
-let rec derivitives (f:fstElem) (eff:effects) : effects = 
+let rec derivitives (f:fstElem) (eff:es) : es = 
   match eff with 
   | Bot        
   | Emp   -> Bot                
@@ -162,10 +164,10 @@ let rec derivitives (f:fstElem) (eff:effects) : effects =
   | Kleene effIn      -> Concatenate (derivitives f effIn, eff)
 
 
-let showEntailemnt (lhs:effects) (rhs:effects) : string =
-  string_of_effects lhs  ^" |- "^ string_of_effects rhs ;;
+let showEntailemnt (lhs:es) (rhs:es) : string =
+  string_of_es lhs  ^" |- "^ string_of_es rhs ;;
 
-let rec compareEffects (eff1:effects) (eff2:effects): bool =
+let rec comparees (eff1:es) (eff2:es): bool =
   match (eff1, eff2) with 
   | (Bot, Bot) 
   | (Any, Any) 
@@ -176,16 +178,16 @@ let rec compareEffects (eff1:effects) (eff2:effects): bool =
     if String.compare s1 s2 == 0  then true else false 
   | (Concatenate (a1, a2), Concatenate(a3, a4)) 
   | (Disj (a1, a2), Disj(a3, a4)) -> 
-    compareEffects a1 a3 && compareEffects a2 a4
-  | (Kleene e1, Kleene e2) -> compareEffects e1 e2
+    comparees a1 a3 && comparees a2 a4
+  | (Kleene e1, Kleene e2) -> comparees e1 e2
   | _ -> false 
   ;;
   
 
 let compareEntailents (e1, e2) (e3, e4) : bool =
-  compareEffects e1 e3 && compareEffects e2 e4
+  comparees e1 e3 && comparees e2 e4
 
-let rec reoccur (lhs:effects) (rhs:effects) (ctx: (effects*effects)list): bool = 
+let rec reoccur (lhs:es) (rhs:es) (ctx: (es*es)list): bool = 
   match ctx with 
   | [] -> false 
   | (a, b):: xs -> 
@@ -195,7 +197,7 @@ let rec reoccur (lhs:effects) (rhs:effects) (ctx: (effects*effects)list): bool =
   ;;
 
 
-let rec isBot (eff:effects) : bool =
+let rec isBot (eff:es) : bool =
   match eff with 
   | Bot -> true 
   | _ -> false 
@@ -214,9 +216,9 @@ A =B
 B =A
 *)
 
-let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bool* binary_tree) =
-  let lhs = normalise_effects lhs in 
-  let rhs = normalise_effects rhs in  
+let rec inclusion (lhs:es) (rhs:es) (ctx: (es*es) list): (bool* binary_tree) =
+  let lhs = normalise_es lhs in 
+  let rhs = normalise_es rhs in  
   let entailent = showEntailemnt lhs rhs in 
   (*print_string (entailent ^ "\n");*)
   if isBot lhs then (true, Node (entailent ^ "  [False LHS]", []) )
@@ -264,7 +266,7 @@ let rec inclusion (lhs:effects) (rhs:effects) (ctx: (effects*effects) list): (bo
       in ietrater fstSet 
     
 
-type error_info = (effects * int * effects)     
+type error_info = (es * int * es)     
     
 let getLineNumFromfstElem (f:fstElem) = 
   match f with 
@@ -276,12 +278,12 @@ let getLineNumFromfstElem (f:fstElem) =
   
 let rec inclusion' 
   (currentposition:int)
-  (lhs:effects) 
-  (rhs:effects) 
-  (ctx: (effects*effects) list) : ((error_info list) * binary_tree ) =
+  (lhs:es) 
+  (rhs:es) 
+  (ctx: (es*es) list) : ((error_info list) * binary_tree ) =
 
-  let lhs = normalise_effects lhs in 
-  let rhs = normalise_effects rhs in  
+  let lhs = normalise_es lhs in 
+  let rhs = normalise_es rhs in  
   let entailent = showEntailemnt lhs rhs in 
   (*print_string (entailent ^ "\n");*)
   if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
@@ -317,7 +319,7 @@ let rec inclusion'
         | [] -> assert false 
         | [f] -> 
           let derL = (derivitives f lhs) in 
-          let derR = normalise_effects (derivitives f rhs) in 
+          let derR = normalise_es (derivitives f rhs) in 
           if (isBot derR) then 
             let currentposition = if currentposition == (-1000) then 
             (print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");
@@ -328,7 +330,7 @@ let rec inclusion'
             (result, Node(entailent ^ "  [Unfold]" , [tree])) 
         | f :: restF -> 
           let derL = (derivitives f lhs) in 
-          let derR = normalise_effects (derivitives f rhs) in 
+          let derR = normalise_es (derivitives f rhs) in 
           if (isBot derR) then 
             let currentposition = if currentposition == (-1000) then 
             (print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");
@@ -344,7 +346,7 @@ let rec inclusion'
       in ietrater fstSet 
 
 
-let rec reverseEffects (eff:effects) : effects = 
+let rec reversees (eff:es) : es = 
   match eff with 
   | Bot             
   | Emp           
@@ -352,26 +354,26 @@ let rec reverseEffects (eff:effects) : effects =
   | Singleton _   
   | NotSingleton _        -> eff 
   | Concatenate (eff1, eff2) ->
-    Concatenate (reverseEffects eff2, reverseEffects eff1)
+    Concatenate (reversees eff2, reversees eff1)
   | Disj (eff1, eff2) ->
-    Disj (reverseEffects eff1, reverseEffects eff2)
-  | Kleene effIn          ->Kleene (reverseEffects effIn)
+    Disj (reversees eff1, reversees eff2)
+  | Kleene effIn          ->Kleene (reversees effIn)
 
 
-let bugLocalisation (paths: error_info list): (effects * (int * int) * effects) list = 
+let bugLocalisation (paths: error_info list): (es * (int * int) * es) list = 
   let rec helper li =
     match li with 
     | [] -> []
     | (lhs, start, rhs):: rest -> 
-      let revlhs = reverseEffects lhs in 
-      let revrhs = reverseEffects rhs in 
+      let revlhs = reversees lhs in 
+      let revrhs = reversees rhs in 
       let (result, tree) = inclusion' (-1000) revlhs revrhs [] in 
       print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
 
       let temp = List.map result ~f:(fun (a, n, b)-> 
-(*      print_string (showEntailemnt (reverseEffects a) (reverseEffects b) ^ "\n ------- \n");
+(*      print_string (showEntailemnt (reversees a) (reversees b) ^ "\n ------- \n");
 *)
-        (reverseEffects a, (start, n), reverseEffects b)) in 
+        (reversees a, (start, n), reversees b)) in 
 
       
       List.append temp (helper rest)
@@ -386,13 +388,13 @@ let getNumberFromfstElem (f:fstElem): int option =
   | NotEvent _ ->  None 
 
 
-(*let retriveLines (eff:effects) : (int*int) = 
+(*let retriveLines (eff:es) : (int*int) = 
   let fstSetOrigin = fst eff in 
   let startNum = List.fold_left ~init:0 ~f:(fun acc a -> 
     match getNumberFromfstElem a with 
     | None -> acc 
     | Some a ->  if acc == 0 then a else if a < acc then a else acc) fstSetOrigin in 
-  let fstSetReversed = fst (reverseEffects eff) in 
+  let fstSetReversed = fst (reversees eff) in 
   let endNum = List.fold_left ~init:0 ~f:(fun acc a ->
     match getNumberFromfstElem a with 
     | None -> acc 
@@ -400,9 +402,9 @@ let getNumberFromfstElem (f:fstElem): int option =
   (startNum, endNum)
   *)
 
-  let normaliseProgramStates (li:(effects*int) list) : effects =
-    let temp = List.map li ~f:(fun (a, _) -> normalise_effects a) in 
-    let rec ifstmtDisj (li: effects list) = 
+  let normaliseProgramStates (li:(es*int) list) : es =
+    let temp = List.map li ~f:(fun (a, _) -> normalise_es a) in 
+    let rec ifstmtDisj (li: es list) = 
       match li with 
       | [] -> Bot 
       | x :: xs -> Disj (x, ifstmtDisj xs) 
