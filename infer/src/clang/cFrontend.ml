@@ -696,17 +696,17 @@ let conjunctPure (pi1:pure) (pi2:pure): pure =
     | (_, _) -> (PureAnd (pi1, pi2))
 
 
-let concatenateTwoEffectswithFlag (effectLi4X: (pure * es * int) list) (effectRest:(pure * es * int) list): (pure * es * int) list = 
+let concatenateTwoEffectswithFlag (effectLi4X: programState list) (effectRest: programState list): programState list = 
   let mixLi = cartesian_product effectLi4X effectRest in 
   List.map mixLi ~f:(
-    fun ((pi1, eff_x, t_x),  (pi2, eff_y, t_y)) -> 
-      if t_x > 0 then (pi1, eff_x, t_x)
-      else (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y), t_y)
+    fun ((pi1, eff_x, t_x, fp1),  (pi2, eff_y, t_y, fp2)) -> 
+      if t_x > 0 then (pi1, eff_x, t_x, fp1)
+      else (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),   t_y, List.append fp1 fp2)
   )
   
   
-let enforePure (p:pure) (eff:(pure * es  * int) list) : (pure * es  * int) list = 
-  List.map eff ~f:(fun (p1, es, f) ->(PureAnd(p1, p), es, f)) 
+let enforePure (p:pure) (eff:programState list) : programState list = 
+  List.map eff ~f:(fun (p1, es, f, fp) ->(PureAnd(p1, p), es, f, fp)) 
 
 let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
   match instr with 
@@ -766,10 +766,13 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
   
   | _ -> Some (Gt (Var(Clang_ast_proj.get_stmt_kind_string instr), Var ("")))
 
-let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : (pure * es  * int) list = 
-  let rec helper (li: Clang_ast_t.stmt list): (pure * es * int) list  = 
+let prefixLoction (li: int list) (state:programState list) : programState list= 
+  List.map state ~f:(fun (a, b, c, d) -> (a, b, c, List.append li d))
+
+let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState list = 
+  let rec helper (li: Clang_ast_t.stmt list): programState list  = 
     match li with
-    | [] -> [(TRUE, Emp, 0)]
+    | [] -> [(TRUE, Emp, 0, [])]
     | x ::xs -> 
       let effectLi4X = syh_compute_stmt_postcondition x in 
       let effectRest = helper xs in 
@@ -786,7 +789,8 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : (pure * es  *
     let (sl1, sl2) = stmt_info.si_source_range in 
     let (lineLoc:int option) = sl1.sl_line in 
     (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
-    [(TRUE, Emp, 1)]
+    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+    [(TRUE, Emp, 1, fp)]
 
   | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info)   ->
     helper stmt_list
@@ -801,7 +805,7 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : (pure * es  *
     (
       match stmt_list with 
       | [] -> assert false  
-      | x::rest -> [(TRUE, extractEventFromFUnctionCall x rest, 0)]
+      | x::rest -> [(TRUE, extractEventFromFUnctionCall x rest, 0, [])]
     )
   | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
   helper stmt_list
@@ -813,33 +817,52 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : (pure * es  *
   | UnaryExprOrTypeTraitExpr (_, stmt_list, _, unary_expr_or_type_trait_expr_info) ->
     helper stmt_list
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
+    let (sl1, sl2) = stmt_info.si_source_range in 
+    let (lineLoc:int option) = sl1.sl_line in 
+    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+
     (match stmt_list with 
     | [x; y] -> 
       (match stmt2Pure x with 
       | None  -> 
         let eff4X = syh_compute_stmt_postcondition x in
         let eff4Y = syh_compute_stmt_postcondition y in
-        List.append (eff4X) (concatenateTwoEffectswithFlag eff4X eff4Y)
+        prefixLoction fp (List.append (eff4X) (concatenateTwoEffectswithFlag eff4X eff4Y))
 
       | Some condition -> 
         
         let eff4X = syh_compute_stmt_postcondition x in
         let eff4Y = syh_compute_stmt_postcondition y in
-        List.append (enforePure (Neg condition) eff4X) (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))
+        prefixLoction fp (List.append (enforePure (Neg condition) eff4X) (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y)))
         )
+    | [x;y;z] -> 
+      (match stmt2Pure x with 
+      | None  -> 
+        let eff4X = syh_compute_stmt_postcondition x in
+        let eff4Y = syh_compute_stmt_postcondition y in
+        let eff4Z = syh_compute_stmt_postcondition z in
+        prefixLoction fp (List.append (concatenateTwoEffectswithFlag eff4X eff4Z) 
+        (concatenateTwoEffectswithFlag eff4X eff4Y))
+
+      | Some condition -> 
+        
+        let eff4X = syh_compute_stmt_postcondition x in
+        let eff4Y = syh_compute_stmt_postcondition y in
+        let eff4Z = syh_compute_stmt_postcondition z in
+        prefixLoction fp (List.append 
+        (enforePure (Neg condition) (concatenateTwoEffectswithFlag eff4X eff4Z)) 
+        (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y)))
+        )
+
+
+    (*
     | x::rest -> 
       let eff4X = syh_compute_stmt_postcondition x in
       let effRest = List.map rest ~f:(fun a -> syh_compute_stmt_postcondition a) in 
       let concateConditional = List.map effRest ~f:(fun a -> concatenateTwoEffectswithFlag eff4X a) in 
       flattenList concateConditional
+    *)
 
-      (*let collection = List.map rest ~f:(fun a -> syh_compute_stmt_postcondition a ) in 
-      let rec ifstmtDisj (li: es list) = 
-        match li with 
-        | [] -> Bot 
-        | x :: xs -> Disj (x, ifstmtDisj xs)
-      in Concatenate (syh_compute_stmt_postcondition x, ifstmtDisj collection)
-      *)
     | _ -> assert false )
     
 
@@ -859,7 +882,7 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : (pure * es  *
   | IntegerLiteral _ 
   | StringLiteral _ 
   | RecoveryExpr _ 
-  | DeclRefExpr _ -> [(TRUE, Emp, 0)]
+  | DeclRefExpr _ -> [(TRUE, Emp, 0, [])]
     
 
  (*
@@ -903,10 +926,10 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : (pure * es  *
     let (sl1, sl2) = stmt_info.si_source_range in 
     let (lineLoc:int option) = sl1.sl_line in 
 
-    [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, lineLoc), 0)]
+    [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, lineLoc), 0, [])]
     
   
-  | _ -> [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, None), 0)]
+  | _ -> [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, None), 0, [])]
 
 
 
@@ -1074,7 +1097,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let funcName = named_decl_info.ni_name in 
                 let (precondition, postcondition) = findSpecFrom specifications funcName in 
                 let startTimeStamp = Unix.time() in
-                let (final:effect) = normalise_effect (normaliseProgramStates (syh_compute_stmt_postcondition stmt)) in 
+                let (final:effectwithfootprint list) = (normaliseProgramStates (syh_compute_stmt_postcondition stmt)) in 
 
                 
                 let startTimeStamp01 = Unix.time() in
@@ -1086,13 +1109,13 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       ("\n\n========== Module: "^ funcName ^" ==========\n" ^
       "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
       "[Post Condition] " ^ string_of_effect postcondition ^"\n"^ 
-      "[Inferred Post Effects] " ^ string_of_effect final  ^"\n"^
+      "[Inferred Post Effects] " ^ string_of_effect (effectwithfootprint2Effect final)  ^"\n"^
       "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
 
         (*: (es * es ) list*)
-      let (error_paths, tree) = effect_inclusion final postcondition in 
+      let (error_paths, tree, correctTraces, errorTraces) = effectwithfootprintInclusion final postcondition in 
       "[Verification "^ (if List.length error_paths == 0 then "SUCCEED" else "FAILED") ^"]\n\n" ^ 
-      string_of_binary_tree  tree    
+      string_of_binary_tree tree    
        ^ 
       if List.length error_paths == 0 then ""
       else 

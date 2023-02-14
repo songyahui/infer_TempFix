@@ -39,6 +39,7 @@ type es = Bot | Emp | Any
 
 type effect = (pure * es) list 
 
+type programState = (pure * es  * int * int list)
 
 type specification = (string * effect * effect)
 
@@ -121,8 +122,8 @@ let rec showPure (p:pure):string =
   | Eq (t1, t2) -> (showTerms t1) ^ "=" ^ (showTerms t2)
   | PureOr (p1, p2) -> "("^showPure p1 ^ "∨" ^ showPure p2^")"
   | PureAnd (p1, p2) -> showPure p1 ^ "∧" ^ showPure p2
-  | Neg (Eq (t1, t2)) -> "(~("^(showTerms t1) ^ "=" ^ (showTerms t2)^"))"
-  | Neg p -> "(~" ^ showPure p^")"
+  | Neg (Eq (t1, t2)) -> "!("^(showTerms t1) ^ "=" ^ (showTerms t2)^")"
+  | Neg p -> "!(" ^ showPure p^")"
   
 (**********************************************)
 exception FooAskz3 of string
@@ -492,6 +493,20 @@ let rec normalise_es (eff:es) : es =
     Kleene (effIn'))
   | _ -> eff 
 
+let rec comparees (eff1:es) (eff2:es): bool =
+  match (eff1, eff2) with 
+  | (Bot, Bot) 
+  | (Any, Any) 
+  | (Emp, Emp) -> true 
+  | (Singleton (s1, _), Singleton (s2, _)) -> 
+    if String.compare s1 s2 == 0  then true else false 
+  | (NotSingleton s1, NotSingleton s2) -> 
+    if String.compare s1 s2 == 0  then true else false 
+  | (Concatenate (a1, a2), Concatenate(a3, a4)) 
+  | (Disj (a1, a2), Disj(a3, a4)) -> 
+    comparees a1 a3 && comparees a2 a4
+  | (Kleene e1, Kleene e2) -> comparees e1 e2
+  | _ -> false 
 
 
 let rec isBot (eff:es) : bool =
@@ -499,9 +514,22 @@ let rec isBot (eff:es) : bool =
   | Bot -> true 
   | _ -> false 
 
+let rec existEff acc (pi, es) : bool = 
+  match acc with 
+  | [] -> false 
+  | (pi1, es1) :: xs -> if comparePure pi1 pi && comparees es1 es then true 
+  else existEff xs (pi, es) 
+
 let normalise_effect (eff:effect) : effect = 
   let temp = List.map eff ~f:(fun (pi, es) -> (normalPure pi, normalise_es es)) in 
-  List.filter temp ~f:(fun (pi, es) -> not (isBot es)) 
+  let noBoteff = List.filter temp ~f:(fun (pi, es) -> not (isBot es)) in 
+  let rec helper effList = 
+    match effList with 
+    | [] -> []
+    | x :: xs  -> if existEff xs x then helper xs else x :: helper xs
+    
+  in helper noBoteff
+
 
 
 
@@ -559,21 +587,7 @@ let rec derivitives (f:fstElem) (eff:es) : es =
 let showEntailemnt (lhs:es) (rhs:es) : string =
   string_of_es lhs  ^" |- "^ string_of_es rhs ;;
 
-let rec comparees (eff1:es) (eff2:es): bool =
-  match (eff1, eff2) with 
-  | (Bot, Bot) 
-  | (Any, Any) 
-  | (Emp, Emp) -> true 
-  | (Singleton (s1, _), Singleton (s2, _)) -> 
-    if String.compare s1 s2 == 0  then true else false 
-  | (NotSingleton s1, NotSingleton s2) -> 
-    if String.compare s1 s2 == 0  then true else false 
-  | (Concatenate (a1, a2), Concatenate(a3, a4)) 
-  | (Disj (a1, a2), Disj(a3, a4)) -> 
-    comparees a1 a3 && comparees a2 a4
-  | (Kleene e1, Kleene e2) -> comparees e1 e2
-  | _ -> false 
-  ;;
+
   
 
 let compareEntailents (e1, e2) (e3, e4) : bool =
@@ -737,6 +751,9 @@ let cartesian_product li1 li2 =
     flattenList (List.map li1 ~f:(fun l1 -> 
       List.map li2 ~f:(fun l2 -> (l1, l2))))
 
+type effectwithfootprint = (pure * es * int list)
+
+
 let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tree) = 
   let mixLi = cartesian_product lhs rhs in 
   let validPairs = List.filter mixLi ~f:(fun ((p1, es1), (p2, es2)) -> entailConstrains p1 p2 )
@@ -745,9 +762,31 @@ let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tre
     fun (accre, acctree) ((p1, es1), (p2, es2)) ->
     let (re, tree) = 
     inclusion' 0 es1 es2 []
-    in (List.append accre re, List.append acctree [tree])
+    in (List.append accre re, List.append acctree [(Node ((showPure p1 ^ "|-" ^ showPure p2) , [tree]))])
     )) in 
-    (f_re, Node ("root", f_tree))
+    (f_re, Node ("TRS:", f_tree))
+
+type pathList = (int list ) list
+
+let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) : 
+((error_info list) * binary_tree * pathList * pathList) = 
+  let mixLi = cartesian_product lhs rhs in 
+  let validPairs = List.filter mixLi ~f:(fun ((p1, _, _), (p2, _)) -> entailConstrains p1 p2 )
+  in 
+  let (f_re, f_tree, correctT, errorT) = 
+  (List.fold_left validPairs ~init:([], [], [], []) ~f:(
+    fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
+    let (re, tree) = inclusion' 0 es1 es2 [] in   
+    let (correctTrace', errorTrace') = 
+      if List.length re == 0 
+      then (List.append correctTrace [li], errorTrace)
+      else (correctTrace, List.append errorTrace [li])
+    in 
+    (List.append accre re, List.append acctree [(Node ((showPure p1 ^ "|-" ^ showPure p2) , [tree]))], 
+    correctTrace', errorTrace'
+    )
+    )) in 
+    (f_re, Node ("TRS:", f_tree), correctT, errorT)
 
 
 let rec reversees (eff:es) : es = 
@@ -806,6 +845,9 @@ let getNumberFromfstElem (f:fstElem): int option =
   (startNum, endNum)
   *)
 
-  let normaliseProgramStates (li:(pure * es *int) list) : effect =
-    let temp = List.map li ~f:(fun (p, a, _) -> (p, normalise_es a)) in 
-    temp
+let normaliseProgramStates (li:programState list) : effectwithfootprint list =
+  let temp = List.map li ~f:(fun (p, a, _, li) -> (normalPure p, normalise_es a, li)) in 
+  temp
+
+let effectwithfootprint2Effect eff = 
+  List.map eff ~f:(fun (a, b, _) -> (a, b)) 

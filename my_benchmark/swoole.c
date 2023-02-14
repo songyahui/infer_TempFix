@@ -56,10 +56,8 @@ char* swoole_file_get_contents(char *filename)
 
 
     int fd = open(filename, O_RDONLY);
-    // this needs pure 
-    
-    //fd>=0 /\ (_)^* · open · (_)^* · close · (_)^*, 
-    //fd<0 /\ open · (_)^* 
+
+
     if (fd < 0)
     {
         swWarn("open(%s) failed. Error: %s[%d]", filename, strerror(errno), errno);
