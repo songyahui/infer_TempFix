@@ -710,8 +710,23 @@ let enforePure (p:pure) (eff:(pure * es  * int) list) : (pure * es  * int) list 
 
 let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
   match instr with 
-  | ImplicitCastExpr (_, x::_, _, _, _) 
-  | DeclRefExpr (_, x::_, _, _)-> stmt2Term x
+  | ImplicitCastExpr (_, x::_, _, _, _) -> stmt2Term x
+  | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
+    Some (Number (int_of_string(integer_literal_info.ili_value)))
+
+  | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
+  let (sl1, sl2) = stmt_info.si_source_range in 
+
+  (match decl_ref_expr_info.drti_decl_ref with 
+  | None -> None 
+  | Some decl_ref ->
+    (
+    match decl_ref.dr_name with 
+    | None -> None
+    | Some named_decl_info -> Some (Var (named_decl_info.ni_name))
+      
+    )
+  )
   | _ -> Some (Var(Clang_ast_proj.get_stmt_kind_string instr))
 
 let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure option = 
@@ -732,20 +747,22 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
   match instr with 
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
     (match binop_info.boi_kind with
-    | `LT -> stmt2Pure_helper "<" (stmt2Term x) (stmt2Term x) 
-    | `GT -> stmt2Pure_helper ">" (stmt2Term x) (stmt2Term x) 
-    | `GE -> stmt2Pure_helper ">=" (stmt2Term x) (stmt2Term x) 
-    | `LE -> stmt2Pure_helper "<=" (stmt2Term x) (stmt2Term x) 
-    | `EQ -> stmt2Pure_helper "=" (stmt2Term x) (stmt2Term x) 
+    | `LT -> stmt2Pure_helper "<" (stmt2Term x) (stmt2Term y) 
+    | `GT -> stmt2Pure_helper ">" (stmt2Term x) (stmt2Term y) 
+    | `GE -> stmt2Pure_helper ">=" (stmt2Term x) (stmt2Term y) 
+    | `LE -> stmt2Pure_helper "<=" (stmt2Term x) (stmt2Term y) 
+    | `EQ -> stmt2Pure_helper "=" (stmt2Term x) (stmt2Term y) 
     | _ -> None 
     )
 
-  (*| UnaryOperator (stmt_info, x::_, expr_info, op_info)->
+  | UnaryOperator (stmt_info, x::_, expr_info, op_info)->
     (match op_info.uoi_kind with
-    | `Not -> match stmt2Pure x with | None -> None | Some p -> Some (Neg p)
+    | `Not -> 
+      (match stmt2Pure x with 
+      | None -> None 
+      | Some p -> Some (Neg p))
     | _ -> None 
     )
-    *)
   
   | _ -> Some (Gt (Var(Clang_ast_proj.get_stmt_kind_string instr), Var ("")))
 

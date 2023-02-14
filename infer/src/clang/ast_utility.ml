@@ -394,10 +394,71 @@ let rec string_of_es (eff:es) : string =
   | Kleene effIn          ->
       "(" ^ string_of_es effIn ^ ")^*"
       
-let string_of_effect (eff:effect) : string = 
-  List.fold_left eff ~init:"" ~f:(fun acc (pi, es) -> 
-    acc ^ ", " ^ showPure pi ^ " /\\ " ^ string_of_es es
-  )
+let rec string_of_effect (eff:effect) : string = 
+  match eff with 
+  | [] -> ""
+  | [(pi, es)] ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ")"
+  | (pi, es) :: xs ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
+
+let rec stricTcompareTerm (term1:terms) (term2:terms) : bool = 
+  match (term1, term2) with 
+    (Var s1, Var s2) -> String.compare s1 s2 == 0
+  | (Number n1, Number n2) -> n1 == n2 
+  | (Plus (tIn1, num1), Plus (tIn2, num2)) -> stricTcompareTerm tIn1 tIn2 && stricTcompareTerm num1  num2
+  | (Minus (tIn1, num1), Minus (tIn2, num2)) -> stricTcompareTerm tIn1 tIn2 && stricTcompareTerm num1  num2
+  | _ -> false 
+
+let rec comparePure (pi1:pure) (pi2:pure):bool = 
+  match (pi1 , pi2) with 
+    (TRUE, TRUE) -> true
+  | (FALSE, FALSE) -> true 
+  | (Gt (t1, t11), Gt (t2, t22)) -> stricTcompareTerm t1 t2 && stricTcompareTerm t11  t22
+  | (Lt (t1, t11), Lt (t2, t22)) -> stricTcompareTerm t1 t2 && stricTcompareTerm t11  t22
+  | (GtEq (t1, t11), GtEq (t2, t22)) -> stricTcompareTerm t1 t2 && stricTcompareTerm t11  t22
+  | (LtEq (t1, t11), LtEq (t2, t22)) -> stricTcompareTerm t1 t2 && stricTcompareTerm t11  t22
+  | (Eq (t1, t11), Eq (t2, t22)) -> stricTcompareTerm t1 t2 && stricTcompareTerm t11  t22
+  | (PureOr (p1, p2), PureOr (p3, p4)) ->
+      (comparePure p1 p3 && comparePure p2 p4) || (comparePure p1 p4 && comparePure p2 p3)
+  | (PureAnd (p1, p2), PureAnd (p3, p4)) ->
+      (comparePure p1 p3 && comparePure p2 p4) || (comparePure p1 p4 && comparePure p2 p3)
+  | (Neg p1, Neg p2) -> comparePure p1 p2
+  | _ -> false
+
+
+
+let rec getAllPi piIn acc= 
+    (match piIn with 
+      PureAnd (pi1, pi2) -> List.append (getAllPi pi1 acc ) (getAllPi pi2 acc )
+    | _ -> List.append acc [piIn]
+    )
+let rec existPi pi li = 
+    (match li with 
+      [] -> false 
+    | x :: xs -> if comparePure pi x then true else existPi pi xs 
+    )
+    
+
+let rec normalPure (pi:pure):pure = 
+  let allPi = getAllPi pi [] in
+  let rec clear_Pi pi li = 
+    (match li with 
+      [] -> [pi]
+    | x :: xs -> if existPi pi li then clear_Pi x xs else List.append [pi] (clear_Pi x xs)
+    )in 
+  let finalPi = clear_Pi TRUE allPi in
+  let rec connectPi li acc = 
+    (match li with 
+      [] -> acc 
+    | x :: xs -> if entailConstrains TRUE x then (connectPi xs acc) else PureAnd (x, (connectPi xs acc)) 
+    ) in 
+  let filte_true = List.filter finalPi ~f:(fun ele-> not (comparePure ele TRUE)  ) in 
+  if List.length filte_true == 0 then  TRUE
+  else 
+    (match filte_true with 
+    | [] -> TRUE
+    | x :: xs ->connectPi xs x
+    )
+
 
 let rec normalise_es (eff:es) : es = 
   match eff with 
@@ -439,7 +500,7 @@ let rec isBot (eff:es) : bool =
   | _ -> false 
 
 let normalise_effect (eff:effect) : effect = 
-  let temp = List.map eff ~f:(fun (pi, es) -> (pi, normalise_es es)) in 
+  let temp = List.map eff ~f:(fun (pi, es) -> (normalPure pi, normalise_es es)) in 
   List.filter temp ~f:(fun (pi, es) -> not (isBot es)) 
 
 
