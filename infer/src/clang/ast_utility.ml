@@ -810,7 +810,7 @@ let bugLocalisation (paths: error_info list): (es * (int * int) * es) list =
     | (lhs, start, rhs):: rest -> 
       let revlhs = reversees lhs in 
       let revrhs = reversees rhs in 
-      let (result, tree) = inclusion' (-1000) revlhs revrhs [] in 
+      let (result, tree) = inclusion' (100000) revlhs revrhs [] in 
       print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
 
       let temp = List.map result ~f:(fun (a, n, b)-> 
@@ -845,9 +845,23 @@ let getNumberFromfstElem (f:fstElem): int option =
   (startNum, endNum)
   *)
 
+let rec existEff_withfootprint acc (pi, es, li) : bool = 
+  match acc with 
+  | [] -> false 
+  | (pi1, es1, li1) :: xs -> if comparePure pi1 pi && comparees es1 es then true 
+  else existEff_withfootprint xs (pi, es, li) 
+
 let normaliseProgramStates (li:programState list) : effectwithfootprint list =
   let temp = List.map li ~f:(fun (p, a, _, li) -> (normalPure p, normalise_es a, li)) in 
-  temp
+
+  let rec helper effList = 
+    match effList with 
+    | [] -> []
+    | x :: xs  -> if existEff_withfootprint xs x then helper xs else x :: helper xs
+    
+  in helper temp
+
+
 
 let effectwithfootprint2Effect eff = 
   List.map eff ~f:(fun (a, b, _) -> (a, b)) 

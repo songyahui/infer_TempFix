@@ -871,8 +871,7 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
   
 
   
-  | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
-  helper stmt_list
+  | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> helper stmt_list
   
   | MemberExpr _
   | NullStmt _
@@ -1056,7 +1055,16 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
     in auc spec env)
 
   
-
+let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list = 
+  let correctDots = flattenList p1 in 
+  let errorDots = flattenList p2 in 
+  let rec helper li a : bool =
+    match li with 
+    | [] -> false 
+    | x :: xs -> if x==a then true else helper xs a
+  in 
+  List.fold_left errorDots ~init:[] ~f:(fun acc a -> 
+  if helper correctDots a then acc else List.append acc [a]) 
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
   print_string("<<<SYH:cFrontend.do_source_file>>>\n");
@@ -1139,6 +1147,18 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
         match li with 
         | [] -> ""
         | (realspec, (startNum ,endNum ),  spec):: res  -> 
+          let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
+          let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
+          let (endNum , startNum) = List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
+          ~f:(fun (min', max') x -> 
+            if x < min' then (x, max')
+            else if x > max' then (min', x)
+            else (min', max')
+            ) in 
+         (* List.fold_left onlyErrorPostions ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_int a) ^
+          "\n"^
+          *)
+
           (* let (startNum, endNum) = retriveLines realspec in *)
           let list_of_functionCalls = synthsisFromSpec (TRUE, spec) specifications in
           ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
