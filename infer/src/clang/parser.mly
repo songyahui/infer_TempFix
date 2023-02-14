@@ -17,18 +17,13 @@
 
 %start specification
 %type <(Ast_utility.specification)> specification
-
+%type <(Ast_utility.pure)> pure
 %%
 
 
-(*parm:
-| {None}
-| LPAR i=INTE RPAR {Some i}
-*)
-
 es:
 | BOTTOM {Bot}
-| EMPTY { Emp }
+| EMPTY {Emp}
 | NOTSINGLE str = VAR (*p=parm*) { NotSingleton ( str) }
 | str = VAR (*p=parm*) { Singleton (str, None) }
 | LPAR r = es RPAR { r }
@@ -45,6 +40,19 @@ term:
 | LPAR a = term MINUS b = term RPAR {Minus (a, b )}
 | LPAR a = term PLUS b = term RPAR {Plus (a, b)}
 
+pure_helper:
+| GT b = term {(">", b)}
+| LT b = term {("<", b)}
+| GTEQ b = term {(">=", b)}
+| LTEQ b = term {("<=", b)}
+| EQ b = term {("=", b)}
+
+pure_aux:
+| CONJ b = pure {("conj", b)}
+| DISJ b = pure {("disj", b)}
+
+(*
+*)
 
 pure:
 | TRUE {TRUE}
@@ -80,12 +88,15 @@ es_or_ltl:
     | Next ltl -> Concatenate (Any, ltlToEs ltl)
     | Global ltl -> Kleene (ltlToEs ltl)
     | Future ltl -> Concatenate (Kleene Any, ltlToEs ltl)
+    | OrLTL (ltl1, ltl2) -> Disj (ltlToEs ltl1, ltlToEs ltl2)
+    | NotLTL (Lable str) ->  NotSingleton str 
+    | Imply (Lable str, ltl2) -> Disj (NotSingleton str ,  ltlToEs ltl2)
+    | Until (ltl1, ltl2) -> Concatenate(Kleene (ltlToEs ltl1), ltlToEs ltl2)
     (*
     | NotLTL of ltl 
-    | Until (ltl1, ltl2) -> 
     | Imply of ltl * ltl
     | AndLTL of ltl * ltl
-    | OrLTL of ltl * ltl *)
+     *)
     | _ ->  Singleton ("ltlToEs not yet", None)
   in ltlToEs b 
 }

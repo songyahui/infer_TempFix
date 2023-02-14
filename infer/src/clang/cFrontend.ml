@@ -705,7 +705,49 @@ let concatenateTwoEffectswithFlag (effectLi4X: (pure * es * int) list) (effectRe
   )
   
   
+let enforePure (p:pure) (eff:(pure * es  * int) list) : (pure * es  * int) list = 
+  List.map eff ~f:(fun (p1, es, f) ->(PureAnd(p1, p), es, f)) 
 
+let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
+  match instr with 
+  | ImplicitCastExpr (_, x::_, _, _, _) 
+  | DeclRefExpr (_, x::_, _, _)-> stmt2Term x
+  | _ -> Some (Var(Clang_ast_proj.get_stmt_kind_string instr))
+
+let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure option = 
+  match (t1, t2) with 
+  | (None, _) 
+  | (_, None ) -> None 
+  | (Some t1, Some t2) -> 
+    let p = 
+      if String.compare op "<" == 0 then Lt (t1, t2)
+    else if String.compare op ">" == 0 then Gt (t1, t2)
+    else if String.compare op ">=" == 0 then GtEq (t1, t2)
+    else if String.compare op "<=" == 0 then LtEq (t1, t2)
+    else Eq (t1, t2)
+    in Some p 
+
+
+let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option = 
+  match instr with 
+  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
+    (match binop_info.boi_kind with
+    | `LT -> stmt2Pure_helper "<" (stmt2Term x) (stmt2Term x) 
+    | `GT -> stmt2Pure_helper ">" (stmt2Term x) (stmt2Term x) 
+    | `GE -> stmt2Pure_helper ">=" (stmt2Term x) (stmt2Term x) 
+    | `LE -> stmt2Pure_helper "<=" (stmt2Term x) (stmt2Term x) 
+    | `EQ -> stmt2Pure_helper "=" (stmt2Term x) (stmt2Term x) 
+    | _ -> None 
+    )
+
+  (*| UnaryOperator (stmt_info, x::_, expr_info, op_info)->
+    (match op_info.uoi_kind with
+    | `Not -> match stmt2Pure x with | None -> None | Some p -> Some (Neg p)
+    | _ -> None 
+    )
+    *)
+  
+  | _ -> Some (Gt (Var(Clang_ast_proj.get_stmt_kind_string instr), Var ("")))
 
 let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : (pure * es  * int) list = 
   let rec helper (li: Clang_ast_t.stmt list): (pure * es * int) list  = 
@@ -756,9 +798,18 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : (pure * es  *
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
     (match stmt_list with 
     | [x; y] -> 
-      let eff4X = syh_compute_stmt_postcondition x in
-      let eff4Y = syh_compute_stmt_postcondition y in
-      List.append eff4X (concatenateTwoEffectswithFlag eff4X eff4Y)
+      (match stmt2Pure x with 
+      | None  -> 
+        let eff4X = syh_compute_stmt_postcondition x in
+        let eff4Y = syh_compute_stmt_postcondition y in
+        List.append (eff4X) (concatenateTwoEffectswithFlag eff4X eff4Y)
+
+      | Some condition -> 
+        
+        let eff4X = syh_compute_stmt_postcondition x in
+        let eff4Y = syh_compute_stmt_postcondition y in
+        List.append (enforePure (Neg condition) eff4X) (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))
+        )
     | x::rest -> 
       let eff4X = syh_compute_stmt_postcondition x in
       let effRest = List.map rest ~f:(fun a -> syh_compute_stmt_postcondition a) in 

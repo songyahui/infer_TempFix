@@ -29,12 +29,10 @@ int insertclose (fd)
 char* swoole_file_get_contents(char *filename)
 /*@ swoole_file_get_contents: 
     Require TRUE, 𝝐
-    Ensure  TRUE: X close @*/
+    Ensure  (fd>=0, (!open)^* · open · (!close)^* · close · (_)^*)  \/ 
+            (fd<0, (!open)^* · open · (!close)^*)   @*/
 {
-     // !close^*
-     // 
-     //(_)^* · open 
-     // forall x. open(x) ... (close(x))
+
     size_t filesize = swoole_file_size(filename);
 
 
