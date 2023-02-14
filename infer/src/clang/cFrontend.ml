@@ -769,6 +769,27 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
 let prefixLoction (li: int list) (state:programState list) : programState list= 
   List.map state ~f:(fun (a, b, c, d) -> (a, b, c, List.append li d))
 
+let getStmtlocation (instr: Clang_ast_t.stmt) : int option =
+  match instr with 
+  | CompoundStmt (stmt_info, _) 
+  | DeclStmt (stmt_info, _, _) 
+  | ReturnStmt (stmt_info, _) 
+  | UnaryOperator (stmt_info, _, _, _) 
+  | ImplicitCastExpr (stmt_info, _, _, _, _) 
+  | BinaryOperator (stmt_info, _, _, _)
+  | CompoundAssignOperator (stmt_info, _, _, _, _)
+  | CallExpr (stmt_info, _, _)  
+  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), _, _)
+  | ArraySubscriptExpr (stmt_info, _, _) 
+  | UnaryExprOrTypeTraitExpr (stmt_info, _, _, _)
+  | IfStmt (stmt_info, _, _) 
+  | CStyleCastExpr (stmt_info, _, _, _, _)  ->
+    let (sl1, sl2) = stmt_info.si_source_range in 
+    sl1.sl_line 
+  | _ -> None 
+
+
+
 let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState list = 
   let rec helper (li: Clang_ast_t.stmt list): programState list  = 
     match li with
@@ -819,30 +840,35 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
     let (sl1, sl2) = stmt_info.si_source_range in 
     let (lineLoc:int option) = sl1.sl_line in 
-    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+    let maybeIntToListInt l = match l with | None -> [] | Some l -> [l] in
+    let fp =  maybeIntToListInt lineLoc in 
 
     (match stmt_list with 
     | [x; y] -> 
+      let locY = maybeIntToListInt (getStmtlocation y) in 
       (match stmt2Pure x with 
       | None  -> 
         let eff4X = syh_compute_stmt_postcondition x in
         let eff4Y = syh_compute_stmt_postcondition y in
-        prefixLoction fp (List.append (eff4X) (concatenateTwoEffectswithFlag eff4X eff4Y))
+        prefixLoction fp (List.append (eff4X) (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
 
       | Some condition -> 
         
         let eff4X = syh_compute_stmt_postcondition x in
         let eff4Y = syh_compute_stmt_postcondition y in
-        prefixLoction fp (List.append (enforePure (Neg condition) eff4X) (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y)))
+        prefixLoction fp (List.append (enforePure (Neg condition) eff4X) 
+        (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
         )
     | [x;y;z] -> 
+      let locY = maybeIntToListInt (getStmtlocation y) in 
+      let locZ = maybeIntToListInt (getStmtlocation z) in 
       (match stmt2Pure x with 
       | None  -> 
         let eff4X = syh_compute_stmt_postcondition x in
         let eff4Y = syh_compute_stmt_postcondition y in
         let eff4Z = syh_compute_stmt_postcondition z in
-        prefixLoction fp (List.append (concatenateTwoEffectswithFlag eff4X eff4Z) 
-        (concatenateTwoEffectswithFlag eff4X eff4Y))
+        prefixLoction fp (List.append ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
+        (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
 
       | Some condition -> 
         
@@ -850,8 +876,8 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
         let eff4Y = syh_compute_stmt_postcondition y in
         let eff4Z = syh_compute_stmt_postcondition z in
         prefixLoction fp (List.append 
-        (enforePure (Neg condition) (concatenateTwoEffectswithFlag eff4X eff4Z)) 
-        (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y)))
+        (prefixLoction locZ (enforePure (Neg condition) (concatenateTwoEffectswithFlag eff4X eff4Z))) 
+        (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
         )
 
 
@@ -1149,7 +1175,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
         | (realspec, (startNum ,endNum ),  spec):: res  -> 
           let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
           let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
-          let (endNum , startNum) = List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
+          let (startNum, endNum) = List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
           ~f:(fun (min', max') x -> 
             if x < min' then (x, max')
             else if x > max' then (min', x)

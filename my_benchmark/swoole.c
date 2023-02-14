@@ -69,7 +69,7 @@ char* swoole_file_get_contents(char *filename)
     char * content = swString_new(filesize);
     if (!content)
     {
-        //close(fd);
+        close(fd);
         return NULL; 
     }
 
