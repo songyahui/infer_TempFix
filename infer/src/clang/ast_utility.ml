@@ -1,5 +1,15 @@
 open Z3
 
+type ltl = Lable of string 
+        | Next of ltl
+        | Until of ltl * ltl
+        | Global of ltl
+        | Future of ltl
+        | NotLTL of ltl
+        | Imply of ltl * ltl
+        | AndLTL of ltl * ltl
+        | OrLTL of ltl * ltl
+
 type line_number = int option
 
 type terms = Var of string
@@ -467,11 +477,13 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     (match f with 
     | Wildcard _ -> Bot 
     | Event (event, _) -> if String.compare str event == 0 then Emp else Bot 
+    | NotEvent event  ->  Bot
     )
   | NotSingleton str -> 
     (match f with 
     | Wildcard _ -> Bot 
-    | Event (event, _) -> if String.compare str event == 0 then Bot  else Emp
+    | Event (event, _) -> if String.compare str event == 0 then Bot else Emp
+    | NotEvent event  ->  if String.compare str event == 0 then Emp else Bot
     )
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then 

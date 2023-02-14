@@ -49,8 +49,15 @@ rule token = parse
 | '=' {EQ}
 | "/\\" {CONJ}
 | "\\/" {DISJ}
+| "<>" {FUTURE}  
+| "[]" {GLOBAL}
+| "->" {IMPLY}
+| '!' {LTLNOT}
+| 'X' {NEXT}
+| 'U' {UNTIL}
+| "&&" {LILAND}
+| "||" {LILOR}
 | eof { EOF }
-
 
 (* part 5 *)
 (*and read_string buf =

@@ -9,6 +9,7 @@
 %token UNDERLINE KLEENE EOF BOTTOM NOTSINGLE
 %token GT LT EQ GTEQ LTEQ CONJ COMMA MINUS 
 %token PLUS TRUE FALSE 
+%token FUTURE GLOBAL IMPLY LTLNOT NEXT UNTIL LILAND LILOR
 %left DISJ 
 %left CONCAT
 
@@ -58,10 +59,43 @@ pure:
 | a = pure CONJ b = pure {PureAnd (a, b)}
 | a = pure DISJ b = pure {PureOr (a, b)}
 
+ltl : 
+| s = VAR {Lable s} 
+| LPAR r = ltl RPAR { r }
+| NEXT p = ltl  {Next p}
+| LPAR p1= ltl UNTIL p2= ltl RPAR {Until (p1, p2)}
+| GLOBAL p = ltl {Global p}
+| FUTURE p = ltl {Future p}
+| LTLNOT p = ltl {NotLTL p}
+| LPAR p1= ltl IMPLY p2= ltl RPAR {Imply (p1, p2)}
+| LPAR p1= ltl LILAND p2= ltl RPAR {AndLTL (p1, p2)}  
+| LPAR p1= ltl LILOR p2= ltl RPAR {OrLTL (p1, p2)}
+
+es_or_ltl:
+| COMMA  b= es  {b}
+| COLON b = ltl {
+  let rec ltlToEs l = 
+    match l with 
+    | Lable str ->  Singleton (str, None)
+    | Next ltl -> Concatenate (Any, ltlToEs ltl)
+    | Global ltl -> Kleene (ltlToEs ltl)
+    | Future ltl -> Concatenate (Kleene Any, ltlToEs ltl)
+    (*
+    | NotLTL of ltl 
+    | Until (ltl1, ltl2) -> 
+    | Imply of ltl * ltl
+    | AndLTL of ltl * ltl
+    | OrLTL of ltl * ltl *)
+    | _ ->  Singleton ("ltlToEs not yet", None)
+  in ltlToEs b 
+}
+
 effect:
 | LPAR r = effect RPAR { r }
-| a = pure  COMMA  b= es  {[(a, b)]}
+| a = pure  b = es_or_ltl {[(a, b)]}
 | a = effect  DISJ  b=effect  {List.append a b}
+
+
 
 
 specification: 

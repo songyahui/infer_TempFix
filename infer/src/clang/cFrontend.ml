@@ -726,7 +726,8 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : (pure * es  *
   | ReturnStmt (stmt_info, stmt_list) ->
     let (sl1, sl2) = stmt_info.si_source_range in 
     let (lineLoc:int option) = sl1.sl_line in 
-    [(TRUE, Singleton( "ret", lineLoc), 1)]
+    (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
+    [(TRUE, Emp, 1)]
 
   | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info)   ->
     helper stmt_list
@@ -1012,8 +1013,8 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     (match postcondition with 
     | None -> ""
     | Some postcondition -> 
-      let postcondition = List.map postcondition ~f:(fun (pi, es) -> 
-        (pi, Concatenate  (es, Singleton ("ret", None)))) in 
+      let postcondition = postcondition (*List.map postcondition ~f:(fun (pi, es) -> 
+        (pi, Concatenate  (es, Singleton ("ret", None)))) *)in 
       ("\n\n========== Module: "^ funcName ^" ==========\n" ^
       "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
       "[Post Condition] " ^ string_of_effect postcondition ^"\n"^ 
@@ -1052,7 +1053,8 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
           ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
           (match list_of_functionCalls with 
           | None -> " Sorry, there is no path from the environment!"
-          | Some str -> if String.compare str "" == 0 then " can be deleted." else  " can have an assertion of " ^  str ^ ".")
+          | Some str -> if String.compare str "" == 0 then " can be deleted." 
+            else  " can be inserted with code " ^  str ^ ".")
            ^ "\n\n" ^ auc res
           ) 
       in auc error_lists)
