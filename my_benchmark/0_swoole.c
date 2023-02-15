@@ -7,7 +7,7 @@
 
 #define SW_ERROR_FILE_EMPTY "SWOOLE_ERROR_FILE_EMPTY"
 #define SW_LOG_TRACE "SWOOLE_LOG_TRACE"
-#define SW_MAX_FILE_CONTENT (64 * 1024 * 1024)  // for swoole_file_get_contents
+#define SW_MAX_FILE_CONTENT 67108864  // for swoole_file_get_contents
 #define SW_LOG_WARNING "SWOOLE_LOG_WARNING"
 #define SW_ERROR_FILE_TOO_LARGE "SWOOLE_ERROR_FILE_TOO_LARGE"
 #define O_RDONLY "O_RDONLY"
@@ -36,7 +36,7 @@ char* swoole_file_get_contents(char *filename)
     size_t filesize = swoole_file_size(filename);
 
 
-    /*
+    
     // logic changing 
     if (filesize < 0)
     {
@@ -52,7 +52,7 @@ char* swoole_file_get_contents(char *filename)
         swoole_error_log(SW_LOG_WARNING, SW_ERROR_FILE_TOO_LARGE, "file[%s] is too large.", filename);
         return NULL;
     }
-    */
+    
 
 
     int fd = open(filename, O_RDONLY);
@@ -60,6 +60,7 @@ char* swoole_file_get_contents(char *filename)
 
     if (fd < 0)
     {
+        //close(fd);
         swWarn("open(%s) failed. Error: %s[%d]", filename, strerror(errno), errno);
         return NULL;
     }
@@ -69,7 +70,7 @@ char* swoole_file_get_contents(char *filename)
     char * content = swString_new(filesize);
     if (!content)
     {
-        close(fd);
+        //close(fd);
         return NULL; 
     }
 

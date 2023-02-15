@@ -710,9 +710,11 @@ let enforePure (p:pure) (eff:programState list) : programState list =
 
 let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
   match instr with 
-  | ImplicitCastExpr (_, x::_, _, _, _) -> stmt2Term x
+  | ImplicitCastExpr (_, x::_, _, _, _) 
+  | ParenExpr (_, x::_, _) -> stmt2Term x
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
     Some (Number (int_of_string(integer_literal_info.ili_value)))
+
 
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
   let (sl1, sl2) = stmt_info.si_source_range in 
@@ -1147,8 +1149,11 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
 
         (*: (es * es ) list*)
+      let startTimeStamp = Unix.time() in
       let (error_paths, tree, correctTraces, errorTraces) = effectwithfootprintInclusion final postcondition in 
-      "[Verification "^ (if List.length error_paths == 0 then "SUCCEED" else "FAILED") ^"]\n\n" ^ 
+      let startTimeStamp01 = Unix.time() in
+
+      "[Verification takes "^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us, and " ^ (if List.length error_paths == 0 then "SUCCEED" else "FAILED") ^"]\n\n" ^ 
       string_of_binary_tree tree    
        ^ 
       if List.length error_paths == 0 then ""
@@ -1185,14 +1190,21 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
           "\n"^
           *)
 
+          let startTimeStamp = Unix.time() in
           (* let (startNum, endNum) = retriveLines realspec in *)
           let list_of_functionCalls = synthsisFromSpec (TRUE, spec) specifications in
+          let startTimeStamp01 = Unix.time() in
+
           ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
           (match list_of_functionCalls with 
-          | None -> " Sorry, there is no path from the environment!"
+          | None -> 
+            let (rr, _) = effect_inclusion [(TRUE, Emp)] [(TRUE, spec)] in 
+            if List.length rr == 0 then  " can be deleted." 
+            else 
+            " Sorry, there is no path from the environment!"
           | Some str -> if String.compare str "" == 0 then " can be deleted." 
             else  " can be inserted with code " ^  str ^ ".")
-           ^ "\n\n" ^ auc res
+           ^ "\n\n" ^ auc res ^ "[Searching Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us"
           ) 
       in auc error_lists)
 
