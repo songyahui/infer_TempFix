@@ -636,7 +636,8 @@ let rec dealwithContinuekStmt (eff:es) (acc:es): (es * bool) list =
       (Concatenate(acc, Kleene(acc1)), false)
     )
 
-let primaryFunctions = ["setsockopt"; "open"; "close"; "accept"; "listen"; "malloc"; "free"; "sendstring"; "BreakStmt"]
+let primaryFunctions = ["ssl_release_record"; "OPENSSL_cleanse"; "memcpy"; 
+"setsockopt"; "open"; "close"; "accept"; "listen"; "malloc"; "free"; "sendstring"; "BreakStmt"]
 
 let rec wantToCapture (fName: string) (li:string list) : bool =
   match li with 
@@ -708,13 +709,29 @@ let concatenateTwoEffectswithFlag (effectLi4X: programState list) (effectRest: p
 let enforePure (p:pure) (eff:programState list) : programState list = 
   List.map eff ~f:(fun (p1, es, f, fp) ->(PureAnd(p1, p), es, f, fp)) 
 
+let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms option = 
+  match (t1, t2) with 
+  | (None, _) 
+  | (_, None ) -> None 
+  | (Some t1, Some t2) -> 
+    let p = 
+      if String.compare op "+" == 0 then Plus (t1, t2)
+    else Minus (t1, t2)
+    in Some p 
+
 let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
   match instr with 
   | ImplicitCastExpr (_, x::_, _, _, _) 
+  | MemberExpr (_, x::_, _, _) 
   | ParenExpr (_, x::_, _) -> stmt2Term x
+  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
+  (match binop_info.boi_kind with
+  | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
+  | `Sub -> stmt2Term_helper "" (stmt2Term x) (stmt2Term y) 
+  | _ -> None 
+  )
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
     Some (Number (int_of_string(integer_literal_info.ili_value)))
-
 
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
   let (sl1, sl2) = stmt_info.si_source_range in 
@@ -729,7 +746,7 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
       
     )
   )
-  | _ -> Some (Var(Clang_ast_proj.get_stmt_kind_string instr))
+  | _ -> None (*Some (Var(Clang_ast_proj.get_stmt_kind_string instr)) *)
 
 let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure option = 
   match (t1, t2) with 
@@ -757,6 +774,7 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     | _ -> None 
     )
 
+  | ImplicitCastExpr (_, x::_, _, _, _) -> stmt2Pure x
   | UnaryOperator (stmt_info, x::_, expr_info, op_info)->
     (match op_info.uoi_kind with
     | `Not -> 
@@ -766,7 +784,7 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     | _ -> None 
     )
   
-  | _ -> Some (Gt (Var(Clang_ast_proj.get_stmt_kind_string instr), Var ("")))
+  | _ -> None (* Some (Gt (Var(Clang_ast_proj.get_stmt_kind_string instr), Var (""))) *)
 
 let prefixLoction (li: int list) (state:programState list) : programState list= 
   List.map state ~f:(fun (a, b, c, d) -> (a, b, c, List.append li d))
@@ -1067,16 +1085,16 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
         let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
         (*print_string (string_of_binary_tree  tree  ^ "\n");*)
         let temp = 
-        match result with 
-        | [] -> Some (fName ^ "(); ") 
-        | (a, _, b):: _ -> 
-          (match normalise_es b with 
-          | Emp -> 
-            (match synthsisFromSpec (pi, a) env with 
-            | None  -> None 
-            | Some rest -> Some (fName ^ "(); " ^ rest))
-          | _ -> auc currectProof xs 
-          ) in 
+          match result with 
+          | [] -> Some (fName ^ "(); ") 
+          | (a, _, b):: _ -> 
+            (match normalise_es a with 
+            | Emp -> 
+              (match synthsisFromSpec (pi, b) env with 
+              | None  -> None 
+              | Some rest -> Some (fName ^ "(); " ^ rest))
+            | _ -> auc currectProof xs 
+            ) in 
         (match temp with 
         | None -> auc currectProof xs 
         | _ -> temp)
@@ -1159,6 +1177,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       if List.length error_paths == 0 then ""
       else 
       let (error_lists:( (es * (int * int) * es) list)) = bugLocalisation error_paths in 
+      let () = print_string ("bugLocalisation done\n") in 
       "\n[Bidirectional Bug Localisation & Possible Proof Repairs] \n\n" ^  
       (*List.fold_left ~init:""
       ~f:(fun acc (lhs, rhs) -> acc ^ "\n" ^ (showEntailemnt lhs rhs))
@@ -1179,6 +1198,8 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
         | [] -> ""
         | (realspec, (startNum ,endNum ),  spec):: res  -> 
           let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
+          let () = print_string ("computeAllthePointOnTheErrorPath done\n") in 
+
           let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
           let (startNum, endNum) = List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
           ~f:(fun (min', max') x -> 
@@ -1193,6 +1214,8 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
           let startTimeStamp = Unix.time() in
           (* let (startNum, endNum) = retriveLines realspec in *)
           let list_of_functionCalls = synthsisFromSpec (TRUE, spec) specifications in
+          let () = print_string ("synthsisFromSpec done\n") in 
+
           let startTimeStamp01 = Unix.time() in
 
           ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
