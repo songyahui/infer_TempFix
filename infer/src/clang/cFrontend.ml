@@ -808,7 +808,13 @@ let getStmtlocation (instr: Clang_ast_t.stmt) : int option =
     sl1.sl_line 
   | _ -> None 
 
+let maybeIntToListInt l = match l with | None -> [] | Some l -> [l] 
 
+
+let stmt_intfor2FootPrint (stmt_info:Clang_ast_t.stmt_info): int list = 
+  let (sl1, sl2) = stmt_info.si_source_range in 
+    let (lineLoc:int option) = sl1.sl_line in 
+    maybeIntToListInt lineLoc
 
 let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState list = 
   let rec helper (li: Clang_ast_t.stmt list): programState list  = 
@@ -821,47 +827,37 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
 
   in 
   match instr with 
-  | CompoundStmt (stmt_info, stmt_list) -> helper stmt_list
-  | DeclStmt (stmt_info, stmt_list, decl_list) -> helper stmt_list
   (*match decl_list with 
   | [] -> Emp
   | x :: _  ->syh_compute_decl_pustcondition x *)
   | ReturnStmt (stmt_info, stmt_list) ->
-    let (sl1, sl2) = stmt_info.si_source_range in 
-    let (lineLoc:int option) = sl1.sl_line in 
-    (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
-    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+    
+    let fp = stmt_intfor2FootPrint stmt_info in 
     [(TRUE, Emp, 1, fp)]
+  | CompoundStmt (stmt_info, stmt_list) 
+  | DeclStmt (stmt_info, stmt_list, _) 
+  | UnaryOperator (stmt_info, stmt_list, _, _)   
+  | ImplicitCastExpr (stmt_info, stmt_list, _, _, _) 
+  | BinaryOperator (stmt_info, stmt_list, _, _)
+  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) 
+  | ArraySubscriptExpr (stmt_info, stmt_list, _) 
+  | UnaryExprOrTypeTraitExpr (stmt_info, stmt_list, _, _)
+  | CStyleCastExpr (stmt_info, stmt_list, _, _, _) 
+  | CompoundAssignOperator (stmt_info, stmt_list, _, _, _) ->
+    let fp = stmt_intfor2FootPrint stmt_info in 
+    prefixLoction fp (helper stmt_list)
 
-  | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info)   ->
-    helper stmt_list
-  | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) ->
-    helper stmt_list
-  | BinaryOperator (stmt_info, stmt_list, expr_info, binop_info)->
-    helper stmt_list 
-
-  | CompoundAssignOperator (stmt_info, stmt_list, expr_info, binop_info, _) ->
-    helper stmt_list 
   | CallExpr (stmt_info, stmt_list, ei) -> 
+    let fp = stmt_intfor2FootPrint stmt_info in 
+
     (
       match stmt_list with 
       | [] -> assert false  
-      | x::rest -> [(TRUE, extractEventFromFUnctionCall x rest, 0, [])]
+      | x::rest -> [(TRUE, extractEventFromFUnctionCall x rest, 0, fp)]
     )
-  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
-  helper stmt_list
-
-  | ArraySubscriptExpr (_, stmt_list, expr_info) -> 
-  helper stmt_list
-
-
-  | UnaryExprOrTypeTraitExpr (_, stmt_list, _, unary_expr_or_type_trait_expr_info) ->
-    helper stmt_list
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
-    let (sl1, sl2) = stmt_info.si_source_range in 
-    let (lineLoc:int option) = sl1.sl_line in 
-    let maybeIntToListInt l = match l with | None -> [] | Some l -> [l] in
-    let fp =  maybeIntToListInt lineLoc in 
+  let fp = stmt_intfor2FootPrint stmt_info in 
+
 
     (match stmt_list with 
     | [x; y] -> 
@@ -917,7 +913,6 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
   
 
   
-  | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> helper stmt_list
   
   | MemberExpr _
   | NullStmt _
@@ -927,7 +922,12 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
   | IntegerLiteral _ 
   | StringLiteral _ 
   | RecoveryExpr _ 
-  | DeclRefExpr _ -> [(TRUE, Emp, 0, [])]
+  | DeclRefExpr _ -> 
+    let (lineLoc:int option) = getStmtlocation instr in 
+    (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
+    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+
+    [(TRUE, Emp, 0, fp)]
     
 
  (*
@@ -968,13 +968,19 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
 *)
   | ContinueStmt (stmt_info , _)  
   | BreakStmt (stmt_info , _) ->
-    let (sl1, sl2) = stmt_info.si_source_range in 
-    let (lineLoc:int option) = sl1.sl_line in 
+  let fp = stmt_intfor2FootPrint stmt_info in 
 
-    [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, lineLoc), 0, [])]
+
+
+    [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, getStmtlocation instr), 0, fp)]
     
   
-  | _ -> [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, None), 0, [])]
+  | _ -> 
+    let (lineLoc:int option) = getStmtlocation instr in 
+  (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
+    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+
+    [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, None), 0, fp)]
 
 
 
@@ -1198,10 +1204,15 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
         | [] -> ""
         | (realspec, (startNum ,endNum ),  spec):: res  -> 
           let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
-          let () = print_string ("computeAllthePointOnTheErrorPath done\n") in 
+          let () = print_string (List.fold_left (flattenList ( correctTraces)) ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_int a) ^
+          "\n") in 
+          let () = print_string (List.fold_left (flattenList ( errorTraces)) ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_int a) ^
+          "\n") in 
 
           let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
-          let (startNum, endNum) = List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
+          let (startNum, endNum) = 
+            if List.length dotsareOntheErrorPath == 0 then (startNum, endNum)
+            else List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
           ~f:(fun (min', max') x -> 
             if x < min' then (x, max')
             else if x > max' then (min', x)

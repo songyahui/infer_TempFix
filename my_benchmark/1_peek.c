@@ -31,7 +31,7 @@ typedef struct tls_record_st {
     unsigned char seq_num[SEQ_NUM_SIZE];
 } TLS_RECORD;
 
-int insert_ssl_release_record() 
+int insert_ssl_release_record(s, rr) 
 /*@ insert_ssl_release_record: 
     Require TRUE, 𝝐
     Ensure  TRUE, ssl_release_record  @*/
@@ -60,8 +60,9 @@ int ssl3_read_bytes(int type, int *recvd_type, unsigned char *buf,
         //- if (!peek) {
             if (peek==1) {                         //+ 
                 /* Mark any zero length record as consumed CVE-2016-6305 */
-                //if (rr->length == 0)            //+
-                   // ssl_release_record(s, rr);  //+
+               // if (rr->length == 0)            //+
+                 //   ssl_release_record(s, rr);  //+
+                rr->length -= n;
             } else {                            //+
                 if (s->options & SSL_OP_CLEANSE_PLAINTEXT)
                     OPENSSL_cleanse(&(rr->data[rr->off]), n);
