@@ -636,7 +636,10 @@ let rec dealwithContinuekStmt (eff:es) (acc:es): (es * bool) list =
       (Concatenate(acc, Kleene(acc1)), false)
     )
 
+let (dynamicSpec: ((specification) list) ref) = ref [] 
+
 let primaryFunctions = ["ssl_release_record"; "OPENSSL_cleanse"; "memcpy"; 
+"throwExc";
 "setsockopt"; "open"; "close"; "accept"; "listen"; "malloc"; "free"; "sendstring"; "BreakStmt"]
 
 let rec wantToCapture (fName: string) (li:string list) : bool =
@@ -664,9 +667,15 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
           | []
           | [_] -> Singleton("sendstring", lineLoc)
           | y::ys -> 
-          Singleton("sendstring_" ^ String.sub ((string_of_stmt_list ys "_")) 0 3 ^"", lineLoc)
+          let ev =  Singleton("sendstring_" ^ String.sub ((string_of_stmt_list ys "_")) 0 3 ^"", lineLoc)   in 
+          let () = dynamicSpec := (string_of_stmt x, [(TRUE, Emp)], [(TRUE, ev )]) :: !dynamicSpec in 
+          ev
+
         else 
-        Singleton (named_decl_info.ni_name, lineLoc)
+          let ev =   Singleton (named_decl_info.ni_name, lineLoc) in 
+          let () = dynamicSpec := (string_of_stmt x, [(TRUE, Emp)], [(TRUE, ev )]) :: !dynamicSpec in 
+          ev
+
       else Emp 
     )
   )
@@ -818,6 +827,7 @@ let stmt_intfor2FootPrint (stmt_info:Clang_ast_t.stmt_info): int list =
   let (sl1, sl2) = stmt_info.si_source_range in 
     let (lineLoc:int option) = sl1.sl_line in 
     maybeIntToListInt lineLoc
+
 
 let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState list = 
   let rec helper (li: Clang_ast_t.stmt list): programState list  = 
@@ -975,7 +985,9 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
 
 
 
-    [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, getStmtlocation instr), 0, fp)]
+    let ev = Singleton (Clang_ast_proj.get_stmt_kind_string instr, getStmtlocation instr) in 
+    let () = dynamicSpec := (string_of_stmt instr,[(TRUE, Emp)], [(TRUE, ev )]) :: !dynamicSpec in 
+    [(TRUE, ev, 0, fp)]
     
   
   | _ -> 
@@ -983,7 +995,10 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
   (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
     let fp = match lineLoc with | None -> [] | Some l -> [l] in 
 
-    [(TRUE, Singleton (Clang_ast_proj.get_stmt_kind_string instr, None), 0, fp)]
+    let ev = Singleton (Clang_ast_proj.get_stmt_kind_string instr, None) in 
+    let () = dynamicSpec := (string_of_stmt instr, [(TRUE, Emp)], [(TRUE, ev )]) :: !dynamicSpec in 
+
+    [(TRUE, ev, 0, fp)]
 
 
 
@@ -1161,8 +1176,11 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let funcName = named_decl_info.ni_name in 
                 let (precondition, postcondition) = findSpecFrom specifications funcName in 
                 let startTimeStamp = Unix.time() in
+                let () = dynamicSpec := [] in 
                 let (final:effectwithfootprint list) = (normaliseProgramStates (syh_compute_stmt_postcondition stmt)) in 
-
+                let () = print_string ("printing dynamicSpec :\n" ^ List.fold_left (!dynamicSpec) ~init:"" ~f:(
+                  fun acc (str, _, spec) -> acc ^ "\n" ^ str ^ ":" ^ string_of_effect spec
+                )) in 
                 
                 let startTimeStamp01 = Unix.time() in
     (match postcondition with 
@@ -1228,7 +1246,10 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
           let startTimeStamp = Unix.time() in
           (* let (startNum, endNum) = retriveLines realspec in *)
-          let list_of_functionCalls = synthsisFromSpec (TRUE, spec) specifications in
+          let (specifications: specification list) = List.append specifications !dynamicSpec in 
+          
+          
+          let list_of_functionCalls = synthsisFromSpec (TRUE, spec) (specifications) in
           let () = print_string ("synthsisFromSpec done\n") in 
 
           let startTimeStamp01 = Unix.time() in

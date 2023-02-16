@@ -15,9 +15,7 @@ void checkGuardedBy( cnd)
     Ensure  TRUE, throwExc
  @*/
 {
-    if (!cnd) {
-        throwExc(); 
-    }
+    throwExc(); 
 }
 
 int locationMarker(){
@@ -33,10 +31,12 @@ void test()
     int mtd =  helper (); 
  // method may be null
    // checkGuardedBy(mtd != null, id.toString());
+    
     if (mtd==NULL) {
         locationMarker();
         locationMarker();
     }
+    
     return mtd;
 }
 

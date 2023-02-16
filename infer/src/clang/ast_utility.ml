@@ -755,6 +755,19 @@ type effectwithfootprint = (pure * es * int list)
 
 
 let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tree) = 
+  let listOflistofPairs = List.filter rhs 
+    ~f:(fun (piR, _) -> 
+        let pairs' = List.map lhs ~f:(fun (piL, esL)-> (piL, piR)) in 
+        let pairs = List.filter pairs' ~f:(fun (piL, piR)->  not (entailConstrains piL piR)) in 
+        if List.length pairs == 0 then true 
+        else false  
+
+       )
+  in 
+  print_string ("not matched specs:\n" ^ List.fold_left listOflistofPairs ~init:"" 
+  ~f:(fun acc a -> acc ^ "\n " ^ string_of_effect [a]) );
+  print_string ("\n------------\n");
+
   let mixLi = cartesian_product lhs rhs in 
   let validPairs = List.filter mixLi ~f:(fun ((p1, es1), (p2, es2)) -> entailConstrains p1 p2 )
   in 
