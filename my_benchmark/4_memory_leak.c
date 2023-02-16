@@ -1,19 +1,44 @@
-case IDENTIFIER: {
-2 MethodSymbol mtd =
-3 resolver.resolveMethod(node, id.getName());
-4 // method may be null
-5+ checkGuardedBy(mtd != null, id.toString());
-6 return bindSelect(computeBase(context , mtd), mtd); 7}
-8 case MEMBER_SELECT: {
-9 ...
-MethodSymbol mtd = resolver.resolveMethod(node, id.getName());
-// same problem!
-return bindSelect(computeBase(context , mtd), mtd);
+
+#include <sys/stat.h>
+#include <sys/resource.h>
+#include <sys/ioctl.h>
+#include <execinfo.h>
+
+
+int helper () {
+    return NULL;
 }
 
-void checkGuardedBy(boolean cnd,
-String fmtStr, Object... fmtArgs) {
+void checkGuardedBy( cnd) 
+/*@ checkGuardedBy: 
+    Require TRUE, 𝝐
+    Ensure  TRUE, throwExc
+ @*/
+{
     if (!cnd) {
-        throw new IllegalGuardedBy(String.format(fmtStr , fmtArgs));
+        throwExc(); 
     }
 }
+
+int locationMarker(){
+    0;
+}
+
+void test() 
+/*@ test: 
+    Require TRUE, 𝝐
+    Ensure  (mtd=0, throwExc) \/ (!(mtd=0), 𝝐)
+ @*/
+{
+    int mtd =  helper (); 
+ // method may be null
+   // checkGuardedBy(mtd != null, id.toString());
+    if (mtd==NULL) {
+        locationMarker();
+        locationMarker();
+    }
+    return mtd;
+}
+
+
+

@@ -723,7 +723,9 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
   match instr with 
   | ImplicitCastExpr (_, x::_, _, _, _) 
   | MemberExpr (_, x::_, _, _) 
+  | CStyleCastExpr (_, x::_, _, _, _) 
   | ParenExpr (_, x::_, _) -> stmt2Term x
+  
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
   (match binop_info.boi_kind with
   | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
@@ -746,7 +748,8 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
       
     )
   )
-  | _ -> None (*Some (Var(Clang_ast_proj.get_stmt_kind_string instr)) *)
+  | NullStmt _ -> Some (Var ("NULL"))
+  | _ -> Some (Var(Clang_ast_proj.get_stmt_kind_string instr)) 
 
 let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure option = 
   match (t1, t2) with 
@@ -1077,7 +1080,8 @@ let rec findSpecFrom (specs:specification list) (fName: string): (effect option 
   | (str, a, b):: rest -> if String.compare str fName == 0 then (Some a,Some b) else findSpecFrom rest fName
   ;;
 
-let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option = 
+let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
+  print_string (string_of_effect ([effect]) ^ "\n");
   let (pi, spec) = effect in 
   let spec =  normalise_es spec in 
   (match spec with 
@@ -1089,7 +1093,7 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
       | x :: xs  -> 
         let (fName, pre, post) = x in 
         let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
-        (*print_string (string_of_binary_tree  tree  ^ "\n");*)
+        print_string (string_of_binary_tree  tree  ^ "\n");
         let temp = 
           match result with 
           | [] -> Some (fName ^ "(); ") 

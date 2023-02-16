@@ -811,8 +811,9 @@ let bugLocalisation (paths: error_info list): (es * (int * int) * es) list =
       let revlhs = reversees lhs in 
       let revrhs = reversees rhs in 
       let (result, tree) = inclusion' (100000) revlhs revrhs [] in 
+      (*
       print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
-
+*)
       let temp = List.map result ~f:(fun (a, n, b)-> 
 (*      print_string (showEntailemnt (reversees a) (reversees b) ^ "\n ------- \n");
 *)
