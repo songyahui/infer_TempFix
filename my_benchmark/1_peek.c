@@ -31,14 +31,6 @@ typedef struct tls_record_st {
     unsigned char seq_num[SEQ_NUM_SIZE];
 } TLS_RECORD;
 
-int insert_ssl_release_record(s, rr) 
-/*@ insert_ssl_release_record: 
-    Require TRUE, 𝝐
-    Ensure  TRUE, ssl_release_record  @*/
-
-{
-    ssl_release_record(s, rr); 
-}
 
 int ssl3_read_bytes(int type, int *recvd_type, unsigned char *buf,
                     int len, int peek, int n)

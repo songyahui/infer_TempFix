@@ -34,6 +34,7 @@ void test()
     
     if (mtd==NULL) {
         locationMarker();
+        //throwExc(); 
         locationMarker();
     }
     

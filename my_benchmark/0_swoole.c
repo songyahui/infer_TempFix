@@ -18,19 +18,13 @@ int swoole_error_log (level, error, str, str1){
     return 0;
 }
 
-int insertclose (fd)
-/*@ insertclose: 
-    Require TRUE, 𝝐
-    Ensure  TRUE, close  @*/
-{
-    close(fd);
-}
+
 
 char* swoole_file_get_contents(char *filename)
 /*@ swoole_file_get_contents: 
     Require TRUE, 𝝐
     Ensure  (fd>=0, (!open)^* · open · (!close)^* · close · (_)^*)  \/ 
-            (fd<0, (!open)^* · open · (!close)^*)   @*/
+            (fd<0, (!open)^* · open )   @*/
 {
 
     size_t filesize = swoole_file_size(filename);
@@ -70,7 +64,7 @@ char* swoole_file_get_contents(char *filename)
     char * content = swString_new(filesize);
     if (!content)
     {
-        //close(fd);
+        //close(fd); 
         return NULL; 
     }
 

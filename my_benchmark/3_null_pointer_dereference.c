@@ -38,6 +38,7 @@ void test ()
     swHashMap *root = malloc(sizeof(swHashMap)); 
     if (root<0) {
         swWarn("malloc[2] failed."); 
+        //free(hmap);
         return NULL; // returns, hmap not freed
     }
     free(hmap);
