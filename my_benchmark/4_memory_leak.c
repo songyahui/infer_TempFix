@@ -5,7 +5,12 @@
 #include <execinfo.h>
 
 
-int helper () {
+int helper () 
+/*@ helper: 
+    Require TRUE, 𝝐
+    Ensure  (ret=NULL, emp) \/ (!(mtd=0), 𝝐)
+ @*/
+{
     return NULL;
 }
 

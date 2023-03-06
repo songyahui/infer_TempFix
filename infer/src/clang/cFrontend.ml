@@ -1178,9 +1178,11 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let startTimeStamp = Unix.time() in
                 let () = dynamicSpec := [] in 
                 let (final:effectwithfootprint list) = (normaliseProgramStates (syh_compute_stmt_postcondition stmt)) in 
+                (*
                 let () = print_string ("printing dynamicSpec :\n" ^ List.fold_left (!dynamicSpec) ~init:"" ~f:(
                   fun acc (str, _, spec) -> acc ^ "\n" ^ str ^ ":" ^ string_of_effect spec
                 )) in 
+                *)
                 
                 let startTimeStamp01 = Unix.time() in
     (match postcondition with 

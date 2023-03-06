@@ -5,6 +5,7 @@
 #include <execinfo.h>
 
 typedef struct swHashMap_aux {
+
    
 } swHashMap;
 
@@ -20,7 +21,6 @@ void sw_free ( ptr )
         swWarn ( "free" ) ;
     }
 }
-
 
 void test () 
 /*@ test: 
