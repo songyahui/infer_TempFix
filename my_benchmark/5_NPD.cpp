@@ -37,15 +37,13 @@ in_addr_t inet_addr(const char *cp);
 
 struct hostent *gethostbyaddr(char *host_address,
                               int address_length,
-                              int address_type)
+                              int address_type);
 /*@ gethostbyaddr: 
     Require TRUE, 𝝐
     Ensure  exists ret. (ret=NULL, gethostbyaddr) \/ (!(ret=NULL), gethostbyaddr)
  @*/
-{
-}
 
-
+// https://cwe.mitre.org/data/definitions/476.html
 void host_lookup(char *user_supplied_addr)
 /*@ gethostbyaddr: 
     Require TRUE, 𝝐
@@ -68,6 +66,8 @@ void host_lookup(char *user_supplied_addr)
 
 
 int main () {
-    
+    struct hostent *hp = NULL;
+
+    char * name = hp-> h_name;
     return 1;
 }

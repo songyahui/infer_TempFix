@@ -34,6 +34,7 @@ type es = Bot | Emp | Any
               | NotSingleton of string 
               | Disj of es * es 
               | Concatenate of es * es 
+              | Exists of string * es 
               | Kleene of es 
 
 
@@ -41,7 +42,7 @@ type effect = (pure * es) list
 
 type programState = (pure * es  * int * int list)
 
-type specification = (string * effect * effect)
+type specification = (string * effect option * effect option * effect option)
 
 type fstElem = Wildcard | Event of (string * line_number)  | NotEvent of string
 

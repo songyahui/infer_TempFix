@@ -5,7 +5,7 @@
 %token <string> VAR
 %token <int> INTE
 %token EMPTY LPAR RPAR CONCAT  POWER  DISJ   
-%token   COLON  REQUIRE ENSURE LSPEC RSPEC
+%token COLON  REQUIRE ENSURE FUTURESpec LSPEC RSPEC
 %token UNDERLINE KLEENE EOF BOTTOM NOTSINGLE
 %token GT LT EQ GTEQ LTEQ CONJ COMMA MINUS 
 %token PLUS TRUE FALSE 
@@ -18,6 +18,9 @@
 %start specification
 %type <(Ast_utility.specification)> specification
 %type <(Ast_utility.pure)> pure
+%type <(Ast_utility.effect option * Ast_utility.effect option * Ast_utility.effect option)> optionalPrecondition
+%type <(Ast_utility.effect option * Ast_utility.effect option)> optionalPostcondition
+%type <(Ast_utility.effect option)> optionalFuturecondition
 %%
 
 
@@ -107,13 +110,39 @@ effect:
 | a = effect  DISJ  b=effect  {List.append a b}
 
 
+optionalFuturecondition:
+| {None}
+| FUTURESpec e3 = effect {Some e3}
 
+optionalPostcondition:
+| ENSURE e2 = effect a = optionalFuturecondition {
+  (Some e2, a)
+}
+| a = optionalFuturecondition {
+  (None, a)
+}
+
+optionalPrecondition:
+| REQUIRE e1 = effect a = optionalPostcondition 
+{let (e2, e3) = a in 
+  (Some e1, e2, e3)}
+| a = optionalPostcondition 
+{let (e2, e3) = a in 
+  (None, e2, e3)}
 
 specification: 
-| EOF {("", [(TRUE, Emp)], [(TRUE, Emp)])}
+| EOF {("", None, None, None)}
+| LSPEC str = VAR COLON 
+a = optionalPrecondition 
+RSPEC {
+  let (e1, e2, e3) = a in 
+  (str, e1, e2, e3)}
+
+
 (*
-| EOF {("", Emp, Emp)}
+specification: 
+| EOF {("", None, None, None)}
+| LSPEC str = VAR COLON 
+REQUIRE e1=effect ENSURE e2=effect FUTURESpec e3=effect
+RSPEC {  (str, Some e1, Some e2, Some e3)}
 *)
-| LSPEC str = VAR COLON REQUIRE e1 = effect  ENSURE e2 = effect RSPEC {(str, e1, e2)}
-
-

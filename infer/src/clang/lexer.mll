@@ -35,6 +35,7 @@ rule token = parse
 | "@*/" {RSPEC}
 | "Require" {REQUIRE}
 | "Ensure" {ENSURE}
+| "Future" {FUTURESpec}
 | "TRUE" { TRUE }
 | "FALSE" { FALSE }
 | int      { INTE (int_of_string (Lexing.lexeme lexbuf)) }

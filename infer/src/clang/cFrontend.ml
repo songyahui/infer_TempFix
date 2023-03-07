@@ -636,7 +636,7 @@ let rec dealwithContinuekStmt (eff:es) (acc:es): (es * bool) list =
       (Concatenate(acc, Kleene(acc1)), false)
     )
 
-let (dynamicSpec: ((specification) list) ref) = ref [] 
+let (dynamicSpec: (specification list) ref) = ref [] 
 
 let primaryFunctions = ["ssl_release_record"; "OPENSSL_cleanse"; "memcpy"; 
 "throwExc";
@@ -668,12 +668,12 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
           | [_] -> Singleton("sendstring", lineLoc)
           | y::ys -> 
           let ev =  Singleton("sendstring_" ^ String.sub ((string_of_stmt_list ys "_")) 0 3 ^"", lineLoc)   in 
-          let () = dynamicSpec := (string_of_stmt x, [(TRUE, Emp)], [(TRUE, ev )]) :: !dynamicSpec in 
+          let () = dynamicSpec := (string_of_stmt x, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
           ev
 
         else 
           let ev =   Singleton (named_decl_info.ni_name, lineLoc) in 
-          let () = dynamicSpec := (string_of_stmt x, [(TRUE, Emp)], [(TRUE, ev )]) :: !dynamicSpec in 
+          let () = dynamicSpec := (string_of_stmt x, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
           ev
 
       else Emp 
@@ -986,7 +986,7 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
 
 
     let ev = Singleton (Clang_ast_proj.get_stmt_kind_string instr, getStmtlocation instr) in 
-    let () = dynamicSpec := (string_of_stmt instr,[(TRUE, Emp)], [(TRUE, ev )]) :: !dynamicSpec in 
+    let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
     [(TRUE, ev, 0, fp)]
     
   
@@ -996,7 +996,7 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
     let fp = match lineLoc with | None -> [] | Some l -> [l] in 
 
     let ev = Singleton (Clang_ast_proj.get_stmt_kind_string instr, None) in 
-    let () = dynamicSpec := (string_of_stmt instr, [(TRUE, Emp)], [(TRUE, ev )]) :: !dynamicSpec in 
+    let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
 
     [(TRUE, ev, 0, fp)]
 
@@ -1089,10 +1089,11 @@ let show_effects_option (eff:effect option): string =
   | Some eff -> string_of_effect eff 
 ;;
 
-let rec findSpecFrom (specs:specification list) (fName: string): (effect option * effect option)  = 
+let rec findSpecFrom (specs:specification list) (fName: string): (effect option * effect option * effect option)  = 
   match specs with 
-  | [] -> (None, None) 
-  | (str, a, b):: rest -> if String.compare str fName == 0 then (Some a,Some b) else findSpecFrom rest fName
+  | [] -> (None, None, None) 
+  | (str, a, b, c):: rest -> if String.compare str fName == 0 then (a, b, c) else 
+  findSpecFrom rest fName
   ;;
 
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
@@ -1105,8 +1106,7 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
     let rec auc (currectProof:es) envli : string option = 
       match envli with 
       | [] -> None 
-      | x :: xs  -> 
-        let (fName, pre, post) = x in 
+      | (fName, Some pre, Some post, _) :: xs  -> 
         let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
         print_string (string_of_binary_tree  tree  ^ "\n");
         let temp = 
@@ -1123,6 +1123,7 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
         (match temp with 
         | None -> auc currectProof xs 
         | _ -> temp)
+      | x :: xs  -> auc currectProof xs 
     in auc spec env)
 
   
@@ -1174,7 +1175,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 | Some stmt -> 
                 let open Sys in 
                 let funcName = named_decl_info.ni_name in 
-                let (precondition, postcondition) = findSpecFrom specifications funcName in 
+                let (precondition, postcondition, futurecondition) = findSpecFrom specifications funcName in 
                 let startTimeStamp = Unix.time() in
                 let () = dynamicSpec := [] in 
                 let (final:effectwithfootprint list) = (normaliseProgramStates (syh_compute_stmt_postcondition stmt)) in 
