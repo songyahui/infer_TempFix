@@ -1,6 +1,12 @@
 open Z3
 
-type ltl = Lable of string 
+type basic_type = BINT of int | BVAR of string | BNULL 
+
+
+type event = string * (basic_type list )
+
+
+type ltl = Lable of event 
         | Next of ltl
         | Until of ltl * ltl
         | Global of ltl
@@ -12,8 +18,8 @@ type ltl = Lable of string
 
 type line_number = int option
 
-type terms = Var of string
-           | Number of int
+
+type terms = Basic of basic_type 
            | Plus of terms * terms
            | Minus of terms * terms 
        
@@ -29,22 +35,22 @@ type pure = TRUE
           | PureAnd of pure * pure
           | Neg of pure
 
+
 type es = Bot | Emp | Any 
-              | Singleton of (string * line_number) 
-              | NotSingleton of string 
+              | Singleton of (event * line_number) 
+              | NotSingleton of event 
               | Disj of es * es 
               | Concatenate of es * es 
-              | Exists of string * es 
               | Kleene of es 
 
 
-type effect = (pure * es) list 
+type effect = ((string list) * pure * es) list 
 
 type programState = (pure * es  * int * int list)
 
 type specification = (string * effect option * effect option * effect option)
 
-type fstElem = Wildcard | Event of (string * line_number)  | NotEvent of string
+type fstElem = Wildcard | Event of (event * line_number)  | NotEvent of event
 
 
 let rec flattenList lili = 
@@ -105,10 +111,17 @@ let get_children = function
       | Leaf -> false 
       | _ -> true ) li;;
 
+
+let string_of_basic_t v = 
+  match v with 
+  | BVAR name -> name
+  | BINT n -> string_of_int n
+  | BNULL -> "nil"
+
+
 let rec showTerms (t:terms):string = 
   match t with
-    Var name -> name
-  | Number n -> string_of_int n
+  | Basic v -> string_of_basic_t v 
   | Plus (t1, t2) -> (showTerms t1) ^ ("+") ^ (showTerms t2)
   | Minus (t1, t2) -> (showTerms t1) ^ ("-") ^ (showTerms t2)
 
@@ -131,8 +144,9 @@ exception FooAskz3 of string
 
 let rec convertTerm (t:terms):string = 
   match t with
-    Var name -> " " ^ name ^ " "
-  | Number n -> " " ^ string_of_int n ^ " "
+  | (Basic (BVAR name)) -> " " ^ name ^ " "
+  | (Basic (BINT n)) -> " " ^ string_of_int n ^ " "
+  | (Basic (BNULL)) -> " " ^ "nil" ^ " "
   | Plus (t1, t2) -> ("(+") ^ (convertTerm t1) ^  (convertTerm t2) ^ ")"
   | Minus (t1, t2) -> ("(-") ^ (convertTerm t1) ^  (convertTerm t2) ^ ")"
   ;;
@@ -174,23 +188,12 @@ let rec convertPure (pi:pure) (acc:string):string =
       acc ^ "(or" ^temp1 ^ temp2 ^ ")"
       ;;
 
-let rec exist li ele = 
-  match li with 
-    [] -> false 
-  | x :: xs -> if (String.compare x ele) == 0 then true else exist xs ele
-  ;;
 
-let rec checkRedundant (li:string list) : string list = 
-  match li with
-    [] -> []
-  | x ::xs -> if (exist xs x) == true then checkRedundant xs else List.append [x] (checkRedundant xs)
-
-;;
 
 
 let rec getAllVarFromTerm (t:terms) (acc:string list):string list = 
   match t with
-  Var name -> List.append acc [name]
+| Basic (BVAR name) -> List.append acc [name]
 | Plus (t1, t2) -> 
     let cur = getAllVarFromTerm t1 acc in 
     getAllVarFromTerm t2 cur
@@ -257,8 +260,9 @@ let rec existInhistoryTable pi table=
 
 
 let rec term_to_expr ctx : terms -> Z3.Expr.expr = function
-  | Number n        -> Z3.Arithmetic.Real.mk_numeral_i ctx n
-  | Var v          -> Z3.Arithmetic.Real.mk_const_s ctx v
+  | (Basic(BINT n))        -> Z3.Arithmetic.Real.mk_numeral_i ctx n
+  | (Basic(BVAR v))           -> Z3.Arithmetic.Real.mk_const_s ctx v
+  | (Basic(BNULL))           -> Z3.Arithmetic.Real.mk_const_s ctx "nil"
   (*
   | Gen i          -> Z3.Arithmetic.Real.mk_const_s ctx ("t" ^ string_of_int i ^ "'")
   *)
@@ -381,31 +385,46 @@ let askZ3 pi =
 
 let string_of_binary_tree tree = printTree ~line_prefix:"* " ~get_name ~get_children tree;; 
 
+let string_of_event (str, li) = 
+  str ^ "(" ^ List.fold_left li ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a )^ ")"
+
 let rec string_of_es (eff:es) : string = 
   match eff with 
   | Bot              -> "⏊"
   | Emp              -> "𝝐"
   | Any -> "_" 
   | Singleton (str, l)  -> 
-    str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)
-  | NotSingleton str          -> "!" ^ str 
+    string_of_event str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)
+  | NotSingleton str          -> "!" ^ string_of_event str 
   | Concatenate (eff1, eff2) ->
       string_of_es eff1 ^ " · " ^ string_of_es eff2 
   | Disj (eff1, eff2) ->
       "(" ^ string_of_es eff1 ^ " \\/ " ^ string_of_es eff2 ^ ")"
   | Kleene effIn          ->
       "(" ^ string_of_es effIn ^ ")^*"
+
+let string_of_exists exs = 
+  if List.length exs == 0 then ""
+  else 
+    let rec aux li  =
+      match li with
+      | [x] -> x 
+      | x :: xs -> x ^ "," ^ aux xs 
+      | [] -> ""
+    in aux exs ^ ". "
+
       
 let rec string_of_effect (eff:effect) : string = 
   match eff with 
   | [] -> ""
-  | [(pi, es)] ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ")"
-  | (pi, es) :: xs ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
+  | [(exs, pi, es)] ->  "(" ^ string_of_exists exs ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ")"
+  | (exs, pi, es) :: xs ->  "(" ^  string_of_exists exs ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
 
 let rec stricTcompareTerm (term1:terms) (term2:terms) : bool = 
   match (term1, term2) with 
-    (Var s1, Var s2) -> String.compare s1 s2 == 0
-  | (Number n1, Number n2) -> n1 == n2 
+    (Basic(BVAR s1), Basic(BVAR s2)) -> String.compare s1 s2 == 0
+  | (Basic(BINT n1), Basic(BINT n2)) -> n1 == n2 
+  | (Basic(BNULL), Basic(BNULL)) -> true 
   | (Plus (tIn1, num1), Plus (tIn2, num2)) -> stricTcompareTerm tIn1 tIn2 && stricTcompareTerm num1  num2
   | (Minus (tIn1, num1), Minus (tIn2, num2)) -> stricTcompareTerm tIn1 tIn2 && stricTcompareTerm num1  num2
   | _ -> false 
@@ -494,15 +513,25 @@ let rec normalise_es (eff:es) : es =
     Kleene (effIn'))
   | _ -> eff 
 
+let comapreEvents (str1, li1) (str2, li2) = 
+  let rec aux l1 l2  =
+    match (l1, l2) with 
+    | ([], []) -> true 
+    | (x::xs, y:: ys) -> x==y  &&  aux xs ys
+    | (_, _) -> false 
+  in 
+  String.compare str1 str2 == 0 && aux li1 li2
+
+
 let rec comparees (eff1:es) (eff2:es): bool =
   match (eff1, eff2) with 
   | (Bot, Bot) 
   | (Any, Any) 
   | (Emp, Emp) -> true 
   | (Singleton (s1, _), Singleton (s2, _)) -> 
-    if String.compare s1 s2 == 0  then true else false 
+    if comapreEvents s1 s2 == true  then true else false 
   | (NotSingleton s1, NotSingleton s2) -> 
-    if String.compare s1 s2 == 0  then true else false 
+    if comapreEvents s1 s2 == true  then true else false 
   | (Concatenate (a1, a2), Concatenate(a3, a4)) 
   | (Disj (a1, a2), Disj(a3, a4)) -> 
     comparees a1 a3 && comparees a2 a4
@@ -515,15 +544,15 @@ let rec isBot (eff:es) : bool =
   | Bot -> true 
   | _ -> false 
 
-let rec existEff acc (pi, es) : bool = 
+let rec existEff acc (exs, pi, es) : bool = 
   match acc with 
   | [] -> false 
-  | (pi1, es1) :: xs -> if comparePure pi1 pi && comparees es1 es then true 
-  else existEff xs (pi, es) 
+  | (_, pi1, es1) :: xs -> if comparePure pi1 pi && comparees es1 es then true 
+  else existEff xs (exs, pi, es) 
 
 let normalise_effect (eff:effect) : effect = 
-  let temp = List.map eff ~f:(fun (pi, es) -> (normalPure pi, normalise_es es)) in 
-  let noBoteff = List.filter temp ~f:(fun (pi, es) -> not (isBot es)) in 
+  let temp = List.map eff ~f:(fun (exs, pi, es) -> (exs, normalPure pi, normalise_es es)) in 
+  let noBoteff = List.filter temp ~f:(fun (exs, pi, es) -> not (isBot es)) in 
   let rec helper effList = 
     match effList with 
     | [] -> []
@@ -558,6 +587,9 @@ let rec fst (eff:es) : (fstElem list) =
   | Disj (eff1, eff2) -> List.append (fst eff1) (fst eff2)
   | Kleene effIn      -> (fst effIn) 
 
+
+
+
 let rec derivitives (f:fstElem) (eff:es) : es = 
   match eff with 
   | Bot        
@@ -566,14 +598,14 @@ let rec derivitives (f:fstElem) (eff:es) : es =
   | Singleton (str, _) -> 
     (match f with 
     | Wildcard _ -> Bot 
-    | Event (event, _) -> if String.compare str event == 0 then Emp else Bot 
+    | Event (event, _) -> if comapreEvents str event == true then Emp else Bot 
     | NotEvent event  ->  Bot
     )
   | NotSingleton str -> 
     (match f with 
     | Wildcard _ -> Bot 
-    | Event (event, _) -> if String.compare str event == 0 then Bot else Emp
-    | NotEvent event  ->  if String.compare str event == 0 then Emp else Bot
+    | Event (event, _) -> if comapreEvents str event == true then Bot else Emp
+    | NotEvent event  ->  if comapreEvents str event == true then Emp else Bot
     )
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then 
@@ -757,8 +789,8 @@ type effectwithfootprint = (pure * es * int list)
 
 let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tree) = 
   let listOflistofPairs = List.filter rhs 
-    ~f:(fun (piR, _) -> 
-        let pairs' = List.map lhs ~f:(fun (piL, esL)-> (piL, piR)) in 
+    ~f:(fun (_, piR, _) -> 
+        let pairs' = List.map lhs ~f:(fun (_, piL, esL)-> (piL, piR)) in 
         let pairs = List.filter pairs' ~f:(fun (piL, piR)->  not (entailConstrains piL piR)) in 
         if List.length pairs == 0 then true 
         else false  
@@ -770,10 +802,10 @@ let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tre
   print_string ("\n------------\n");
 
   let mixLi = cartesian_product lhs rhs in 
-  let validPairs = List.filter mixLi ~f:(fun ((p1, es1), (p2, es2)) -> entailConstrains p1 p2 )
+  let validPairs = List.filter mixLi ~f:(fun ((_, p1, es1), (_, p2, es2)) -> entailConstrains p1 p2 )
   in 
   let (f_re, f_tree) = (List.fold_left validPairs ~init:([], []) ~f:(
-    fun (accre, acctree) ((p1, es1), (p2, es2)) ->
+    fun (accre, acctree) ((_, p1, es1), (_, p2, es2)) ->
     let (re, tree) = 
     inclusion' 0 es1 es2 []
     in (List.append accre re, List.append acctree [(Node ((showPure p1 ^ "|-" ^ showPure p2) , [tree]))])
@@ -785,11 +817,11 @@ type pathList = (int list ) list
 let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) : 
 ((error_info list) * binary_tree * pathList * pathList) = 
   let mixLi = cartesian_product lhs rhs in 
-  let validPairs = List.filter mixLi ~f:(fun ((p1, _, _), (p2, _)) -> entailConstrains p1 p2 )
+  let validPairs = List.filter mixLi ~f:(fun ((p1, _, _), (_, p2, _)) -> entailConstrains p1 p2 )
   in 
   let (f_re, f_tree, correctT, errorT) = 
   (List.fold_left validPairs ~init:([], [], [], []) ~f:(
-    fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
+    fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (_, p2, es2)) ->
     let (re, tree) = inclusion' 0 es1 es2 [] in   
     let (correctTrace', errorTrace') = 
       if List.length re == 0 
@@ -879,4 +911,4 @@ let normaliseProgramStates (li:programState list) : effectwithfootprint list =
 
 
 let effectwithfootprint2Effect eff = 
-  List.map eff ~f:(fun (a, b, _) -> (a, b)) 
+  List.map eff ~f:(fun (a, b, _) -> ([], a, b)) 

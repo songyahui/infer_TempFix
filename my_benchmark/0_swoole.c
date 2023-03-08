@@ -20,6 +20,13 @@ int swoole_error_log (level, error, str, str1){
 
 
 
+/*@ open: 
+    Ensure exists fd. (fd>=0, open)  \/ (fd<0, open )  
+    Future (fd<0, (_)^*)  \/ (fd>=0, (!close(fd))^* · close(fd) · (_)^* )  
+            
+             @*/
+
+
 char* swoole_file_get_contents(char *filename)
 /*@ swoole_file_get_contents: 
     Require TRUE, 𝝐

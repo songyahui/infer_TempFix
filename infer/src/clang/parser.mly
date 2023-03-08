@@ -5,7 +5,7 @@
 %token <string> VAR
 %token <int> INTE
 %token EMPTY LPAR RPAR CONCAT  POWER  DISJ   
-%token COLON  REQUIRE ENSURE FUTURESpec LSPEC RSPEC
+%token COLON  REQUIRE ENSURE FUTURESpec LSPEC RSPEC Exists NULL DOT
 %token UNDERLINE KLEENE EOF BOTTOM NOTSINGLE
 %token GT LT EQ GTEQ LTEQ CONJ COMMA MINUS 
 %token PLUS TRUE FALSE 
@@ -21,14 +21,27 @@
 %type <(Ast_utility.effect option * Ast_utility.effect option * Ast_utility.effect option)> optionalPrecondition
 %type <(Ast_utility.effect option * Ast_utility.effect option)> optionalPostcondition
 %type <(Ast_utility.effect option)> optionalFuturecondition
+%type <(Ast_utility.basic_type)> basic_type
+%type <(Ast_utility.basic_type list)> parm
+%type <(Ast_utility.es)> es
 %%
+
+basic_type : 
+| i = INTE{      BINT ( i)
+    }
+| v = VAR {BVAR v} 
+| NULL {BNULL}
+
+parm:
+| {[]}
+| LPAR argument= basic_type RPAR {[argument]}
 
 
 es:
 | BOTTOM {Bot}
 | EMPTY {Emp}
-| NOTSINGLE str = VAR (*p=parm*) { NotSingleton ( str) }
-| str = VAR (*p=parm*) { Singleton (str, None) }
+| NOTSINGLE str = VAR p=parm { NotSingleton ((str, p)) }
+| str = VAR p=parm { Singleton ((str, p), None) }
 | LPAR r = es RPAR { r }
 | a = es DISJ b = es { Disj(a, b) }
 | UNDERLINE {Any}
@@ -36,12 +49,14 @@ es:
 | LPAR a = es  RPAR POWER KLEENE {Kleene a}
 
 term:
-| str = VAR { Var str }
-| n = INTE {Number n}
+| b = basic_type {Basic b}
 | LPAR r = term RPAR { r }
-| a = term b = INTE {Minus (a, Number (0 -  b))}
+| a = term b = INTE {Minus (a, Basic( BINT (0 -  b)))}
 | LPAR a = term MINUS b = term RPAR {Minus (a, b )}
 | LPAR a = term PLUS b = term RPAR {Plus (a, b)}
+
+
+(*
 
 pure_helper:
 | GT b = term {(">", b)}
@@ -54,7 +69,6 @@ pure_aux:
 | CONJ b = pure {("conj", b)}
 | DISJ b = pure {("disj", b)}
 
-(*
 *)
 
 pure:
@@ -71,7 +85,7 @@ pure:
 | a = pure DISJ b = pure {PureOr (a, b)}
 
 ltl : 
-| s = VAR {Lable s} 
+| str = VAR p=parm {Lable (str, p)} 
 | LPAR r = ltl RPAR { r }
 | NEXT p = ltl  {Next p}
 | LPAR p1= ltl UNTIL p2= ltl RPAR {Until (p1, p2)}
@@ -100,14 +114,15 @@ es_or_ltl:
     | Imply of ltl * ltl
     | AndLTL of ltl * ltl
      *)
-    | _ ->  Singleton ("ltlToEs not yet", None)
+    | _ ->  Singleton (("ltlToEs not yet", []), None)
   in ltlToEs b 
 }
 
 effect:
 | LPAR r = effect RPAR { r }
-| a = pure  b = es_or_ltl {[(a, b)]}
+| Exists   DOT a = pure  b = es_or_ltl {[([], a, b)]}
 | a = effect  DISJ  b=effect  {List.append a b}
+
 
 
 optionalFuturecondition:

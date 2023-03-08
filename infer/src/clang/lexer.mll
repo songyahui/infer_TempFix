@@ -38,11 +38,14 @@ rule token = parse
 | "Future" {FUTURESpec}
 | "TRUE" { TRUE }
 | "FALSE" { FALSE }
+| "E" {Exists}
+| "nil" {NULL}
 | int      { INTE (int_of_string (Lexing.lexeme lexbuf)) }
 | id as str { VAR str }
 | "⏊" {BOTTOM}
 | '^' { POWER }
 | "·" { CONCAT }
+| "." { DOT }
 | '(' { LPAR }
 | ')' { RPAR }
 | ':' { COLON }
