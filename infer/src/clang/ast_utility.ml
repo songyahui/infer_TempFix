@@ -117,6 +117,7 @@ let string_of_basic_t v =
   | BVAR name -> name
   | BINT n -> string_of_int n
   | BNULL -> "nil"
+  | BRET -> "ret"
 
 
 let rec showTerms (t:terms):string = 
@@ -138,6 +139,41 @@ let rec showPure (p:pure):string =
   | PureAnd (p1, p2) -> showPure p1 ^ "∧" ^ showPure p2
   | Neg (Eq (t1, t2)) -> "!("^(showTerms t1) ^ "=" ^ (showTerms t2)^")"
   | Neg p -> "!(" ^ showPure p^")"
+
+let rec varFromTerm (t:terms): string list =   
+  match t with
+  | Basic (BVAR v) -> [v]
+  | Plus (t1, t2) 
+  | Minus (t1, t2) ->  List.append (varFromTerm t1) (varFromTerm t2)
+  | _ -> []
+
+
+let twoStringSetOverlap (sli1) (sli2) = 
+  let rec helper str li = 
+    match li with 
+    | [] -> false 
+    | x :: xs -> if String.compare x str == 0 then true else helper str xs 
+  in 
+  let rec aux li = 
+    match li with 
+    | [] -> false 
+    | y :: ys -> if helper y sli2 then true else aux ys
+  in aux sli1
+ 
+let rec varFromPure (p:pure): string list =   
+    match p with
+    TRUE -> []
+  | FALSE -> []
+  | Gt (t1, t2) 
+  | Lt (t1, t2) 
+  | GtEq (t1, t2) 
+  | LtEq (t1, t2) 
+  | Eq (t1, t2) -> List.append (varFromTerm t1) (varFromTerm t2)
+  | PureOr (p1, p2) 
+  | PureAnd (p1, p2) -> List.append (varFromPure p1) (varFromPure p2)
+  | Neg p -> varFromPure p 
+
+
   
 (**********************************************)
 exception FooAskz3 of string
@@ -797,9 +833,12 @@ let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tre
 
        )
   in 
+  
+  (*
   print_string ("not matched specs:\n" ^ List.fold_left listOflistofPairs ~init:"" 
   ~f:(fun acc a -> acc ^ "\n " ^ string_of_effect [a]) );
   print_string ("\n------------\n");
+  *)
 
   let mixLi = cartesian_product lhs rhs in 
   let validPairs = List.filter mixLi ~f:(fun ((p1, es1), (p2, es2)) -> entailConstrains p1 p2 )

@@ -14,31 +14,25 @@
 #define errno 110
 #define EINTR 1
 
-int swoole_error_log (level, error, str, str1){
-    return 0;
-}
-
+typedef struct swString {
+    char* str;
+    int length;
+   
+} swString;
 
 
 /*@ open: 
-    Ensure exists fd. (fd>=0, open)  \/ (fd<0, open )  
-    Future (fd<0, (_)^*)  \/ (fd>=0, (!close(fd))^* · close(fd) · (_)^* )  
+    Post (TRUE, open)
+    Future (ret<0, (_)^*)  \/ (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  
             
-             @*/
+@*/
 
-
-char* swoole_file_get_contents(char *filename)
+swString* swoole_file_get_contents(char *filename)
 /*@ swoole_file_get_contents: 
-    Require TRUE, 𝝐
-    Ensure  (fd>=0, (!open)^* · open · (!close)^* · close · (_)^*)  \/ 
-            (fd<0, (!open)^* · open )   @*/
+    Post (TRUE, (_)^* )
+ @*/
 {
-
     size_t filesize = swoole_file_size(filename);
-
-
-    
-    // logic changing 
     if (filesize < 0)
     {
         return NULL;
@@ -53,36 +47,24 @@ char* swoole_file_get_contents(char *filename)
         swoole_error_log(SW_LOG_WARNING, SW_ERROR_FILE_TOO_LARGE, "file[%s] is too large.", filename);
         return NULL;
     }
-    
-
-
     int fd = open(filename, O_RDONLY);
-
-
     if (fd < 0)
     {
-        //close(fd);
         swWarn("open(%s) failed. Error: %s[%d]", filename, strerror(errno), errno);
         return NULL;
     }
-    
-    
-    
-    char * content = swString_new(filesize);
+    swString *content = swString_new(filesize);
     if (!content)
     {
-        //close(fd); 
-        return NULL; 
+        close(fd);
+        return NULL;
     }
 
-    /*
     int readn = 0;
     int n;
-
-
     while(readn < filesize)
     {
-        n = pread(fd, content + readn, filesize - readn, readn);
+        n = pread(fd, content->str + readn, filesize - readn, readn);
         if (n < 0)
         {
             if (errno == EINTR)
@@ -99,8 +81,7 @@ char* swoole_file_get_contents(char *filename)
         }
         readn += n;
     }
-    */
     close(fd);
-    //content->length = readn;
+    content->length = readn;
     return content;
 }

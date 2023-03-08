@@ -24,7 +24,7 @@ let float = digit* frac? exp?
 (* part 3 *)
 let white = [' ' '\t']+
 let newline = '\n' | '\r' | "\r\n" 
-let id = ['a'-'v' 'A'-'Z' 'x'-'z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let id = ['a'-'v' 'A'-'Z' 'x'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 
 rule token = parse
@@ -33,12 +33,11 @@ rule token = parse
 | "𝝐" { EMPTY }
 | "/*@" {LSPEC}
 | "@*/" {RSPEC}
-| "Require" {REQUIRE}
-| "Ensure" {ENSURE}
+| "Pre" {REQUIRE}
+| "Post" {ENSURE}
 | "Future" {FUTURESpec}
 | "TRUE" { TRUE }
 | "FALSE" { FALSE }
-| "E" {Exists}
 | "nil" {NULL}
 | "ret" {RETURN}
 | int      { INTE (int_of_string (Lexing.lexeme lexbuf)) }
