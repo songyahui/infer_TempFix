@@ -1,6 +1,6 @@
 open Z3
 
-type basic_type = BINT of int | BVAR of string | BNULL 
+type basic_type = BINT of int | BVAR of string | BNULL | BRET
 
 
 type event = string * (basic_type list )
@@ -44,7 +44,7 @@ type es = Bot | Emp | Any
               | Kleene of es 
 
 
-type effect = ((string list) * pure * es) list 
+type effect = (pure * es) list 
 
 type programState = (pure * es  * int * int list)
 
@@ -417,8 +417,8 @@ let string_of_exists exs =
 let rec string_of_effect (eff:effect) : string = 
   match eff with 
   | [] -> ""
-  | [(exs, pi, es)] ->  "(" ^ string_of_exists exs ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ")"
-  | (exs, pi, es) :: xs ->  "(" ^  string_of_exists exs ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
+  | [(pi, es)] ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ")"
+  | (pi, es) :: xs ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
 
 let rec stricTcompareTerm (term1:terms) (term2:terms) : bool = 
   match (term1, term2) with 
@@ -544,15 +544,15 @@ let rec isBot (eff:es) : bool =
   | Bot -> true 
   | _ -> false 
 
-let rec existEff acc (exs, pi, es) : bool = 
+let rec existEff acc ( pi, es) : bool = 
   match acc with 
   | [] -> false 
-  | (_, pi1, es1) :: xs -> if comparePure pi1 pi && comparees es1 es then true 
-  else existEff xs (exs, pi, es) 
+  | (pi1, es1) :: xs -> if comparePure pi1 pi && comparees es1 es then true 
+  else existEff xs ( pi, es) 
 
 let normalise_effect (eff:effect) : effect = 
-  let temp = List.map eff ~f:(fun (exs, pi, es) -> (exs, normalPure pi, normalise_es es)) in 
-  let noBoteff = List.filter temp ~f:(fun (exs, pi, es) -> not (isBot es)) in 
+  let temp = List.map eff ~f:(fun (pi, es) -> ( normalPure pi, normalise_es es)) in 
+  let noBoteff = List.filter temp ~f:(fun ( pi, es) -> not (isBot es)) in 
   let rec helper effList = 
     match effList with 
     | [] -> []
@@ -789,8 +789,8 @@ type effectwithfootprint = (pure * es * int list)
 
 let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tree) = 
   let listOflistofPairs = List.filter rhs 
-    ~f:(fun (_, piR, _) -> 
-        let pairs' = List.map lhs ~f:(fun (_, piL, esL)-> (piL, piR)) in 
+    ~f:(fun (piR, _) -> 
+        let pairs' = List.map lhs ~f:(fun (piL, esL)-> (piL, piR)) in 
         let pairs = List.filter pairs' ~f:(fun (piL, piR)->  not (entailConstrains piL piR)) in 
         if List.length pairs == 0 then true 
         else false  
@@ -802,10 +802,10 @@ let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tre
   print_string ("\n------------\n");
 
   let mixLi = cartesian_product lhs rhs in 
-  let validPairs = List.filter mixLi ~f:(fun ((_, p1, es1), (_, p2, es2)) -> entailConstrains p1 p2 )
+  let validPairs = List.filter mixLi ~f:(fun ((p1, es1), (p2, es2)) -> entailConstrains p1 p2 )
   in 
   let (f_re, f_tree) = (List.fold_left validPairs ~init:([], []) ~f:(
-    fun (accre, acctree) ((_, p1, es1), (_, p2, es2)) ->
+    fun (accre, acctree) ((p1, es1), (p2, es2)) ->
     let (re, tree) = 
     inclusion' 0 es1 es2 []
     in (List.append accre re, List.append acctree [(Node ((showPure p1 ^ "|-" ^ showPure p2) , [tree]))])
@@ -817,11 +817,11 @@ type pathList = (int list ) list
 let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) : 
 ((error_info list) * binary_tree * pathList * pathList) = 
   let mixLi = cartesian_product lhs rhs in 
-  let validPairs = List.filter mixLi ~f:(fun ((p1, _, _), (_, p2, _)) -> entailConstrains p1 p2 )
+  let validPairs = List.filter mixLi ~f:(fun ((p1, _, _), (p2, _)) -> entailConstrains p1 p2 )
   in 
   let (f_re, f_tree, correctT, errorT) = 
   (List.fold_left validPairs ~init:([], [], [], []) ~f:(
-    fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (_, p2, es2)) ->
+    fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
     let (re, tree) = inclusion' 0 es1 es2 [] in   
     let (correctTrace', errorTrace') = 
       if List.length re == 0 
@@ -911,4 +911,4 @@ let normaliseProgramStates (li:programState list) : effectwithfootprint list =
 
 
 let effectwithfootprint2Effect eff = 
-  List.map eff ~f:(fun (a, b, _) -> ([], a, b)) 
+  List.map eff ~f:(fun (a, b, _) -> (a, b)) 

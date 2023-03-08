@@ -40,12 +40,12 @@ rule token = parse
 | "FALSE" { FALSE }
 | "E" {Exists}
 | "nil" {NULL}
+| "ret" {RETURN}
 | int      { INTE (int_of_string (Lexing.lexeme lexbuf)) }
 | id as str { VAR str }
 | "⏊" {BOTTOM}
 | '^' { POWER }
 | "·" { CONCAT }
-| "." { DOT }
 | '(' { LPAR }
 | ')' { RPAR }
 | ':' { COLON }

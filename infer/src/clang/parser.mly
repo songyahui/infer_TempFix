@@ -5,8 +5,8 @@
 %token <string> VAR
 %token <int> INTE
 %token EMPTY LPAR RPAR CONCAT  POWER  DISJ   
-%token COLON  REQUIRE ENSURE FUTURESpec LSPEC RSPEC Exists NULL DOT
-%token UNDERLINE KLEENE EOF BOTTOM NOTSINGLE
+%token COLON  REQUIRE ENSURE FUTURESpec LSPEC RSPEC Exists NULL
+%token UNDERLINE KLEENE EOF BOTTOM NOTSINGLE RETURN
 %token GT LT EQ GTEQ LTEQ CONJ COMMA MINUS 
 %token PLUS TRUE FALSE 
 %token FUTURE GLOBAL IMPLY LTLNOT NEXT UNTIL LILAND LILOR
@@ -31,6 +31,7 @@ basic_type :
     }
 | v = VAR {BVAR v} 
 | NULL {BNULL}
+| RETURN {BRET}
 
 parm:
 | {[]}
@@ -120,7 +121,7 @@ es_or_ltl:
 
 effect:
 | LPAR r = effect RPAR { r }
-| Exists   DOT a = pure  b = es_or_ltl {[([], a, b)]}
+| a = pure  b = es_or_ltl {[(a, b)]}
 | a = effect  DISJ  b=effect  {List.append a b}
 
 

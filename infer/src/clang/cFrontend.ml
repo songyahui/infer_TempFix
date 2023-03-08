@@ -671,12 +671,12 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
           | [_] -> Singleton(("sendstring", []), lineLoc)
           | y::ys -> 
           let ev =  Singleton(("sendstring_" ^ String.sub ((string_of_stmt_list ys "_")) 0 3 ^"", []), lineLoc)   in 
-          let () = dynamicSpec := (string_of_stmt x, None, Some [([], TRUE, ev )], None) :: !dynamicSpec in 
+          let () = dynamicSpec := (string_of_stmt x, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
           ev
 
         else 
           let ev =   Singleton ((named_decl_info.ni_name, []), lineLoc) in 
-          let () = dynamicSpec := (string_of_stmt x, None, Some [([], TRUE, ev )], None) :: !dynamicSpec in 
+          let () = dynamicSpec := (string_of_stmt x, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
           ev
 
       else Emp 
@@ -693,13 +693,13 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
 let getFirst (a, _) = a
 
 let concatenateTwoEffect (eff1:effect) (eff2:effect) : effect = 
-  let (mixLi:(((string list * pure * es) * (string list * pure * es)) list)) = cartesian_product eff1 eff2 in 
-  List.map mixLi ~f:(fun ((exs1, pi1, es1), (exs2, pi2, es2)) -> 
+  let (mixLi:(((pure * es) * (pure * es)) list)) = cartesian_product eff1 eff2 in 
+  List.map mixLi ~f:(fun ((pi1, es1), (pi2, es2)) -> 
     let (trace:es)  = Concatenate(es1, es2) in 
     match (pi1, pi2) with
-    | (TRUE, p2) -> (List.append exs1 exs2, p2, trace)
-    | (p1, TRUE) -> (List.append exs1 exs2, p1, trace)
-    | (_, _) -> (List.append exs1 exs2, PureAnd (pi1, pi2), trace)
+    | (TRUE, p2) -> (p2, trace)
+    | (p1, TRUE) -> (p1, trace)
+    | (_, _) -> (PureAnd (pi1, pi2), trace)
   )
 
 let conjunctPure (pi1:pure) (pi2:pure): pure = 
@@ -989,7 +989,7 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
 
 
     let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), getStmtlocation instr) in 
-    let () = dynamicSpec := (string_of_stmt instr, None, Some [([], TRUE, ev )], None) :: !dynamicSpec in 
+    let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
     [(TRUE, ev, 0, fp)]
     
   
@@ -999,7 +999,7 @@ let rec syh_compute_stmt_postcondition (instr: Clang_ast_t.stmt) : programState 
     let fp = match lineLoc with | None -> [] | Some l -> [l] in 
 
     let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), None) in 
-    let () = dynamicSpec := (string_of_stmt instr, None, Some [([], TRUE, ev )], None) :: !dynamicSpec in 
+    let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
 
     [(TRUE, ev, 0, fp)]
 
@@ -1099,9 +1099,9 @@ let rec findSpecFrom (specs:specification list) (fName: string): (effect option 
   findSpecFrom rest fName
   ;;
 
-let rec synthsisFromSpec (effect:(string list * pure * es)) (env:(specification list)) : string option =  
+let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
   print_string (string_of_effect ([effect]) ^ "\n");
-  let (_, pi, spec) = effect in 
+  let (pi, spec) = effect in 
   let spec =  normalise_es spec in 
   (match spec with 
   | Emp -> Some ""
@@ -1110,7 +1110,7 @@ let rec synthsisFromSpec (effect:(string list * pure * es)) (env:(specification 
       match envli with 
       | [] -> None 
       | (fName, Some pre, Some post, _) :: xs  -> 
-        let (result, tree) = effect_inclusion post ([([], pi, currectProof)]) in 
+        let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
         print_string (string_of_binary_tree  tree  ^ "\n");
         let temp = 
           match result with 
@@ -1118,7 +1118,7 @@ let rec synthsisFromSpec (effect:(string list * pure * es)) (env:(specification 
           | (a, _, b):: _ -> 
             (match normalise_es a with 
             | Emp -> 
-              (match synthsisFromSpec ([], pi, b) env with 
+              (match synthsisFromSpec (pi, b) env with 
               | None  -> None 
               | Some rest -> Some (fName ^ "(); " ^ rest))
             | _ -> auc currectProof xs 
@@ -1255,7 +1255,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
           let (specifications: specification list) = List.append specifications !dynamicSpec in 
           
           
-          let list_of_functionCalls = synthsisFromSpec ([], TRUE, spec) (specifications) in
+          let list_of_functionCalls = synthsisFromSpec (TRUE, spec) (specifications) in
           let () = print_string ("synthsisFromSpec done\n") in 
 
           let startTimeStamp01 = Unix.time() in
@@ -1263,7 +1263,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
           ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
           (match list_of_functionCalls with 
           | None -> 
-            let (rr, _) = effect_inclusion [([], TRUE, Emp)] [([], TRUE, spec)] in 
+            let (rr, _) = effect_inclusion [(TRUE, Emp)] [(TRUE, spec)] in 
             if List.length rr == 0 then  " can be deleted." 
             else 
             " Sorry, there is no path from the environment!"
