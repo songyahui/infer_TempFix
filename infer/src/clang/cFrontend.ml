@@ -638,7 +638,7 @@ let rec dealwithContinuekStmt (eff:es) (acc:es): (es * bool) list =
 
 let (dynamicSpec: (specification list) ref) = ref [] 
 
-let primaryFunctions = []
+(*let primaryFunctions = []
 (* 
 "ssl_release_record"; "OPENSSL_cleanse"; "memcpy"; 
 "throwExc";
@@ -689,6 +689,31 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
   | y :: restY -> extractEventFromFUnctionCall y rest)
 | _ -> Emp
 )
+*)
+
+let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt list) : event option = 
+(match x with
+| DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
+  let (sl1, sl2) = stmt_info.si_source_range in 
+  let (lineLoc:int option) = sl1.sl_line in 
+
+  (match decl_ref_expr_info.drti_decl_ref with 
+  | None -> None  
+  | Some decl_ref ->
+    (
+    match decl_ref.dr_name with 
+    | None -> None 
+    | Some named_decl_info -> 
+      Some (named_decl_info.ni_name, [])
+    )
+  )
+
+| ImplicitCastExpr (_, stmt_list, _, _, _) ->
+  (match stmt_list with 
+  | [] -> None 
+  | y :: restY -> extractEventFromFUnctionCall y rest)
+| _ -> None 
+)
 
 let getFirst (a, _) = a
 
@@ -709,7 +734,7 @@ let conjunctPure (pi1:pure) (pi2:pure): pure =
     | (_, _) -> (PureAnd (pi1, pi2))
 
 
-let concatenateTwoEffectswithFlag (effectLi4X: programState list) (effectRest: programState list): programState list = 
+let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: programStates): programStates = 
   let mixLi = cartesian_product effectLi4X effectRest in 
   List.map mixLi ~f:(
     fun ((pi1, eff_x, t_x, fp1),  (pi2, eff_y, t_y, fp2)) -> 
@@ -718,7 +743,7 @@ let concatenateTwoEffectswithFlag (effectLi4X: programState list) (effectRest: p
   )
   
   
-let enforePure (p:pure) (eff:programState list) : programState list = 
+let enforePure (p:pure) (eff:programStates) : programStates = 
   List.map eff ~f:(fun (p1, es, f, fp) ->(PureAnd(p1, p), es, f, fp)) 
 
 let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms option = 
@@ -803,7 +828,7 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
 
 
   
-let prefixLoction (li: int list) (state:programState list) : programState list= 
+let prefixLoction (li: int list) (state:programStates) : programStates= 
   List.map state ~f:(fun (a, b, c, d) -> (a, b, c, List.append li d))
 
 let getStmtlocation (instr: Clang_ast_t.stmt) : int option =
@@ -834,13 +859,88 @@ let stmt_intfor2FootPrint (stmt_info:Clang_ast_t.stmt_info): int list =
     maybeIntToListInt lineLoc
 
 
-let rec syh_compute_stmt_postcondition (varSet: string list) (instr: Clang_ast_t.stmt) : programState list = 
-  let rec helper (li: Clang_ast_t.stmt list): programState list  = 
+(*
+env - records all the specifications 
+current - \Phi_{pre} prestates 
+future - F garenteed to be happening 
+varSet - key varaibles to capture 
+instr - current expression 
+output - postcondition (the extension derived from instr)
+---------------------------------------
+F ｜- {current} instr {postconsition }
+*)
+
+let (varSet: (string list) ref) = ref [] 
+
+let rec findSpecFrom (specs:specification list) (fName: string): (effect option * effect option * effect option)  = 
+  match specs with 
+  | [] -> (None, None, None) 
+  | (str, a, b, c):: rest -> if String.compare str fName == 0 then (a, b, c) else 
+  findSpecFrom rest fName
+  ;;
+
+
+let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
+(future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
+  let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
     match li with
     | [] -> [(TRUE, Emp, 0, [])]
+
+    | (CallExpr (stmt_info, stmt_list, ei)) ::xs -> 
+(* STEP 0: retrive the spec of the callee *)
+      let fp = stmt_intfor2FootPrint stmt_info in 
+
+      let (prec, postc, futurec) = 
+        match stmt_list with 
+        | [] -> assert false  
+        | x::rest -> 
+          (match extractEventFromFUnctionCall x rest with 
+          | None -> (None, None, None)
+          | Some (calleeName, arli) -> findSpecFrom env calleeName)
+      in 
+(* STEP 1: check precondition *)
+      let precheckingRES = 
+        match prec with 
+        | None -> []
+        | Some prec -> 
+          let (error_paths, tree, correctTraces, errorTraces) = 
+            effectwithfootprintInclusion (programStates2effectwithfootprintlist current') prec in 
+          error_paths
+      in 
+(* STEP 2: obtain the next state *)
+      let post' = 
+        match postc with 
+        | None -> current'  
+        | Some postc -> 
+          concatenateTwoEffectswithFlag current' (effects2programStates postc)
+      in 
+(* STEP 3: compute the effect for the rest code *)
+      let effectRest = helper (post') xs in
+(* STEP 4: check the future spec of the callee *)
+        (match futurec with 
+        | None -> 
+          (match postc with 
+          | None ->  effectRest 
+          | Some postc -> concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
+          )
+        | Some futurec -> 
+          let restSpec = 
+            match future with
+            | None -> effectRest 
+            | Some future -> concatenateTwoEffectswithFlag effectRest (effects2programStates future)
+          in 
+          let (error_paths, tree, correctTraces, errorTraces) = 
+            effectwithfootprintInclusion (programStates2effectwithfootprintlist restSpec) futurec in 
+          (match postc with 
+          | None ->  effectRest 
+          | Some postc -> concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
+          )
+        )  
+
     | x ::xs -> 
-      let effectLi4X = syh_compute_stmt_postcondition varSet x in 
-      let effectRest = helper xs in 
+      
+      let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
+      let effectRest = helper (concatenateTwoEffectswithFlag current' effectLi4X) xs in 
       concatenateTwoEffectswithFlag effectLi4X effectRest
 
   in 
@@ -862,16 +962,10 @@ let rec syh_compute_stmt_postcondition (varSet: string list) (instr: Clang_ast_t
   | CStyleCastExpr (stmt_info, stmt_list, _, _, _) 
   | CompoundAssignOperator (stmt_info, stmt_list, _, _, _) ->
     let fp = stmt_intfor2FootPrint stmt_info in 
-    prefixLoction fp (helper stmt_list)
+    prefixLoction fp (helper current stmt_list)
 
-  | CallExpr (stmt_info, stmt_list, ei) -> 
-    let fp = stmt_intfor2FootPrint stmt_info in 
 
-    (
-      match stmt_list with 
-      | [] -> assert false  
-      | x::rest -> [(TRUE, extractEventFromFUnctionCall x rest, 0, fp)]
-    )
+
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
     let fp = stmt_intfor2FootPrint stmt_info in 
 
@@ -881,7 +975,7 @@ let rec syh_compute_stmt_postcondition (varSet: string list) (instr: Clang_ast_t
         | None -> None 
         | Some condition -> 
           let (varFromPure: string list) = varFromPure condition in 
-          if twoStringSetOverlap varFromPure varSet then 
+          if twoStringSetOverlap varFromPure (!varSet) then 
           Some (condition, varFromPure)
           else None 
     in 
@@ -893,14 +987,14 @@ let rec syh_compute_stmt_postcondition (varSet: string list) (instr: Clang_ast_t
       let locY = maybeIntToListInt (getStmtlocation y) in 
       (match checkRelavent x with 
       | None  -> 
-        let eff4X = syh_compute_stmt_postcondition varSet x in
-        let eff4Y = syh_compute_stmt_postcondition varSet y in
+        let eff4X = syh_compute_stmt_postcondition env current future x in
+        let eff4Y = syh_compute_stmt_postcondition env current future y in
         prefixLoction fp (List.append (eff4X) (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
 
       | Some (condition, morevar) -> 
-        
-        let eff4X = syh_compute_stmt_postcondition (List.append varSet morevar) x in
-        let eff4Y = syh_compute_stmt_postcondition (List.append varSet morevar) y in
+        let ()= varSet := (List.append !varSet morevar) in 
+        let eff4X = syh_compute_stmt_postcondition env current future  x in
+        let eff4Y = syh_compute_stmt_postcondition env current future  y in
         prefixLoction fp (List.append (enforePure (Neg condition) eff4X) 
         (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
         )
@@ -909,17 +1003,18 @@ let rec syh_compute_stmt_postcondition (varSet: string list) (instr: Clang_ast_t
       let locZ = maybeIntToListInt (getStmtlocation z) in 
       (match checkRelavent x with 
       | None  -> 
-        let eff4X = syh_compute_stmt_postcondition varSet x in
-        let eff4Y = syh_compute_stmt_postcondition varSet y in
-        let eff4Z = syh_compute_stmt_postcondition varSet z in
+        let eff4X = syh_compute_stmt_postcondition env current future x in
+        let eff4Y = syh_compute_stmt_postcondition env current future y in
+        let eff4Z = syh_compute_stmt_postcondition env current future z in
         prefixLoction fp (List.append ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
         (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
 
       | Some (condition, morevar) -> 
-        
-        let eff4X = syh_compute_stmt_postcondition (List.append varSet morevar) x in
-        let eff4Y = syh_compute_stmt_postcondition (List.append varSet morevar) y in
-        let eff4Z = syh_compute_stmt_postcondition (List.append varSet morevar) z in
+        let ()= varSet := (List.append !varSet morevar) in 
+
+        let eff4X = syh_compute_stmt_postcondition env current future x in
+        let eff4Y = syh_compute_stmt_postcondition env current future y in
+        let eff4Z = syh_compute_stmt_postcondition env current future z in
         prefixLoction fp (List.append 
         (prefixLoction locZ (enforePure (Neg condition) (concatenateTwoEffectswithFlag eff4X eff4Z))) 
         (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
@@ -1098,12 +1193,7 @@ let show_effects_option (eff:effect option): string =
   | Some eff -> string_of_effect eff 
 ;;
 
-let rec findSpecFrom (specs:specification list) (fName: string): (effect option * effect option * effect option)  = 
-  match specs with 
-  | [] -> (None, None, None) 
-  | (str, a, b, c):: rest -> if String.compare str fName == 0 then (a, b, c) else 
-  findSpecFrom rest fName
-  ;;
+
 
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
   print_string (string_of_effect ([effect]) ^ "\n");
@@ -1187,11 +1277,29 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let (precondition, postcondition, futurecondition) = findSpecFrom specifications funcName in 
                 let startTimeStamp = Unix.time() in
                 let () = dynamicSpec := [] in 
-                let (final:effectwithfootprint list) = (normaliseProgramStates (syh_compute_stmt_postcondition [] stmt)) in 
+                let () = varSet := [] in 
+                let (defultPrecondition:programStates) = 
+                  match precondition with
+                  | None -> [(Ast_utility.TRUE, Emp, 0, [])]
+                  | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
+                in 
+                let (final:effectwithfootprint list) = 
+                  (normaliseProgramStates 
+                    (syh_compute_stmt_postcondition 
+                      specifications 
+                      defultPrecondition
+                      futurecondition  
+                      stmt)) in 
                 (*
                 let () = print_string ("printing dynamicSpec :\n" ^ List.fold_left (!dynamicSpec) ~init:"" ~f:(
                   fun acc (str, _, spec) -> acc ^ "\n" ^ str ^ ":" ^ string_of_effect spec
                 )) in 
+
+                (env:(specification list)) 
+(current:effect) 
+(future:effect) 
+(varSet: string list) 
+(instr: Clang_ast_t.stmt) 
                 *)
                 
                 let startTimeStamp01 = Unix.time() in

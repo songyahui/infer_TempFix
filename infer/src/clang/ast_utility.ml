@@ -48,10 +48,19 @@ type effect = (pure * es) list
 
 type programState = (pure * es  * int * int list)
 
+type programStates = (programState list)
+
+
 type specification = (string * effect option * effect option * effect option)
 
 type fstElem = Wildcard | Event of (event * line_number)  | NotEvent of event
 
+type effectwithfootprint = (pure * es * int list)
+
+let programStates2effectwithfootprintlist eff = 
+  List.map eff ~f:(fun (p, es, _, ft)-> (p, es, ft))
+let effects2programStates eff = 
+  List.map eff ~f:(fun (p, es)-> (p, es, 0, []))
 
 let rec flattenList lili = 
   match lili with 
@@ -820,7 +829,6 @@ let cartesian_product li1 li2 =
     flattenList (List.map li1 ~f:(fun l1 -> 
       List.map li2 ~f:(fun l2 -> (l1, l2))))
 
-type effectwithfootprint = (pure * es * int list)
 
 
 let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tree) = 
