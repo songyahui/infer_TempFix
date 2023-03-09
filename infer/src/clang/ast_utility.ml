@@ -59,8 +59,12 @@ type effectwithfootprint = (pure * es * int list)
 
 let programStates2effectwithfootprintlist eff = 
   List.map eff ~f:(fun (p, es, _, ft)-> (p, es, ft))
+
 let effects2programStates eff = 
   List.map eff ~f:(fun (p, es)-> (p, es, 0, []))
+
+let programStates2effects eff = 
+  List.map eff ~f:(fun (p, es, _ , _)-> (p, es))
 
 let rec flattenList lili = 
   match lili with 
@@ -183,6 +187,8 @@ let rec varFromPure (p:pure): string list =
   | Neg p -> varFromPure p 
 
 
+let rec varFromEffects (eff:effect) :  string list =   
+  flattenList (List.map eff ~f:(fun (a, b) -> varFromPure a))
   
 (**********************************************)
 exception FooAskz3 of string
@@ -308,6 +314,8 @@ let rec term_to_expr ctx : terms -> Z3.Expr.expr = function
   | (Basic(BINT n))        -> Z3.Arithmetic.Real.mk_numeral_i ctx n
   | (Basic(BVAR v))           -> Z3.Arithmetic.Real.mk_const_s ctx v
   | (Basic(BNULL))           -> Z3.Arithmetic.Real.mk_const_s ctx "nil"
+  | (Basic(BRET))           -> Z3.Arithmetic.Real.mk_const_s ctx "ret"
+
   (*
   | Gen i          -> Z3.Arithmetic.Real.mk_const_s ctx ("t" ^ string_of_int i ^ "'")
   *)
@@ -431,7 +439,10 @@ let askZ3 pi =
 let string_of_binary_tree tree = printTree ~line_prefix:"* " ~get_name ~get_children tree;; 
 
 let string_of_event (str, li) = 
-  str ^ "(" ^ List.fold_left li ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a )^ ")"
+  let temp = 
+    if List.length li > 0 then  "(" ^ List.fold_left li ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a )^ ")"
+    else "" in 
+  str ^ temp
 
 let rec string_of_es (eff:es) : string = 
   match eff with 
@@ -470,6 +481,8 @@ let rec stricTcompareTerm (term1:terms) (term2:terms) : bool =
     (Basic(BVAR s1), Basic(BVAR s2)) -> String.compare s1 s2 == 0
   | (Basic(BINT n1), Basic(BINT n2)) -> n1 == n2 
   | (Basic(BNULL), Basic(BNULL)) -> true 
+  | (Basic(BRET), Basic(BRET)) -> true 
+
   | (Plus (tIn1, num1), Plus (tIn2, num2)) -> stricTcompareTerm tIn1 tIn2 && stricTcompareTerm num1  num2
   | (Minus (tIn1, num1), Minus (tIn2, num2)) -> stricTcompareTerm tIn1 tIn2 && stricTcompareTerm num1  num2
   | _ -> false 
@@ -939,14 +952,14 @@ let getNumberFromfstElem (f:fstElem): int option =
   (startNum, endNum)
   *)
 
-let rec existEff_withfootprint acc (pi, es, li) : bool = 
+let rec existEff_withfootprint acc (pi, es, ft, li) : bool = 
   match acc with 
   | [] -> false 
-  | (pi1, es1, li1) :: xs -> if comparePure pi1 pi && comparees es1 es then true 
-  else existEff_withfootprint xs (pi, es, li) 
+  | (pi1, es1, _, _) :: xs -> if comparePure pi1 pi && comparees es1 es then true 
+  else existEff_withfootprint xs (pi, es, ft, li) 
 
-let normaliseProgramStates (li:programState list) : effectwithfootprint list =
-  let temp = List.map li ~f:(fun (p, a, _, li) -> (normalPure p, normalise_es a, li)) in 
+let normaliseProgramStates (li:programStates) : programStates =
+  let temp = List.map li ~f:(fun (p, a, ft, li) -> (normalPure p, normalise_es a, ft, li)) in 
 
   let rec helper effList = 
     match effList with 

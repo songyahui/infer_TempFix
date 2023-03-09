@@ -22,9 +22,12 @@ typedef struct swString {
 
 
 /*@ open: 
-    Post (TRUE, open)
-    Future (ret<0, (_)^*)  \/ (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  
-            
+    Post (fd<0, open) \/ (fd>=0, open)
+    Future (fd<0, (_)^*)  \/ (fd>=0, (!close(fd))^* · close(fd) · (_)^* )  
+@*/
+
+/*@ close: 
+    Post (TRUE, close)   
 @*/
 
 swString* swoole_file_get_contents(char *filename)
