@@ -476,6 +476,13 @@ let rec string_of_effect (eff:effect) : string =
   | [(pi, es)] ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ")"
   | (pi, es) :: xs ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
 
+let rec string_of_programStates (eff:programStates) : string = 
+  match eff with 
+  | [] -> ""
+  | [(pi, es, code, _)] ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^"," ^ string_of_int code ^")"
+  | (pi, es, code, _) :: xs ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^"," ^ string_of_int code ^ ") \\/ " ^ string_of_programStates xs
+
+
 let rec stricTcompareTerm (term1:terms) (term2:terms) : bool = 
   match (term1, term2) with 
     (Basic(BVAR s1), Basic(BVAR s2)) -> String.compare s1 s2 == 0
@@ -955,7 +962,9 @@ let getNumberFromfstElem (f:fstElem): int option =
 let rec existEff_withfootprint acc (pi, es, ft, li) : bool = 
   match acc with 
   | [] -> false 
-  | (pi1, es1, _, _) :: xs -> if comparePure pi1 pi && comparees es1 es then true 
+  | (pi1, es1, ft1, _) :: xs -> 
+  if comparePure pi1 pi && comparees es1 es && ft == ft1
+  then true 
   else existEff_withfootprint xs (pi, es, ft, li) 
 
 let normaliseProgramStates (li:programStates) : programStates =

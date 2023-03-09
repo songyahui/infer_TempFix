@@ -30,10 +30,11 @@ typedef struct swString {
     Post (TRUE, close)   
 @*/
 
+/* swoole_error_log: 
+    Post (TRUE, swoole_error_log)   
+*/
+
 swString* swoole_file_get_contents(char *filename)
-/*@ swoole_file_get_contents: 
-    Post (TRUE, (_)^* )
- @*/
 {
     size_t filesize = swoole_file_size(filename);
     if (filesize < 0)

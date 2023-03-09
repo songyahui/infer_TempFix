@@ -895,7 +895,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     match li with
     | [] -> [(TRUE, Emp, 0, [])]
 
+    | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], _) ::xs 
     | (CallExpr (stmt_info, stmt_list, ei)) ::xs -> 
+
+
 (* STEP 0: retrive the spec of the callee *)
       let fp = stmt_intfor2FootPrint stmt_info in 
 
@@ -960,6 +963,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           )
         )  
 
+    | DeclStmt (_, [x], _):: xs  
     | x ::xs -> 
       
       let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
@@ -968,19 +972,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
   in 
   match instr with 
-  (*match decl_list with 
-  | [] -> Emp
-  | x :: _  ->syh_compute_decl_pustcondition x *)
   | ReturnStmt (stmt_info, stmt_list) ->
     let fp = stmt_intfor2FootPrint stmt_info in 
     [(TRUE, Emp, 1, fp)]
-  | DeclStmt (stmt_info, stmt_list, _) 
   
-  | CompoundStmt (stmt_info, stmt_list)-> 
 
+  | CompoundStmt (stmt_info, stmt_list)-> 
     let fp = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
-
 
 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
@@ -997,8 +996,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           else None 
     in 
 
-
-
+    let extra = 
     (match stmt_list with 
     | [x; y] -> 
       let locY = maybeIntToListInt (getStmtlocation y) in 
@@ -1006,7 +1004,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       | None  -> 
         let eff4X = syh_compute_stmt_postcondition env current future x in
         let eff4Y = syh_compute_stmt_postcondition env current future y in
-        prefixLoction fp (List.append (eff4X) (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
+        prefixLoction fp 
+        (List.append 
+          (eff4X) 
+          (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
 
       | Some (condition, morevar) -> 
         let ()= varSet := (List.append !varSet morevar) in 
@@ -1023,8 +1024,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         let eff4X = syh_compute_stmt_postcondition env current future x in
         let eff4Y = syh_compute_stmt_postcondition env current future y in
         let eff4Z = syh_compute_stmt_postcondition env current future z in
-        prefixLoction fp (List.append ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
-        (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
+        prefixLoction fp 
+        (List.append 
+          ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
+          (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
 
       | Some (condition, morevar) -> 
         let ()= varSet := (List.append !varSet morevar) in 
@@ -1039,25 +1042,16 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
 
-    | _ -> assert false )
+    | _ -> assert false ) in 
+    let final = extra in 
+    let () = print_string ("IFELSE:\n " ^ string_of_programStates final ^ "\n") in 
+    final
     
 
   
 
   
 
-  
-  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) 
-  | ArraySubscriptExpr (stmt_info, stmt_list, _) 
-  | UnaryExprOrTypeTraitExpr (stmt_info, stmt_list, _, _)
-  | CStyleCastExpr (stmt_info, stmt_list, _, _, _) 
-  | CompoundAssignOperator (stmt_info, stmt_list, _, _, _) ->
-        let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), getStmtlocation instr) in 
-    let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
-    let (lineLoc:int option) = getStmtlocation instr in 
-
-    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
-    [(TRUE, ev, 0, fp)]
 
 
   | UnaryOperator _ (*stmt_info, stmt_list, _, _*)   
@@ -1071,70 +1065,53 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | IntegerLiteral _ 
   | StringLiteral _ 
   | RecoveryExpr _ 
-  | DeclRefExpr _ -> 
+  | DeclRefExpr _  
+  | DeclStmt (_, [], _) 
+  | WhileStmt _ -> 
     let (lineLoc:int option) = getStmtlocation instr in 
     (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
     let fp = match lineLoc with | None -> [] | Some l -> [l] in 
 
     [(TRUE, Emp, 0, fp)]
+
+
+
+  | DeclStmt (_, stmt_list, _) -> 
+
+
+    let ev = Singleton (((Clang_ast_proj.get_stmt_kind_string instr ^ " " ^ string_of_int (List.length stmt_list), [])), getStmtlocation instr) in 
+    let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
+    let (lineLoc:int option) = getStmtlocation instr in 
+
+    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+    [(TRUE, ev, 0, fp)]
+
     
 
- (*
-  | SwitchStmt (stmt_info, stmt_list, switch_stmt_info) -> 
-      let collection = List.map stmt_list ~f:(fun a -> syh_compute_stmt_postcondition a ) in 
-      let rec ifstmtDisj (li: es list) = 
-        match li with 
-        | [] -> Emp 
-        | x :: xs -> Disj (x, ifstmtDisj xs)
-      in ifstmtDisj collection
+  
 
-
-  | WhileStmt (stmt_info, [_;condition;body]) 
-  | WhileStmt (stmt_info, [condition;body]) ->
-
-    let temp = syh_compute_stmt_postcondition body in 
-    let interleavings = dealwithContinuekStmt (normalise_es temp) Emp in 
-    let filterout = List.map interleavings ~f:(fun (a, _) -> a) in 
-
-    let rec whildRec li = 
-      match li with 
-      | [x] -> x
-      | x::xs -> Disj (x, whildRec xs)
-      | _ -> assert false 
-    in 
-    let withBreakStmt = whildRec filterout in 
-    let moreBranches = dealwithBreakStmt withBreakStmt Emp in 
-    let filteroutAgain = List.filter interleavings ~f:(fun (_, b) -> b) in 
-    let postppendBreakBranches = List.map filteroutAgain ~f:(fun (a, _)-> Concatenate (Kleene (withBreakStmt), a))  in 
-    if List.length postppendBreakBranches ==0 then Kleene (withBreakStmt) else whildRec postppendBreakBranches
-    
-
-
-  | DoStmt (stmt_info, [body; condition]) ->
-    let temp = syh_compute_stmt_postcondition body in (Concatenate(temp, Kleene temp))
-  | ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
-    let temp = syh_compute_stmt_postcondition body in Kleene temp
-*)
   | ContinueStmt (stmt_info , _)  
-  | BreakStmt (stmt_info , _) ->
-  let fp = stmt_intfor2FootPrint stmt_info in 
-
-
-
+  | BreakStmt (stmt_info , _) 
+  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), _, _) 
+  | ArraySubscriptExpr (stmt_info, _, _) 
+  | UnaryExprOrTypeTraitExpr (stmt_info, _, _, _)
+  | CStyleCastExpr (stmt_info, _, _, _, _) 
+  | CompoundAssignOperator (stmt_info, _, _, _, _) ->
     let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), getStmtlocation instr) in 
     let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
+    let (lineLoc:int option) = getStmtlocation instr in 
+
+    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
     [(TRUE, ev, 0, fp)]
-    
+
   
   | _ -> 
-    let (lineLoc:int option) = getStmtlocation instr in 
-  (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
-    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
-    (*
-    let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), None) in 
+    let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), getStmtlocation instr) in 
     let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
-*)
-    [(TRUE, Emp, 0, fp)]
+    let (lineLoc:int option) = getStmtlocation instr in 
+
+    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+    [(TRUE, ev, 0, fp)]
 
 
 
@@ -1424,17 +1401,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       in auc error_lists)
 
       ) 
-
-     (*^ 
-
-     specifications
-          "\n[AST] " ^  string_of_stmt stmt 
-    
-     
-    "[TOTAL TRS TIME] " ^ string_of_float (totol proves +. totol disproves) ^ " ms \n" ^ 
-    "[Proving   Time] " ^ printing proves ^
-    "[Disprove  Time] " ^ printing disproves ^"\n" 
-    *)
     )
                 else ""
               | _ -> "" (*Clang_ast_proj.get_decl_kind_string dec *)
@@ -1456,33 +1422,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
             )  ^ helper rest 
           in 
           helper decl_list
-        (*
-        let source_file = SourceFile.from_abs_path info.Clang_ast_t.tudi_input_path in
-        init_global_state_for_capture_and_linters source_file ;
-
-        let lang =
-          match info.Clang_ast_t.tudi_input_kind with
-          | `IK_C ->
-              CFrontend_config.C
-          | `IK_CXX ->
-              CFrontend_config.CPP
-          | `IK_ObjC ->
-              CFrontend_config.ObjC
-          | `IK_ObjCXX ->
-              CFrontend_config.ObjCPP
-          | _ ->
-              assert false
-        in
-        let integer_type_widths =
-          let widths = info.Clang_ast_t.tudi_integer_type_widths in
-          { Typ.IntegerWidths.char_width= widths.itw_char_type
-          ; short_width= widths.itw_short_type
-          ; int_width= widths.itw_int_type
-          ; long_width= widths.itw_long_type
-          ; longlong_width= widths.itw_longlong_type }
-        in
-        let is_objc_arc_on = info.Clang_ast_t.tudi_is_objc_arc_on in
-        {CFrontend_config.source_file; lang; integer_type_widths; is_objc_arc_on}*)
     | _ ->
         assert false
   in 
