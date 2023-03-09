@@ -543,8 +543,6 @@ match gse_info.gse_value with
 
 *)
 
-let isLibFunction str : bool = false 
-
   (*
   let record_li = 
     ["/Applications"; 
@@ -923,7 +921,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             effectwithfootprintInclusion (programStates2effectwithfootprintlist current') prec in 
           error_paths
       in 
-      print_string ("precheckingRES" ^ string_of_int (List.length precheckingRES) ^ "\n");
+      print_string ("precheckingRES " ^ string_of_int (List.length precheckingRES) ^ "\n");
 (* STEP 2: obtain the next state *)
 
       let post' = 
@@ -932,9 +930,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | Some postc -> 
           let () = print_string (string_of_effect (postc) ^ "\n") in 
           let varSet = List.append !varSet (varFromEffects postc) in 
-
+          let postc = enforeceLineNum fp postc in 
+          let () = print_string ("postc" ^ string_of_effect (postc ) ^ "\n") in 
           concatenateTwoEffectswithFlag current' (effects2programStates postc)
       in 
+      let () = print_string ("after postc " ^ string_of_effect (programStates2effects post' ) ^ "\n") in 
+
 
 (* STEP 3: compute the effect for the rest code *)
       let effectRest = helper (post') xs in
@@ -943,7 +944,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | None -> 
           (match postc with 
           | None ->  effectRest 
-          | Some postc -> concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
+          | Some postc -> 
+            let postc = enforeceLineNum fp postc in 
+            concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
           )
         | Some futurec -> 
           let restSpec = 
@@ -953,13 +956,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           in 
           let (error_paths, tree, correctTraces, errorTraces) = 
             effectwithfootprintInclusion (programStates2effectwithfootprintlist restSpec) futurec in 
-            let () = print_string ("restSpec" ^ string_of_effect (programStates2effects restSpec) ^ "\n") in 
+            let () = print_string ("restSpec " ^ string_of_effect (programStates2effects restSpec) ^ "\n") in 
 
             print_string ("futurecheckingRES " ^ string_of_int (List.length error_paths) ^ "\n");
 
           (match postc with 
           | None ->  effectRest 
-          | Some postc -> concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
+          | Some postc -> 
+            let postc = enforeceLineNum fp postc in 
+            concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
           )
         )  
 
@@ -1044,7 +1049,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     | _ -> assert false ) in 
     let final = extra in 
-    let () = print_string ("IFELSE:\n " ^ string_of_programStates final ^ "\n") in 
     final
     
 
@@ -1276,13 +1280,14 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
               match dec with
               | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
                 let source = string_of_source_range  decl_info.di_source_range in 
-                if not (isLibFunction (source))  then 
+                (
                 (*print_string (named_decl_info.ni_name ^ ":\n");*)
                 match function_decl_info.fdi_body with 
                 | None -> ""
                 | Some stmt -> 
                 let open Sys in 
                 let funcName = named_decl_info.ni_name in 
+                print_string (funcName ^ ":\n");
                 let (precondition, postcondition, futurecondition) = findSpecFrom specifications funcName in 
                 let startTimeStamp = Unix.time() in
                 let () = dynamicSpec := [] in 
@@ -1292,8 +1297,8 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                   | None -> [(Ast_utility.TRUE, Emp, 0, [])]
                   | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
                 in 
-                let (final:effectwithfootprint list) = 
-                  ( programStates2effectwithfootprintlist
+                let (final:programStates) = 
+                  ( 
                     (normaliseProgramStates
                     (syh_compute_stmt_postcondition 
                       specifications 
@@ -1313,19 +1318,22 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 *)
                 
                 let startTimeStamp01 = Unix.time() in
-    (match postcondition with 
-    | None -> ""
-    | Some postcondition -> 
-      let postcondition = postcondition (*List.map postcondition ~f:(fun (pi, es) -> 
-        (pi, Concatenate  (es, Singleton ("ret", None)))) *)in 
+    (
+      let postcondition =  (*List.map postcondition ~f:(fun (pi, es) -> 
+        (pi, Concatenate  (es, Singleton ("ret", None)))) *)
+        match postcondition with 
+        | None -> [(Ast_utility.TRUE, Kleene(Any))]
+        | Some postcondition -> postcondition
+        in 
       ("\n\n========== Module: "^ funcName ^" ==========\n" ^
       "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
       "[Post Condition] " ^ string_of_effect postcondition ^"\n"^ 
       "[Future Condition] " ^ show_effects_option futurecondition ^"\n"^ 
-      "[Inferred Post Effects] " ^ string_of_effect (effectwithfootprint2Effect final)  ^"\n"^
+      "[Inferred Post Effects] " ^ string_of_programStates ( final)  ^"\n"^
       "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
 
         (*: (es * es ) list*)
+      let final = programStates2effectwithfootprintlist final in 
       let startTimeStamp = Unix.time() in
       let (error_paths, tree, correctTraces, errorTraces) = effectwithfootprintInclusion final postcondition in 
       let startTimeStamp01 = Unix.time() in
@@ -1402,7 +1410,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
       ) 
     )
-                else ""
+            )
               | _ -> "" (*Clang_ast_proj.get_decl_kind_string dec *)
               (*| ObjCInterfaceDecl _ -> "ObjCInterfaceDecl"
               | ObjCProtocolDecl _ -> "ObjCProtocolDecl"

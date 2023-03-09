@@ -977,6 +977,26 @@ let normaliseProgramStates (li:programStates) : programStates =
     
   in helper temp
 
+let enforeceLineNum (fp:int list) (eff:effect) : effect = 
+  match fp with 
+  | [] -> 
+    print_string (" enforeceLineNum NOne \n");
+    eff 
+  | x::_ -> 
+        print_string (" enforeceLineNum " ^ string_of_int x ^" \n");
+
+    let rec helper es = 
+      match es with 
+      | Bot | Emp | Any 
+      | NotSingleton _
+      -> es 
+      | Singleton (ins, _) ->  Singleton (ins, Some x)
+      | Disj(es1, es2) -> Disj(helper es1, helper es2)
+      | Concatenate (es1, es2) -> Concatenate(helper es1, helper es2)
+      | Kleene es1 -> Kleene (helper es1)
+    in 
+    List.map eff ~f:(fun (p, es) -> (p, helper es))
+
 
 
 let effectwithfootprint2Effect eff = 
