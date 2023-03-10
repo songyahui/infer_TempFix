@@ -18,6 +18,8 @@ type ltl = Lable of event
 
 type line_number = int option
 
+type bindings = (string * basic_type) list
+
 
 type terms = Basic of basic_type 
            | Plus of terms * terms
@@ -132,6 +134,13 @@ let string_of_basic_t v =
   | BINT n -> string_of_int n
   | BNULL -> "nil"
   | BRET -> "ret"
+
+let argumentsTerms2basic_types (t: (terms option) list): (basic_type list) = 
+  List.fold_left t ~init:[] ~f:(fun acc a ->
+    match a with 
+    | Some (Basic (BVAR str)) -> List.append acc [(BVAR str)]
+    | _ -> acc 
+  )
 
 
 let rec showTerms (t:terms):string = 
@@ -993,61 +1002,89 @@ let normaliseProgramStates (li:programStates) : programStates =
     
   in helper temp
 
-let instantiateRet_basic_type (bt:basic_type) (handler:string):  basic_type = 
+let rec findRetFromBindings (bt:bindings) (str: string) : basic_type option =
+  match bt with
+  | [] -> None 
+  | (formal, artual) :: xs -> 
+    if String.compare formal str == 0 then Some artual else findRetFromBindings xs str
+  
+
+
+let rec findRetFromBindingsRet (bt:bindings) : string option =
+  match bt with
+  | [] -> None 
+  | (formal, BRET) :: xs -> Some formal 
+  | x :: xs -> findRetFromBindingsRet xs 
+
+
+
+let instantiateRet_basic_type (bt:basic_type) (bds:bindings):  basic_type = 
   match bt with 
-  | BRET -> BVAR handler
+  | BRET -> 
+    (match findRetFromBindingsRet bds with
+    | None -> BRET
+    | Some handler ->   BVAR handler
+    )
+  | BVAR str -> 
+    (match findRetFromBindings bds str with
+    | None -> BRET
+    | Some term ->  term 
+    )
+
+  
   | _ -> bt 
   
-let rec instantiateRetTerm (t:terms) (handler:string): terms = 
+let rec instantiateRetTerm (t:terms) (bds:bindings): terms = 
   match t with
-  | Basic (bt ) -> Basic (instantiateRet_basic_type bt handler)
-  | Plus (t1, t2) -> Plus (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
-  | Minus (t1, t2) -> Minus (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
+  | Basic (bt ) -> Basic (instantiateRet_basic_type bt bds)
+  | Plus (t1, t2) -> Plus (instantiateRetTerm t1 bds, instantiateRetTerm t2 bds)
+  | Minus (t1, t2) -> Minus (instantiateRetTerm t1 bds, instantiateRetTerm t2 bds)
 
 
-let rec instantiateRetPure (p:pure) (handler:string): pure = 
+let rec instantiateRetPure (p:pure) (bds:bindings): pure = 
   match p with
     TRUE | FALSE -> p
-  | Gt (t1, t2) -> Gt (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
-  | Lt (t1, t2) -> Lt (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
-  | GtEq (t1, t2) -> GtEq (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
-  | LtEq (t1, t2) -> LtEq (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
-  | Eq (t1, t2) -> Eq (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
-  | PureOr (p1, p2) -> PureOr (instantiateRetPure p1 handler, instantiateRetPure p2 handler)
-  | PureAnd (p1, p2) -> PureAnd (instantiateRetPure p1 handler, instantiateRetPure p2 handler)
-  | Neg p1 -> Neg (instantiateRetPure p1 handler)
+  | Gt (t1, t2) -> Gt (instantiateRetTerm t1 bds, instantiateRetTerm t2 bds)
+  | Lt (t1, t2) -> Lt (instantiateRetTerm t1 bds, instantiateRetTerm t2 bds)
+  | GtEq (t1, t2) -> GtEq (instantiateRetTerm t1 bds, instantiateRetTerm t2 bds)
+  | LtEq (t1, t2) -> LtEq (instantiateRetTerm t1 bds, instantiateRetTerm t2 bds)
+  | Eq (t1, t2) -> Eq (instantiateRetTerm t1 bds, instantiateRetTerm t2 bds)
+  | PureOr (p1, p2) -> PureOr (instantiateRetPure p1 bds, instantiateRetPure p2 bds)
+  | PureAnd (p1, p2) -> PureAnd (instantiateRetPure p1 bds, instantiateRetPure p2 bds)
+  | Neg p1 -> Neg (instantiateRetPure p1 bds)
 
 
-let rec instantiateRetEs (es:es) (handler:string): es =
+let rec instantiateRetEs (es:es) (bds:bindings): es =
   match es with   
   | Bot | Emp | Any -> es
   | NotSingleton (str, btList) -> 
     (*let () = print_string ("instantiateRetEs: " ^ string_of_es es^ "\n") in *)
-    let newbyList = List.map btList ~f:(fun bt -> instantiateRet_basic_type bt handler) in 
+    let newbyList = List.map btList ~f:(fun bt -> instantiateRet_basic_type bt bds) in 
     let newes = NotSingleton (str, newbyList) in 
     (*let () = print_string ("instantiateRetEs after : " ^ string_of_es newes^ "\n") in *)
     newes
   | Singleton ((str, btList), l) ->  
     (*let () = print_string ("instantiateRetEs: " ^ string_of_es es^ "\n") in *)
-    let newbyList = List.map btList ~f:(fun bt -> instantiateRet_basic_type bt handler) in 
+    let newbyList = List.map btList ~f:(fun bt -> instantiateRet_basic_type bt bds) in 
     let newes = Singleton ((str, newbyList), l) in 
     (*let () = print_string ("instantiateRetEs after : " ^ string_of_es newes^ "\n") in *)
     newes
     
-  | Disj(es1, es2) -> Disj(instantiateRetEs es1 handler, instantiateRetEs es2 handler)
-  | Concatenate (es1, es2) -> Concatenate(instantiateRetEs es1 handler, instantiateRetEs es2 handler)
-  | Kleene es1 -> Kleene (instantiateRetEs es1 handler)
+  | Disj(es1, es2) -> Disj(instantiateRetEs es1 bds, instantiateRetEs es2 bds)
+  | Concatenate (es1, es2) -> Concatenate(instantiateRetEs es1 bds, instantiateRetEs es2 bds)
+  | Kleene es1 -> Kleene (instantiateRetEs es1 bds)
 
 
 
-let instantiateRet (eff:effect option) (handler:string) : effect option = 
+let instantiateAugument (eff:effect option) (bds:bindings) : effect option = 
   match eff with 
   | None -> None 
   | Some eff -> 
     (*let () = print_string ("instantiateRet: " ^ string_of_effect eff^ "\n") in *)
-    let temp = List.map eff ~f:(fun (pi, es) -> (instantiateRetPure pi handler, instantiateRetEs es handler)) in 
+    let temp = List.map eff ~f:(fun (pi, es) -> (instantiateRetPure pi bds, instantiateRetEs es bds)) in 
     (*let () = print_string ("instantiateRet after : " ^ string_of_effect temp^ "\n") in *)
      Some (temp)
+
 
 
 let enforeceLineNum (fp:int list) (eff:effect option) : effect option = 

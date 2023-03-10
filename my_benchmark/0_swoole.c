@@ -51,8 +51,8 @@ swString* swoole_file_get_contents(char *filename)
         swoole_error_log(SW_LOG_WARNING, SW_ERROR_FILE_TOO_LARGE, "file[%s] is too large.", filename);
         return NULL;
     }
-    int fd = open(filename, O_RDONLY);
-    if (fd < 0)
+    int handler = open(filename, O_RDONLY);
+    if (handler < 0)
     {
         swWarn("open(%s) failed. Error: %s[%d]", filename, strerror(errno), errno);
         return NULL;
@@ -60,7 +60,7 @@ swString* swoole_file_get_contents(char *filename)
     swString *content = swString_new(filesize);
     if (!content)
     {
-        close(fd);
+        close(handler);
         return NULL;
     }
 
@@ -68,7 +68,7 @@ swString* swoole_file_get_contents(char *filename)
     int n;
     while(readn < filesize)
     {
-        n = pread(fd, content->str + readn, filesize - readn, readn);
+        n = pread(handler, content->str + readn, filesize - readn, readn);
         if (n < 0)
         {
             if (errno == EINTR)
@@ -77,15 +77,15 @@ swString* swoole_file_get_contents(char *filename)
             }
             else
             {
-                swSysError("pread(%d, %ld, %d) failed.", fd, filesize - readn, readn);
+                swSysError("pread(%d, %ld, %d) failed.", handler, filesize - readn, readn);
                 swString_free(content);
-                close(fd);
+                close(handler);
                 return NULL;
             }
         }
         readn += n;
     }
-    close(fd);
+    close(handler);
     content->length = readn;
     return content;
 }

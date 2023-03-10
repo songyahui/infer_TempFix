@@ -689,6 +689,49 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
 )
 *)
 
+let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms option = 
+  match (t1, t2) with 
+  | (None, _) 
+  | (_, None ) -> None 
+  | (Some t1, Some t2) -> 
+    let p = 
+      if String.compare op "+" == 0 then Plus (t1, t2)
+    else Minus (t1, t2)
+    in Some p 
+
+let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
+  match instr with 
+  | ImplicitCastExpr (_, x::_, _, _, _) 
+  | MemberExpr (_, x::_, _, _) 
+  | CStyleCastExpr (_, x::_, _, _, _) 
+  | ParenExpr (_, x::_, _) -> stmt2Term x
+  
+  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
+  (match binop_info.boi_kind with
+  | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
+  | `Sub -> stmt2Term_helper "" (stmt2Term x) (stmt2Term y) 
+  | _ -> None 
+  )
+  | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
+    Some (Basic(BINT (int_of_string(integer_literal_info.ili_value))))
+
+  | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
+  let (sl1, sl2) = stmt_info.si_source_range in 
+
+  (match decl_ref_expr_info.drti_decl_ref with 
+  | None -> None 
+  | Some decl_ref ->
+    (
+    match decl_ref.dr_name with 
+    | None -> None
+    | Some named_decl_info -> Some (Basic(BVAR (named_decl_info.ni_name)))
+      
+    )
+  )
+  | NullStmt _ -> Some (Basic(BVAR ("NULL")))
+  | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
+
+
 let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt list) : event option = 
 (match x with
 | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
@@ -702,7 +745,8 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
     match decl_ref.dr_name with 
     | None -> None 
     | Some named_decl_info -> 
-      Some (named_decl_info.ni_name, [])
+      Some (named_decl_info.ni_name, argumentsTerms2basic_types((
+        List.map rest ~f:(fun r -> stmt2Term r))))
     )
   )
 
@@ -753,47 +797,6 @@ let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: progr
 let enforePure (p:pure) (eff:programStates) : programStates = 
   List.map eff ~f:(fun (p1, es, f, fp) ->(PureAnd(p1, p), es, f, fp)) 
 
-let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms option = 
-  match (t1, t2) with 
-  | (None, _) 
-  | (_, None ) -> None 
-  | (Some t1, Some t2) -> 
-    let p = 
-      if String.compare op "+" == 0 then Plus (t1, t2)
-    else Minus (t1, t2)
-    in Some p 
-
-let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
-  match instr with 
-  | ImplicitCastExpr (_, x::_, _, _, _) 
-  | MemberExpr (_, x::_, _, _) 
-  | CStyleCastExpr (_, x::_, _, _, _) 
-  | ParenExpr (_, x::_, _) -> stmt2Term x
-  
-  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
-  (match binop_info.boi_kind with
-  | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
-  | `Sub -> stmt2Term_helper "" (stmt2Term x) (stmt2Term y) 
-  | _ -> None 
-  )
-  | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
-    Some (Basic(BINT (int_of_string(integer_literal_info.ili_value))))
-
-  | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
-  let (sl1, sl2) = stmt_info.si_source_range in 
-
-  (match decl_ref_expr_info.drti_decl_ref with 
-  | None -> None 
-  | Some decl_ref ->
-    (
-    match decl_ref.dr_name with 
-    | None -> None
-    | Some named_decl_info -> Some (Basic(BVAR (named_decl_info.ni_name)))
-      
-    )
-  )
-  | NullStmt _ -> Some (Basic(BVAR ("NULL")))
-  | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
 
 let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure option = 
   match (t1, t2) with 
@@ -894,6 +897,12 @@ let string_of_decl (decl:Clang_ast_t.decl) : string =
   | _ -> Clang_ast_proj.get_decl_kind_string decl
 
 let (handlerVar: string option ref) = ref None 
+
+let rec var_binding (formal:string list) (actual: basic_type list) : bindings = 
+  match (formal, actual) with 
+  | (x::xs, v::ys) -> (x, v) :: (var_binding xs ys)
+  | _ -> []
+  ;;
  
 
 let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
@@ -917,14 +926,22 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | x::rest -> 
           (match extractEventFromFUnctionCall x rest with 
           | None -> (("none", []), None, None, None)
-          | Some (calleeName, arli) -> 
+          | Some (calleeName, acturelli) -> (* arli is the actual argument *)
           let () = print_string ("=========================\n") in 
-            print_string (calleeName ^ ":\n");
+            print_string (string_of_event (calleeName, acturelli) ^ ":\n");
             let spec = findSpecFrom env calleeName in 
             match spec with
             | None -> (("none", []), None, None, None)
-            | Some (signiture, prec, postc, futurec)-> 
-            (signiture, prec, postc, futurec)
+            | Some ((signiture, formalLi), prec, postc, futurec)-> 
+              if List.length acturelli == List.length formalLi then 
+                let vb = var_binding formalLi acturelli in 
+                ((signiture, formalLi), 
+                instantiateAugument prec vb, 
+                instantiateAugument postc vb, 
+                instantiateAugument futurec vb)
+                (* spec instantiation *)
+              else 
+              ((signiture, formalLi), prec, postc, futurec)
             
           )
       in 
@@ -947,7 +964,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         match !handlerVar with 
         | None -> (postc, futurec)
         | Some handler ->  
-          (instantiateRet postc handler , instantiateRet futurec handler)
+          (instantiateAugument postc [(handler, BRET)], 
+           instantiateAugument futurec [(handler, BRET)])
       in 
 
       let () = handlerVar := None in 
@@ -1327,9 +1345,12 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let funcName = named_decl_info.ni_name in 
                 print_string (funcName ^ ":\n");
                 let functionspec = findSpecFrom specifications funcName in 
-                match functionspec with
-                | None -> ""
-                | Some (_, precondition, postcondition, futurecondition) -> 
+                let (_, precondition, postcondition, futurecondition) = 
+                  match functionspec with
+                  | None -> ((funcName, []), None, None, None)
+                  | Some (sign, precondition, postcondition, futurecondition) 
+                    -> (sign, precondition, postcondition, futurecondition)
+                in 
                 let startTimeStamp = Unix.time() in
                 let () = dynamicSpec := [] in 
                 let () = varSet := [] in 
@@ -1346,17 +1367,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                       defultPrecondition
                       futurecondition  
                       stmt))) in 
-                (*
-                let () = print_string ("printing dynamicSpec :\n" ^ List.fold_left (!dynamicSpec) ~init:"" ~f:(
-                  fun acc (str, _, spec) -> acc ^ "\n" ^ str ^ ":" ^ string_of_effect spec
-                )) in 
 
-                (env:(specification list)) 
-(current:effect) 
-(future:effect) 
-(varSet: string list) 
-(instr: Clang_ast_t.stmt) 
-                *)
                 
                 let startTimeStamp01 = Unix.time() in
     (
