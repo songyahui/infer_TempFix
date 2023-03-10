@@ -887,16 +887,27 @@ let rec findSpecFrom (specs:specification list) (fName: string): (effect option 
   ;;
 
 
+let string_of_decl (decl:Clang_ast_t.decl) : string = 
+  match decl with
+  | Clang_ast_t.VarDecl (_, a , _, _) -> 
+  (*Clang_ast_proj.get_decl_kind_string*) a.ni_name 
+  | _ -> Clang_ast_proj.get_decl_kind_string decl
+
+let (handlerVar: string option ref) = ref None 
+ 
+
 let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
 (future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
     match li with
     | [] -> [(TRUE, Emp, 0, [])]
 
-    | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], _) ::xs 
+    | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], [del]) ::xs ->
+      let () = handlerVar := Some (string_of_decl del) in 
+      helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
+
     | (CallExpr (stmt_info, stmt_list, ei)) ::xs -> 
-
-
+      
 (* STEP 0: retrive the spec of the callee *)
       let fp = stmt_intfor2FootPrint stmt_info in 
 
@@ -924,17 +935,24 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       print_string ("precheckingRES " ^ string_of_int (List.length precheckingRES) ^ "\n");
 (* STEP 2: obtain the next state *)
 
+      let (postc: effect option) = enforeceLineNum fp postc in 
+      let (postc, futurec) = 
+        match !handlerVar with 
+        | None -> (postc, futurec)
+        | Some handler ->  
+          (instantiateRet postc handler , instantiateRet futurec handler)
+      in 
+
+      let () = handlerVar := None in 
+
+
       let post' = 
         match postc with 
         | None -> current'  
         | Some postc -> 
-          let () = print_string (string_of_effect (postc) ^ "\n") in 
           let varSet = List.append !varSet (varFromEffects postc) in 
-          let postc = enforeceLineNum fp postc in 
-          let () = print_string ("postc" ^ string_of_effect (postc ) ^ "\n") in 
           concatenateTwoEffectswithFlag current' (effects2programStates postc)
       in 
-      let () = print_string ("after postc " ^ string_of_effect (programStates2effects post' ) ^ "\n") in 
 
 
 (* STEP 3: compute the effect for the rest code *)
@@ -945,7 +963,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (match postc with 
           | None ->  effectRest 
           | Some postc -> 
-            let postc = enforeceLineNum fp postc in 
             concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
           )
         | Some futurec -> 
@@ -963,7 +980,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (match postc with 
           | None ->  effectRest 
           | Some postc -> 
-            let postc = enforeceLineNum fp postc in 
             concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
           )
         )  

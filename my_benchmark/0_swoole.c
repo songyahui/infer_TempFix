@@ -22,9 +22,9 @@ typedef struct swString {
 
 
 /*@ open: 
-    Post (fd<0, open) \/ (fd>=0, open)
-    Future (fd<0, (_)^*)  \/ (fd>=0, (!close(fd))^* · close(fd) · (_)^* )  
-@*/
+    Post (ret<0, open) \/ (ret>=0, open)
+    Future (ret<0, (_)^*)  \/ (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  
+@*/ 
 
 /*@ close: 
     Post (TRUE, close)   

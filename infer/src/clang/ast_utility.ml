@@ -977,11 +977,66 @@ let normaliseProgramStates (li:programStates) : programStates =
     
   in helper temp
 
-let enforeceLineNum (fp:int list) (eff:effect) : effect = 
+let instantiateRet_basic_type (bt:basic_type) (handler:string):  basic_type = 
+  match bt with 
+  | BRET -> BVAR handler
+  | _ -> bt 
+  
+let rec instantiateRetTerm (t:terms) (handler:string): terms = 
+  match t with
+  | Basic (bt ) -> Basic (instantiateRet_basic_type bt handler)
+  | Plus (t1, t2) -> Plus (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
+  | Minus (t1, t2) -> Minus (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
+
+
+let rec instantiateRetPure (p:pure) (handler:string): pure = 
+  match p with
+    TRUE | FALSE -> p
+  | Gt (t1, t2) -> Gt (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
+  | Lt (t1, t2) -> Lt (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
+  | GtEq (t1, t2) -> GtEq (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
+  | LtEq (t1, t2) -> LtEq (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
+  | Eq (t1, t2) -> Eq (instantiateRetTerm t1 handler, instantiateRetTerm t2 handler)
+  | PureOr (p1, p2) -> PureOr (instantiateRetPure p1 handler, instantiateRetPure p2 handler)
+  | PureAnd (p1, p2) -> PureAnd (instantiateRetPure p1 handler, instantiateRetPure p2 handler)
+  | Neg p1 -> Neg (instantiateRetPure p1 handler)
+
+
+let rec instantiateRetEs (es:es) (handler:string): es =
+  match es with   
+  | Bot | Emp | Any 
+  | NotSingleton _ -> es 
+  | Singleton ((str, btList), l) ->  
+    let () = print_string ("instantiateRetEs: " ^ string_of_es es^ "\n") in 
+    let newbyList = List.map btList ~f:(fun bt -> instantiateRet_basic_type bt handler) in 
+    let newes = Singleton ((str, newbyList), l) in 
+    let () = print_string ("instantiateRetEs after : " ^ string_of_es newes^ "\n") in 
+    newes
+    
+  | Disj(es1, es2) -> Disj(instantiateRetEs es1 handler, instantiateRetEs es2 handler)
+  | Concatenate (es1, es2) -> Concatenate(instantiateRetEs es1 handler, instantiateRetEs es2 handler)
+  | Kleene es1 -> Kleene (instantiateRetEs es1 handler)
+
+
+
+let instantiateRet (eff:effect option) (handler:string) : effect option = 
+  match eff with 
+  | None -> None 
+  | Some eff -> 
+    let () = print_string ("instantiateRet: " ^ string_of_effect eff^ "\n") in 
+    let temp = List.map eff ~f:(fun (pi, es) -> (instantiateRetPure pi handler, instantiateRetEs es handler)) in 
+    let () = print_string ("instantiateRet after : " ^ string_of_effect temp^ "\n") in 
+     Some (temp)
+
+
+let enforeceLineNum (fp:int list) (eff:effect option) : effect option = 
+  match eff with 
+  | None -> None 
+  | Some eff -> 
   match fp with 
   | [] -> 
     print_string (" enforeceLineNum NOne \n");
-    eff 
+    Some eff 
   | x::_ -> 
         print_string (" enforeceLineNum " ^ string_of_int x ^" \n");
 
@@ -995,7 +1050,7 @@ let enforeceLineNum (fp:int list) (eff:effect) : effect =
       | Concatenate (es1, es2) -> Concatenate(helper es1, helper es2)
       | Kleene es1 -> Kleene (helper es1)
     in 
-    List.map eff ~f:(fun (p, es) -> (p, helper es))
+    Some (List.map eff ~f:(fun (p, es) -> (p, helper es)))
 
 
 
