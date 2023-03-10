@@ -24,6 +24,7 @@
 %type <(Ast_utility.basic_type)> basic_type
 %type <(Ast_utility.basic_type list)> parm
 %type <(Ast_utility.es)> es
+%type <(string list)> formalparm
 %%
 
 basic_type : 
@@ -146,13 +147,20 @@ optionalPrecondition:
 {let (e2, e3) = a in 
   (None, e2, e3)}
 
+
+formalparm:
+| {[]}
+| str = VAR {[str]}
+| str = VAR COMMA rest=formalparm {str:: rest}
+
+
 specification: 
-| EOF {("", None, None, None)}
-| LSPEC str = VAR COLON 
+| EOF {(("", []), None, None, None)}
+| LSPEC str = VAR LPAR argument=formalparm RPAR COLON 
 a = optionalPrecondition 
 RSPEC {
   let (e1, e2, e3) = a in 
-  (str, e1, e2, e3)}
+  ((str, argument), e1, e2, e3)}
 
 
 (*

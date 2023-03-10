@@ -50,8 +50,9 @@ type programState = (pure * es  * int * int list)
 
 type programStates = (programState list)
 
+type mnsigniture = (string *  (string list))
 
-type specification = (string * effect option * effect option * effect option)
+type specification = (mnsigniture * effect option * effect option * effect option)
 
 type fstElem = Wildcard | Event of (event * line_number)  | NotEvent of event
 
@@ -1076,3 +1077,24 @@ let enforeceLineNum (fp:int list) (eff:effect option) : effect option =
 
 let effectwithfootprint2Effect eff = 
   List.map eff ~f:(fun (a, b, _) -> (a, b)) 
+
+let string_of_inclusion_results (info:((error_info list) * binary_tree * pathList * pathList)) : string = 
+  let (error_paths, tree, correctTraces, errorTraces) = info in 
+  if List.length error_paths == 0 then 
+    "Inclusion Succeed!\n" ^  string_of_binary_tree tree   
+  else 
+    "Inclusion Failed!\n" ^  string_of_binary_tree tree   
+
+let string_of_function_sepc (pre, post, future) : string = 
+  let pre = match pre with 
+    | None -> "No Pre"
+    | Some eff -> string_of_effect eff 
+  in 
+  let post = match post with 
+    | None -> "No Post"
+    | Some eff -> string_of_effect eff 
+  in 
+  let future = match future with 
+    | None -> "No Future"
+    | Some eff -> string_of_effect eff 
+  in pre ^ "\n" ^ post ^ "\n" ^ future ^ "\n"

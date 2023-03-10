@@ -879,10 +879,10 @@ F ｜- {current} instr {postconsition }
 
 let (varSet: (string list) ref) = ref [] 
 
-let rec findSpecFrom (specs:specification list) (fName: string): (effect option * effect option * effect option)  = 
+let rec findSpecFrom (specs:specification list) (fName: string): specification option = 
   match specs with 
-  | [] -> (None, None, None) 
-  | (str, a, b, c):: rest -> if String.compare str fName == 0 then (a, b, c) else 
+  | [] -> None
+  | ((str, li), a, b, c):: rest -> if String.compare str fName == 0 then Some ((str, li), a, b, c) else 
   findSpecFrom rest fName
   ;;
 
@@ -911,28 +911,35 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 (* STEP 0: retrive the spec of the callee *)
       let fp = stmt_intfor2FootPrint stmt_info in 
 
-      let (prec, postc, futurec) = 
+      let ((calleeName, formalLi), prec, postc, futurec) = 
         match stmt_list with 
         | [] -> assert false  
         | x::rest -> 
           (match extractEventFromFUnctionCall x rest with 
-          | None -> (None, None, None)
+          | None -> (("none", []), None, None, None)
           | Some (calleeName, arli) -> 
           let () = print_string ("=========================\n") in 
             print_string (calleeName ^ ":\n");
-            findSpecFrom env calleeName)
+            let spec = findSpecFrom env calleeName in 
+            match spec with
+            | None -> (("none", []), None, None, None)
+            | Some (signiture, prec, postc, futurec)-> 
+            (signiture, prec, postc, futurec)
+            
+          )
       in 
+      print_string (string_of_function_sepc (prec, postc, futurec)^"\n"); 
 
 (* STEP 1: check precondition *)
-      let precheckingRES = 
+      let () = 
         match prec with 
-        | None -> []
+        | None -> ()
         | Some prec -> 
-          let (error_paths, tree, correctTraces, errorTraces) = 
+          let info = 
             effectwithfootprintInclusion (programStates2effectwithfootprintlist current') prec in 
-          error_paths
+            print_string ("precheckingRES \n" ^ string_of_inclusion_results info)
+            
       in 
-      print_string ("precheckingRES " ^ string_of_int (List.length precheckingRES) ^ "\n");
 (* STEP 2: obtain the next state *)
 
       let (postc: effect option) = enforeceLineNum fp postc in 
@@ -947,8 +954,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
       let () = varSet := List.append !varSet (varFromEffects postc) in 
-      print_string ("adding varset: "); 
+      (*print_string ("adding varset: "); 
       print_string (string_of_varSet (!varSet));
+      *)
 
       let post' = 
         match postc with 
@@ -974,11 +982,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             | None -> effectRest 
             | Some future -> concatenateTwoEffectswithFlag effectRest (effects2programStates future)
           in 
-          let (error_paths, tree, correctTraces, errorTraces) = 
-            effectwithfootprintInclusion (programStates2effectwithfootprintlist restSpec) futurec in 
-            let () = print_string ("restSpec " ^ string_of_effect (programStates2effects restSpec) ^ "\n") in 
-
-            print_string ("futurecheckingRES " ^ string_of_int (List.length error_paths) ^ "\n");
+          let info = 
+            effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpec)) futurec in 
+          print_string ("futurecheckingRES: "^calleeName^": \n");
+          print_string (string_of_effect futurec ^ "\n");
+          print_string (string_of_inclusion_results info); 
 
           (match postc with 
           | None ->  effectRest 
@@ -1010,17 +1018,18 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let fp = stmt_intfor2FootPrint stmt_info in 
 
     let checkRelavent (conditional:  Clang_ast_t.stmt) : (((pure* (string list)) option))  = 
-        print_string ("\n*****\ncheckRelavent: "); 
+        (*print_string ("\n*****\ncheckRelavent: "); 
         print_string (string_of_varSet (!varSet));
+        *)
         match stmt2Pure conditional with 
-        | None -> print_string ("None; \n"); None 
+        | None -> (*print_string ("None; \n");*) None 
         | Some condition -> 
           let (varFromPure: string list) = varFromPure condition in 
           if twoStringSetOverlap varFromPure (!varSet) then 
-          (print_string ("Yes; \n");
+          ((*print_string ("Yes; \n");*)
           Some (condition, varFromPure))
           else 
-            (print_string ("None; \n");
+            ((*print_string ("None; \n");*)
             None )
     in 
 
@@ -1036,7 +1045,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (List.append 
           (eff4X) 
           (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y))) in 
-        let () = print_string ("if else [x, y] None: " ^ string_of_programStates final^ "\n") in 
+        (*let () = print_string ("if else [x, y] None: " ^ string_of_programStates final^ "\n") in 
+        *)
         final
 
 
@@ -1076,8 +1086,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     | _ -> assert false ) in 
     let final = extra in 
-    (print_string ("IfStmt:" ^ string_of_programStates final^"\n"); 
-    final)
+    (*print_string ("IfStmt:" ^ string_of_programStates final^"\n"); *)
+    final
     
 
   
@@ -1112,7 +1122,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
     let ev = Singleton (((Clang_ast_proj.get_stmt_kind_string instr ^ " " ^ string_of_int (List.length stmt_list), [])), getStmtlocation instr) in 
-    let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
+    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
     let (lineLoc:int option) = getStmtlocation instr in 
 
     let fp = match lineLoc with | None -> [] | Some l -> [l] in 
@@ -1130,7 +1140,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | CStyleCastExpr (stmt_info, _, _, _, _) 
   | CompoundAssignOperator (stmt_info, _, _, _, _) ->
     let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), getStmtlocation instr) in 
-    let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
+    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
     let (lineLoc:int option) = getStmtlocation instr in 
 
     let fp = match lineLoc with | None -> [] | Some l -> [l] in 
@@ -1139,7 +1149,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   
   | _ -> 
     let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), getStmtlocation instr) in 
-    let () = dynamicSpec := (string_of_stmt instr, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
+    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
     let (lineLoc:int option) = getStmtlocation instr in 
 
     let fp = match lineLoc with | None -> [] | Some l -> [l] in 
@@ -1246,7 +1256,7 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
     let rec auc (currectProof:es) envli : string option = 
       match envli with 
       | [] -> None 
-      | (fName, Some pre, Some post, _) :: xs  -> 
+      | ((fName, li), Some pre, Some post, _) :: xs  -> 
         let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
         print_string (string_of_binary_tree  tree  ^ "\n");
         let temp = 
@@ -1316,7 +1326,10 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 let open Sys in 
                 let funcName = named_decl_info.ni_name in 
                 print_string (funcName ^ ":\n");
-                let (precondition, postcondition, futurecondition) = findSpecFrom specifications funcName in 
+                let functionspec = findSpecFrom specifications funcName in 
+                match functionspec with
+                | None -> ""
+                | Some (_, precondition, postcondition, futurecondition) -> 
                 let startTimeStamp = Unix.time() in
                 let () = dynamicSpec := [] in 
                 let () = varSet := [] in 

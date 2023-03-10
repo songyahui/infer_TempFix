@@ -21,13 +21,13 @@ typedef struct swString {
 } swString;
 
 
-/*@ open: 
+/*@ open(path, mode): 
     Post (ret<0, open) \/ (ret>=0, open)
     Future (ret<0, (_)^*)  \/ (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  
-@*/ 
+@*/
 
-/*@ close: 
-    Post (TRUE, close)   
+/*@ close(handler): 
+    Post (TRUE, close(handler))   
 @*/
 
 /* swoole_error_log: 
@@ -66,6 +66,25 @@ swString* swoole_file_get_contents(char *filename)
 
     int readn = 0;
     int n;
+    while(readn < filesize)
+    {
+        n = pread(fd, content->str + readn, filesize - readn, readn);
+        if (n < 0)
+        {
+            if (errno == EINTR)
+            {
+                continue;
+            }
+            else
+            {
+                swSysError("pread(%d, %ld, %d) failed.", fd, filesize - readn, readn);
+                swString_free(content);
+                close(fd);
+                return NULL;
+            }
+        }
+        readn += n;
+    }
     close(fd);
     content->length = readn;
     return content;
