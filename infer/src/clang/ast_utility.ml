@@ -497,14 +497,17 @@ let rec string_of_programStates (eff:programStates) : string =
   | [(pi, es, code, _)] ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^"," ^ string_of_int code ^")"
   | (pi, es, code, _) :: xs ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^"," ^ string_of_int code ^ ") \\/ " ^ string_of_programStates xs
 
+let compareBasic_type (bt1:basic_type) (bt2:basic_type) : bool = 
+  match (bt1, bt2) with 
+  | ((BVAR s1), (BVAR s2)) -> String.compare s1 s2 == 0
+  | (BINT n1, BINT n2) -> n1 == n2 
+  | (BNULL, BNULL)
+  | (BRET, BRET) -> true 
+  | _ -> false 
 
 let rec stricTcompareTerm (term1:terms) (term2:terms) : bool = 
   match (term1, term2) with 
-    (Basic(BVAR s1), Basic(BVAR s2)) -> String.compare s1 s2 == 0
-  | (Basic(BINT n1), Basic(BINT n2)) -> n1 == n2 
-  | (Basic(BNULL), Basic(BNULL)) -> true 
-  | (Basic(BRET), Basic(BRET)) -> true 
-
+  | (Basic t1, Basic t2) -> compareBasic_type t1 t2
   | (Plus (tIn1, num1), Plus (tIn2, num2)) -> stricTcompareTerm tIn1 tIn2 && stricTcompareTerm num1  num2
   | (Minus (tIn1, num1), Minus (tIn2, num2)) -> stricTcompareTerm tIn1 tIn2 && stricTcompareTerm num1  num2
   | _ -> false 
@@ -593,18 +596,19 @@ let rec normalise_es (eff:es) : es =
     Kleene (effIn'))
   | _ -> eff 
 
+
 let comapreEvents (str1, li1) (str2, li2) = 
   let rec aux l1 l2  =
     match (l1, l2) with 
     | ([], []) -> true 
-    | (x::xs, y:: ys) -> x==y  &&  aux xs ys
+    | (x::xs, y:: ys) -> compareBasic_type x y &&  aux xs ys
     | (_, _) -> false 
   in 
   String.compare str1 str2 == 0 && aux li1 li2
 
 let compareLineNumOption (l1:int option) (l2:int option) : bool = 
   match (l1, l2) with 
-  | (None, None) -> true 
+  | (_, None) -> true 
   | (Some i1, Some i2) -> i1 == i2
   | (_, _) -> false 
 
@@ -615,7 +619,7 @@ let rec comparees (eff1:es) (eff2:es): bool =
   | (Any, Any) 
   | (Emp, Emp) -> true 
   | (Singleton (s1, line1), Singleton (s2, line2)) -> 
-    if comapreEvents s1 s2 == true  && compareLineNumOption line1 line2 
+    if comapreEvents s1 s2 == true && compareLineNumOption line1 line2 
     then true else false 
   | (NotSingleton s1, NotSingleton s2) -> 
     if comapreEvents s1 s2 == true  then true else false 
@@ -624,6 +628,8 @@ let rec comparees (eff1:es) (eff2:es): bool =
     comparees a1 a3 && comparees a2 a4
   | (Kleene e1, Kleene e2) -> comparees e1 e2
   | _ -> false 
+
+
 
 
 let rec isBot (eff:es) : bool =
