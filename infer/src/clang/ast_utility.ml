@@ -160,6 +160,8 @@ let rec varFromTerm (t:terms): string list =
   | Minus (t1, t2) ->  List.append (varFromTerm t1) (varFromTerm t2)
   | _ -> []
 
+let string_of_varSet (li: string list) : string = 
+  (List.fold_left li ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ^ "\n"
 
 let twoStringSetOverlap (sli1) (sli2) = 
   let rec helper str li = 
@@ -187,7 +189,10 @@ let rec varFromPure (p:pure): string list =
   | Neg p -> varFromPure p 
 
 
-let rec varFromEffects (eff:effect) :  string list =   
+let rec varFromEffects (eff:effect option) :  string list =  
+  match eff with 
+  | None -> []
+  | Some eff -> 
   flattenList (List.map eff ~f:(fun (a, b) -> varFromPure a))
   
 (**********************************************)
@@ -587,14 +592,21 @@ let comapreEvents (str1, li1) (str2, li2) =
   in 
   String.compare str1 str2 == 0 && aux li1 li2
 
+let compareLineNumOption (l1:int option) (l2:int option) : bool = 
+  match (l1, l2) with 
+  | (None, None) -> true 
+  | (Some i1, Some i2) -> i1 == i2
+  | (_, _) -> false 
+
 
 let rec comparees (eff1:es) (eff2:es): bool =
   match (eff1, eff2) with 
   | (Bot, Bot) 
   | (Any, Any) 
   | (Emp, Emp) -> true 
-  | (Singleton (s1, _), Singleton (s2, _)) -> 
-    if comapreEvents s1 s2 == true  then true else false 
+  | (Singleton (s1, line1), Singleton (s2, line2)) -> 
+    if comapreEvents s1 s2 == true  && compareLineNumOption line1 line2 
+    then true else false 
   | (NotSingleton s1, NotSingleton s2) -> 
     if comapreEvents s1 s2 == true  then true else false 
   | (Concatenate (a1, a2), Concatenate(a3, a4)) 
@@ -968,7 +980,10 @@ let rec existEff_withfootprint acc (pi, es, ft, li) : bool =
   else existEff_withfootprint xs (pi, es, ft, li) 
 
 let normaliseProgramStates (li:programStates) : programStates =
-  let temp = List.map li ~f:(fun (p, a, ft, li) -> (normalPure p, normalise_es a, ft, li)) in 
+  let temp = List.fold_left li ~init:[] ~f:(fun acc (p, a, ft, li) -> 
+    let p = normalPure p in 
+    if entailConstrains p FALSE then acc
+    else List.append acc [(p, normalise_es a, ft, li)]) in 
 
   let rec helper effList = 
     match effList with 
@@ -1004,13 +1019,18 @@ let rec instantiateRetPure (p:pure) (handler:string): pure =
 
 let rec instantiateRetEs (es:es) (handler:string): es =
   match es with   
-  | Bot | Emp | Any 
-  | NotSingleton _ -> es 
+  | Bot | Emp | Any -> es
+  | NotSingleton (str, btList) -> 
+    (*let () = print_string ("instantiateRetEs: " ^ string_of_es es^ "\n") in *)
+    let newbyList = List.map btList ~f:(fun bt -> instantiateRet_basic_type bt handler) in 
+    let newes = NotSingleton (str, newbyList) in 
+    (*let () = print_string ("instantiateRetEs after : " ^ string_of_es newes^ "\n") in *)
+    newes
   | Singleton ((str, btList), l) ->  
-    let () = print_string ("instantiateRetEs: " ^ string_of_es es^ "\n") in 
+    (*let () = print_string ("instantiateRetEs: " ^ string_of_es es^ "\n") in *)
     let newbyList = List.map btList ~f:(fun bt -> instantiateRet_basic_type bt handler) in 
     let newes = Singleton ((str, newbyList), l) in 
-    let () = print_string ("instantiateRetEs after : " ^ string_of_es newes^ "\n") in 
+    (*let () = print_string ("instantiateRetEs after : " ^ string_of_es newes^ "\n") in *)
     newes
     
   | Disj(es1, es2) -> Disj(instantiateRetEs es1 handler, instantiateRetEs es2 handler)
@@ -1023,9 +1043,9 @@ let instantiateRet (eff:effect option) (handler:string) : effect option =
   match eff with 
   | None -> None 
   | Some eff -> 
-    let () = print_string ("instantiateRet: " ^ string_of_effect eff^ "\n") in 
+    (*let () = print_string ("instantiateRet: " ^ string_of_effect eff^ "\n") in *)
     let temp = List.map eff ~f:(fun (pi, es) -> (instantiateRetPure pi handler, instantiateRetEs es handler)) in 
-    let () = print_string ("instantiateRet after : " ^ string_of_effect temp^ "\n") in 
+    (*let () = print_string ("instantiateRet after : " ^ string_of_effect temp^ "\n") in *)
      Some (temp)
 
 
@@ -1035,11 +1055,11 @@ let enforeceLineNum (fp:int list) (eff:effect option) : effect option =
   | Some eff -> 
   match fp with 
   | [] -> 
-    print_string (" enforeceLineNum NOne \n");
+    (*print_string (" enforeceLineNum NOne \n");*)
     Some eff 
   | x::_ -> 
-        print_string (" enforeceLineNum " ^ string_of_int x ^" \n");
-
+        (*print_string (" enforeceLineNum " ^ string_of_int x ^" \n");
+*)
     let rec helper es = 
       match es with 
       | Bot | Emp | Any 

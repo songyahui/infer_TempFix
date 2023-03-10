@@ -946,11 +946,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let () = handlerVar := None in 
 
 
+      let () = varSet := List.append !varSet (varFromEffects postc) in 
+      print_string ("adding varset: "); 
+      print_string (string_of_varSet (!varSet));
+
       let post' = 
         match postc with 
         | None -> current'  
         | Some postc -> 
-          let varSet = List.append !varSet (varFromEffects postc) in 
           concatenateTwoEffectswithFlag current' (effects2programStates postc)
       in 
 
@@ -1007,14 +1010,18 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let fp = stmt_intfor2FootPrint stmt_info in 
 
     let checkRelavent (conditional:  Clang_ast_t.stmt) : (((pure* (string list)) option))  = 
-
+        print_string ("\n*****\ncheckRelavent: "); 
+        print_string (string_of_varSet (!varSet));
         match stmt2Pure conditional with 
-        | None -> None 
+        | None -> print_string ("None; \n"); None 
         | Some condition -> 
           let (varFromPure: string list) = varFromPure condition in 
           if twoStringSetOverlap varFromPure (!varSet) then 
-          Some (condition, varFromPure)
-          else None 
+          (print_string ("Yes; \n");
+          Some (condition, varFromPure))
+          else 
+            (print_string ("None; \n");
+            None )
     in 
 
     let extra = 
@@ -1025,13 +1032,17 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       | None  -> 
         let eff4X = syh_compute_stmt_postcondition env current future x in
         let eff4Y = syh_compute_stmt_postcondition env current future y in
-        prefixLoction fp 
-        (List.append 
+        let final = prefixLoction fp 
+          (List.append 
           (eff4X) 
-          (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
+          (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y))) in 
+        let () = print_string ("if else [x, y] None: " ^ string_of_programStates final^ "\n") in 
+        final
+
 
       | Some (condition, morevar) -> 
-        let ()= varSet := (List.append !varSet morevar) in 
+
+        (*let ()= varSet := (List.append !varSet morevar) in *)
         let eff4X = syh_compute_stmt_postcondition env current future  x in
         let eff4Y = syh_compute_stmt_postcondition env current future  y in
         prefixLoction fp (List.append (enforePure (Neg condition) eff4X) 
@@ -1051,7 +1062,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
 
       | Some (condition, morevar) -> 
-        let ()= varSet := (List.append !varSet morevar) in 
+        (*let ()= varSet := (List.append !varSet morevar) in *)
 
         let eff4X = syh_compute_stmt_postcondition env current future x in
         let eff4Y = syh_compute_stmt_postcondition env current future y in
@@ -1065,7 +1076,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     | _ -> assert false ) in 
     let final = extra in 
-    final
+    (print_string ("IfStmt:" ^ string_of_programStates final^"\n"); 
+    final)
     
 
   
