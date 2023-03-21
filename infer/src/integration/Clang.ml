@@ -10,11 +10,11 @@ module L = Logging
 type compiler = Clang | Make [@@deriving compare]
 
 let capture compiler ~prog ~args =
-  print_string("<<<SYH:Clang.capture>>>\n");
+  (*print_string("<<<SYH:Clang.capture>>>\n"); *)
 
   match compiler with
   | Clang ->
-  print_string("<<<SYH:Clang.capture.Clang>>>\n");
+  (* print_string("<<<SYH:Clang.capture.Clang>>>\n"); *)
 
       ClangWrapper.exe ~prog ~args
   | Make -> (

@@ -107,7 +107,7 @@ let run_clang_frontend ast_source =
 
 
 let run_and_validate_clang_frontend ast_source =
-  print_string("<<<SYH:capture.run_and_validate_clang_frontend>>>\n");
+  (*print_string("<<<SYH:capture.run_and_validate_clang_frontend>>>\n"); *)
 
   try run_clang_frontend ast_source
   with exc ->
@@ -124,9 +124,10 @@ let run_clang clang_command read =
   (* NOTE: exceptions will propagate through without exiting here *)
   match Utils.with_process_in (ClangCommand.command_to_run clang_command) read with
   | res, Ok () ->
-  (print_string("<<<SYH:Clang.Capture.run_clang-OK>>>\n");
+  (
+    (*print_string("<<<SYH:Clang.Capture.run_clang-OK>>>\n");
    print_string(ClangCommand.command_to_run clang_command ^"\n" );
-
+*)
   
       res)
   | _, Error (`Exit_non_zero n) ->
@@ -165,12 +166,12 @@ let run_plugin_and_frontend source_path frontend clang_cmd =
       "bdump -x -d \"%s/clang_ast.dict\" -w '!!DUMMY!!' %s \\@\n  > %s.bdump" Config.etc_dir
       biniou_fname basename ;
     Out_channel.close debug_script_out ) ;
-(  print_string("<<<SYH:Clang.Capture.run_plugin_and_frontend-non-debuging>>>\n");
+( (*print_string("<<<SYH:Clang.Capture.run_plugin_and_frontend-non-debuging>>>\n");*)
   run_clang clang_plugin_cmd frontend)
 
 
 let cc1_capture clang_cmd =
-  print_string("<<<SYH:capture.cc1_capture>>>\n");
+  (*print_string("<<<SYH:capture.cc1_capture>>>\n"); *)
 
   let source_path =
     let root = Unix.getcwd () in
@@ -196,7 +197,7 @@ let cc1_capture clang_cmd =
     match Config.clang_ast_file with
     | Some fname ->   run_and_validate_clang_frontend (`File fname)
     | None ->
-    (print_string("<<<SYH:Clang.Capture.cc1_capture-else-None>>>\n");
+    ( (*print_string("<<<SYH:Clang.Capture.cc1_capture-else-None>>>\n"); *)
 
         run_plugin_and_frontend source_path
           (fun chan_in -> run_and_validate_clang_frontend (`BiniouPipe chan_in))
@@ -208,7 +209,7 @@ let capture clang_cmd =
   if ClangCommand.can_attach_ast_exporter clang_cmd then
     (* this command compiles some code; replace the invocation of clang with our own clang and
        plugin *)
-    (print_string("<<<SYH:Clang.Capture.capture-if>>>\n");
+    ( (*print_string("<<<SYH:Clang.Capture.capture-if>>>\n"); *)
     cc1_capture clang_cmd)
   else if Option.exists Config.buck_mode ~f:BuckMode.is_clang_compilation_db then
     (* when running with buck's compilation-database, skip commands where frontend cannot be

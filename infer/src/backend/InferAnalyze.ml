@@ -253,7 +253,7 @@ let analyze source_files_to_analyze =
 
 
 let invalidate_changed_procedures changed_files =
-  print_string("<<<SYH:invalidate_changed_procedures>>>\n");
+  (*print_string("<<<SYH:invalidate_changed_procedures>>>\n"); *)
 
   if Config.incremental_analysis then (
     let changed_files =

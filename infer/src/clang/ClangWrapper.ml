@@ -150,7 +150,7 @@ let exec_action_item ~prog ~args = function
 
       L.external_warning "%s@\n" warning
   | CanonicalCommand clang_cmd ->
-  print_string("<<<SYH:ClangWrapper.exec_action_item.CanonicalCommand>>>\n");
+  (*print_string("<<<SYH:ClangWrapper.exec_action_item.CanonicalCommand>>>\n");*)
 
       Capture.capture clang_cmd
   | DriverCommand clang_cmd ->
@@ -185,7 +185,7 @@ let exe ~prog ~args =
         L.(debug Capture Medium) "Will run Apple clang %s" bin_xx ;
         (bin_xx, true)
     | None ->
-    print_string("<<<SYH:ClangWrapper.None>>>\n");
+    (*print_string("<<<SYH:ClangWrapper.None>>>\n");*)
 
         (clang_xx, false)
   in

@@ -43,17 +43,8 @@ bidirectional bug localization.
 program synthesis using deductions. 
 
 
-CVE-2019-18217:
-infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/proftpd/src/main.c
+infer/bin/infer run -- clang -c ../../git/swoole-src/src/core/*.cc
 
-CVE-2019-15232: 
-infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/live555/liveMedia/GenericMediaServer.cpp
-
-CVE-2016-6305:
-infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/openssl/ssl/record/rec_layer_s3.c
-
-CVE-2016-6309: 
-infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/openssl/ssl/statem/statem.c
 
 1. is that ok to extract the code and analyses it separately 
 2. most likely trace to have the repair. 
@@ -63,3 +54,9 @@ infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/openssl/ssl/statem/sta
 
 AST: 
 /Users/yahuis/Desktop/git/infer/infer/src/atd/clang_ast_t.ml
+
+
+todo:
+1. add a timer for analyzing the whole program 
+2. postcondition is default then no need to check 
+3. back-end checking wrap up 

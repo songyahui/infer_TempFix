@@ -225,7 +225,7 @@ let report () =
   (* Post-process the report according to the user config.
      Do not bother calling the report hook when called from within Buck. *)
   if not Config.buck_cache_mode then 
-  print_string("<<<SYH:Driver.report>>>\n");
+  (*print_string("<<<SYH:Driver.report>>>\n"); *)
   (
     TextReport.create_from_json ~quiet:Config.quiet ~console_limit:Config.report_console_limit
       ~report_txt:(ResultsDir.get_path ReportText) ~report_json:issues_json ;

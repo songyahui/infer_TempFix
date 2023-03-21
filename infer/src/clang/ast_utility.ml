@@ -1153,11 +1153,12 @@ let enforeceLineNum (fp:int list) (eff:effect option) : effect option =
 let effectwithfootprint2Effect eff = 
   List.map eff ~f:(fun (a, b, _) -> (a, b)) 
 
-let string_of_inclusion_results (info:((error_info list) * binary_tree * pathList * pathList)) : string = 
+let string_of_inclusion_results (extra_info: string) (info:((error_info list) * binary_tree * pathList * pathList)) : string = 
   let (error_paths, tree, correctTraces, errorTraces) = info in 
-  if List.length error_paths == 0 then 
-    "Inclusion Succeed!\n" ^  string_of_binary_tree tree   
+  if List.length error_paths == 0 then ""
+    (* "Inclusion Succeed!\n" ^  string_of_binary_tree tree   *)
   else 
+    extra_info^ 
     "Inclusion Failed!\n" ^  string_of_binary_tree tree   
 
 let string_of_function_sepc (pre, post, future) : string = 

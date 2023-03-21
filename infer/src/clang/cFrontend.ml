@@ -635,6 +635,8 @@ let rec dealwithContinuekStmt (eff:es) (acc:es): (es * bool) list =
     )
 
 let (dynamicSpec: (specification list) ref) = ref [] 
+let (currentModule: string ref) = ref ""
+
 
 (*let primaryFunctions = []
 (* 
@@ -956,7 +958,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | Some prec -> 
           let info = 
             effectwithfootprintInclusion (programStates2effectwithfootprintlist current') prec in 
-            print_string ("precheckingRES \n" ^ string_of_inclusion_results info)
+            print_string (string_of_inclusion_results "precheckingRES \n"  info)
             
       in 
 (* STEP 2: obtain the next state *)
@@ -1004,9 +1006,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           in 
           let info = 
             effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpec)) futurec in 
+          (*
           print_string ("futurecheckingRES: "^calleeName^": \n");
           print_string (string_of_effect futurec ^ "\n");
-          print_string (string_of_inclusion_results info ^ "\n\n"); 
+          *)
+          let extra_info = 
+            "\n\n========== Module: "^ !currentModule ^" ==========\n" ^
+            "futurecheckingRES: "^calleeName^": \n" in 
+          print_string (string_of_inclusion_results extra_info info ^ "\n\n"); 
 
           (match postc with 
           | None ->  effectRest 
@@ -1318,7 +1325,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   let integer_type_widths = translation_unit_context.CFrontend_config.integer_type_widths in
 
   print_string ("\n=======================================================\n");
-  print_string ("================ Here is Yahui's Code =================\n");
+  print_string ("================ Here is Yahui's Code =================\n\n");
   let syh_pp_Clang_ast_t_decl ast_decl: string = 
     match ast_decl with
     | Clang_ast_t.TranslationUnitDecl (decl_info, decl_list, _, translation_unit_decl_info) ->
@@ -1345,7 +1352,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                 | Some stmt -> 
                 let open Sys in 
                 let funcName = named_decl_info.ni_name in 
-                print_string (funcName ^ ":\n");
                 let functionspec = findSpecFrom specifications funcName in 
                 let (_, precondition, postcondition, futurecondition) = 
                   match functionspec with
@@ -1361,6 +1367,8 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
                   | None -> [(Ast_utility.TRUE, Emp, 0, [])]
                   | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
                 in 
+                let () = currentModule := funcName in 
+                
                 let (final:programStates) = 
                   ( 
                     (normaliseProgramStates
@@ -1379,12 +1387,15 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
         | None -> [(Ast_utility.TRUE, Kleene(Any))]
         | Some postcondition -> postcondition
         in 
-      ("\n\n========== Module: "^ funcName ^" ==========\n" ^
+      (
+      (* 
       "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
       "[Post Condition] " ^ string_of_effect postcondition ^"\n"^ 
       "[Future Condition] " ^ show_effects_option futurecondition ^"\n"^ 
       "[Inferred Post Effects] " ^ string_of_programStates ( final)  ^"\n"^
-      "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^ 
+      "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^
+      
+      *)
 
         (*: (es * es ) list*)
       let final = programStates2effectwithfootprintlist final in 
@@ -1392,6 +1403,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
       let (error_paths, tree, correctTraces, errorTraces) = effectwithfootprintInclusion final postcondition in 
       let startTimeStamp01 = Unix.time() in
 
+      print_string ("\n\n========== Module: "^ funcName ^" ==========\n");
       "[Verification takes "^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us, and " ^ (if List.length error_paths == 0 then "SUCCEED" else "FAILED") ^"]\n\n" ^ 
       string_of_binary_tree tree    
        ^ 
