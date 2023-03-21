@@ -60,7 +60,6 @@ infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/openssl/ssl/statem/sta
 3. related works derived by "Static automated program repair for heap properties"
 
 
-TODO: instantiation. 
 
 AST: 
 /Users/yahuis/Desktop/git/infer/infer/src/atd/clang_ast_t.ml

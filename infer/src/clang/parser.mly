@@ -25,6 +25,10 @@
 %type <(Ast_utility.basic_type list)> parm
 %type <(Ast_utility.es)> es
 %type <(string list)> formalparm
+%type <(Ast_utility.effect)> effect
+%type <(Ast_utility.es)> es_or_ltl
+%type <(Ast_utility.ltl)> ltl
+%type <(Ast_utility.terms)> term
 %%
 
 basic_type : 

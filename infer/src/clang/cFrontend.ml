@@ -927,8 +927,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (match extractEventFromFUnctionCall x rest with 
           | None -> (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
-          let () = print_string ("=========================\n") in 
+            (*
+            let () = print_string ("=========================\n") in 
             print_string (string_of_event (calleeName, acturelli) ^ ":\n");
+            *)
             let spec = findSpecFrom env calleeName in 
             match spec with
             | None -> (("none", []), None, None, None)
@@ -945,7 +947,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             
           )
       in 
-      print_string (string_of_function_sepc (prec, postc, futurec)^"\n"); 
+      (*print_string (string_of_function_sepc (prec, postc, futurec)^"\n"); *)
 
 (* STEP 1: check precondition *)
       let () = 
@@ -1004,7 +1006,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpec)) futurec in 
           print_string ("futurecheckingRES: "^calleeName^": \n");
           print_string (string_of_effect futurec ^ "\n");
-          print_string (string_of_inclusion_results info); 
+          print_string (string_of_inclusion_results info ^ "\n\n"); 
 
           (match postc with 
           | None ->  effectRest 

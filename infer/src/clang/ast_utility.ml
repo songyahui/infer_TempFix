@@ -3,7 +3,7 @@ open Z3
 type basic_type = BINT of int | BVAR of string | BNULL | BRET
 
 
-type event = string * (basic_type list )
+type event = string * (basic_type list)
 
 
 type ltl = Lable of event 
@@ -40,6 +40,7 @@ type pure = TRUE
 
 type es = Bot | Emp | Any 
               | Singleton of (event * line_number) 
+              | NotArguments of (basic_type list) 
               | NotSingleton of event 
               | Disj of es * es 
               | Concatenate of es * es 
@@ -455,9 +456,15 @@ let string_of_binary_tree tree = printTree ~line_prefix:"* " ~get_name ~get_chil
 
 let string_of_event (str, li) = 
   let temp = 
-    if List.length li > 0 then  "(" ^ List.fold_left li ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a )^ ")"
-    else "" in 
-  str ^ temp
+    match li with 
+    | [] -> ""
+    | [x] ->  string_of_basic_t x 
+    | x::xs->
+      List.fold_left xs 
+      ~init:(string_of_basic_t x) 
+      ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a )
+  in 
+  str ^ "("^temp^")"
 
 let rec string_of_es (eff:es) : string = 
   match eff with 
@@ -680,7 +687,23 @@ let rec fst (eff:es) : (fstElem list) =
   | Disj (eff1, eff2) -> List.append (fst eff1) (fst eff2)
   | Kleene effIn      -> (fst effIn) 
 
+let rec exists_basic_type (t:basic_type) (li:basic_type list) : bool = 
+    match li with 
+    | [] -> false 
+    | x :: xs -> if compareBasic_type t x then true else exists_basic_type t xs 
 
+
+
+let rec basic_type_common (bt1:basic_type list) (bt2:basic_type list) : bool = 
+  match bt1 with 
+  | [] -> false  
+  | y::ys -> if exists_basic_type y bt2 == true then true else basic_type_common ys bt2
+ 
+
+let rec basic_type_subset (bt1:basic_type list) (bt2:basic_type list) : bool = 
+  match bt1 with 
+  | [] -> true 
+  | y::ys -> if exists_basic_type y bt2 == false then false else basic_type_subset ys bt2
 
 
 let rec derivitives (f:fstElem) (eff:es) : es = 
@@ -695,11 +718,20 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     | NotEvent event  ->  Bot
     )
   | NotSingleton str -> 
-    (match f with 
-    | Wildcard _ -> Bot 
-    | Event (event, _) -> if comapreEvents str event == true then Bot else Emp
-    | NotEvent event  ->  if comapreEvents str event == true then Emp else Bot
-    )
+    let (ename, ep) = str in 
+    if String.compare ename "_" == 0 then 
+      (match f with 
+      | Wildcard _ -> Bot 
+      | Event ((_, event), _) -> if basic_type_common ep event == true then Bot else Emp
+      | NotEvent (_, event)  ->  if basic_type_subset ep event   == true then Emp else Bot
+      )
+
+    else 
+      (match f with 
+      | Wildcard _ -> Bot 
+      | Event (event, _) -> if comapreEvents str event == true then Bot else Emp
+      | NotEvent event  ->  if comapreEvents str event == true then Emp else Bot
+      )
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then 
       Disj (

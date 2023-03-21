@@ -22,12 +22,13 @@ typedef struct swString {
 
 
 /*@ open(path, mode): 
-    Post (ret<0, open) \/ (ret>=0, open)
-    Future (ret<0, (_)^*)  \/ (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  
+    Post (ret<0, 𝝐) \/ (ret>=0, open(ret))
+    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  
 @*/
 
 /*@ close(handler): 
-    Post (TRUE, close(handler))   
+    Post (TRUE, close(handler)) 
+    Future  (TRUE, (!_(handler))^*) 
 @*/
 
 /* swoole_error_log: 
@@ -86,6 +87,7 @@ swString* swoole_file_get_contents(char *filename)
         readn += n;
     }
     close(fd);
+    //close(fd);
     content->length = readn;
     return content;
 }
