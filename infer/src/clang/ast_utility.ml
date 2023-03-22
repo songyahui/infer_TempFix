@@ -71,7 +71,9 @@ let (handlerVar: string option ref) = ref None
 let (proofObligations: int ref) = ref 0 
 let (failedProofObligations: int ref) = ref 0 
 
-(* number of the assertions are failed *)
+(* number of the assertions are failed 
+assertions are differnet from proof obligations 
+because proof obligations can be triggerred while searching *)
 let (totalAssertions: int ref) =  ref 0 
 let (failedAssertions: int ref) =  ref 0 
 

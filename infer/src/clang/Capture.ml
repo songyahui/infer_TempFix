@@ -16,9 +16,12 @@ let debug_mode = Config.debug_mode || Config.frontend_stats
 let validate_decl_from_file file =
   match file with
   | `Biniou fname ->
+      print_string ("validate_decl_from_file1" ^ fname ^ "\n");
       Atdgen_runtime.Util.Biniou.from_file ~len:CFrontend_config.biniou_buffer_size
         Clang_ast_b.read_decl fname
   | `Yojson fname ->
+  print_string ("validate_decl_from_file2" ^ fname ^ "\n");
+
       Atdgen_runtime.Util.Json.from_file Clang_ast_j.read_decl fname
 
 
@@ -34,7 +37,7 @@ let init_global_state_for_capture_and_linters source_file =
   CFrontend_config.reset_global_state ()
 
 
-  let run_clang_frontend ast_source =
+let run_clang_frontend ast_source =
   print_string("<<<SYH:capture.run_clang_frontend>>>\n");
 
   let init_time = Mtime_clock.counter () in
@@ -53,6 +56,10 @@ let init_global_state_for_capture_and_linters source_file =
     | Clang_ast_t.TranslationUnitDecl (_, _, _, info) ->
         let source_file = SourceFile.from_abs_path info.Clang_ast_t.tudi_input_path in
         init_global_state_for_capture_and_linters source_file ;
+
+        (* info.Clang_ast_t.tudi_input_path !!!!!! *)
+
+
         let lang =
           match info.Clang_ast_t.tudi_input_kind with
           | `IK_C ->

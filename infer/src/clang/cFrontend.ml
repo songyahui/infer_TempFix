@@ -48,13 +48,12 @@ let init_global_state_capture () =
   CFrontend_config.reset_block_counter ()
 
 
-let string_of_source_location (s: Clang_ast_t.source_location):string = 
-    match s.sl_file with 
-  | Some name-> name ^ " "
-  | None -> "none " 
 
 let string_of_source_range ((s1, s2):Clang_ast_t.source_range) :string = 
-  string_of_source_location s1 (*^ string_of_source_location s2 *)
+  match (s1.sl_file, s2.sl_file) with 
+  | (Some name, _) 
+  | (_, Some name) -> name
+  | (_, _) -> "none"
 
 
 let rec string_of_decl (dec :Clang_ast_t.decl) : string = 
@@ -1317,19 +1316,36 @@ let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list =
       
       *)
               
-
+^ 
+        if List.length error_paths == 0 then ""
+        else 
+        let (error_lists:( (es * (int * int) * es) list)) = bugLocalisation error_paths in 
+        "\n[Bidirectional Bug Localisation & Possible Proof Repairs] \n\n" 
 
 *)
 
-let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specification list): string  = 
+let getAddressfromDel (dec: Clang_ast_t.decl) : string = 
+  match dec with 
+  | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
+      string_of_source_range  decl_info.di_source_range
+  | _ -> "none"
+
+
+let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specification list) (source_Address:string): unit  = 
   (match dec with
     | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
-      let source = string_of_source_range  decl_info.di_source_range in 
+      let source_Addressnow = string_of_source_range  decl_info.di_source_range in 
+
+      if String.compare source_Address source_Addressnow !=0 then ()
+      else 
+      
       (
       match function_decl_info.fdi_body with 
-      | None -> ""
+      | None -> ()
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
+      print_string (source_Address ^ "\n"); 
+
       let functionspec = findSpecFrom specifications funcName in 
       let (_, precondition, postcondition, futurecondition) = 
         match functionspec with
@@ -1339,13 +1355,14 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       in 
       let () = dynamicSpec := [] in 
       let () = varSet := [] in 
+      
+      print_string("~~~~~~~~~ In function: "^ funcName ^" ~~~~~~~~~\n" );
       let (defultPrecondition:programStates) = 
         match precondition with
-        | None -> [(Ast_utility.TRUE, Emp, 0, [])]
+        | None -> [(Ast_utility.TRUE, Kleene (Any), 0, [])]
         | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
       in 
       let () = currentModule := funcName in 
-      
       let (final:programStates) = 
           ((normaliseProgramStates
           (syh_compute_stmt_postcondition 
@@ -1354,24 +1371,19 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             futurecondition  
             stmt))) in 
       match postcondition with 
-        | None -> "" (* [(Ast_utility.TRUE, Kleene(Any))] *)
+        | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
         | Some postcondition -> 
         (
         let final = programStates2effectwithfootprintlist final in 
-        let (error_paths, tree, correctTraces, errorTraces) = effectwithfootprintInclusion final postcondition in 
-  
-        
-        print_endline ("~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~");
-        (if List.length error_paths == 0 then "SUCCEED" else "FAILED") ^"\n" ^ 
-        string_of_binary_tree tree ^ 
-        if List.length error_paths == 0 then ""
-        else 
-        let (error_lists:( (es * (int * int) * es) list)) = bugLocalisation error_paths in 
-        "\n[Bidirectional Bug Localisation & Possible Proof Repairs] \n\n" 
+        let info = effectwithfootprintInclusion final postcondition in 
+        let extra_info = 
+          "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
+          "Post-condition checking: " in 
+        print_endline (string_of_inclusion_results extra_info info);
         ) 
 
       )
-    | _ -> "" (*Clang_ast_proj.get_decl_kind_string dec *)
+    | _ -> () (*Clang_ast_proj.get_decl_kind_string dec *)
     (*| ObjCInterfaceDecl _ -> "ObjCInterfaceDecl"
     | ObjCProtocolDecl _ -> "ObjCProtocolDecl"
     | ObjCCategoryDecl _ -> "ObjCCategoryDecl"
@@ -1390,13 +1402,14 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
   )  
 
 
-let retrive_basic_info_from_AST ast_decl: (Clang_ast_t.decl list * specification list * int * int * int) = 
+let retrive_basic_info_from_AST ast_decl: (string * Clang_ast_t.decl list * specification list * int * int * int) = 
     match ast_decl with
     | Clang_ast_t.TranslationUnitDecl (decl_info, decl_list, _, translation_unit_decl_info) ->
         let source =  translation_unit_decl_info.tudi_input_path in 
+
+
         let (specifications, lines_of_code, lines_of_spec, number_of_protocol) = retriveSpecifications source in 
-        
-        (decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol)
+        (source, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol)
  
     | _ -> assert false
 
@@ -1412,10 +1425,12 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   print_endline ("\n=======================================================");
   print_endline ("================ Here is Yahui's Code =================");
 
-  let (decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol) = retrive_basic_info_from_AST ast in 
+
+
+
+  let (source_Address, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol) = retrive_basic_info_from_AST ast in 
   let start = Unix.gettimeofday () in 
-  let reasoning_Res = List.fold_left decl_list ~init:"" ~f:(fun acc dec -> acc ^ reason_about_declaration dec specifications) in 
-  print_string (reasoning_Res ^ "\n");
+  let reasoning_Res = List.map decl_list  ~f:(fun dec -> reason_about_declaration dec specifications source_Address) in 
   
   (* Input program has  *)
   let msg = 

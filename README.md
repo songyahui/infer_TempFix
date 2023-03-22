@@ -57,6 +57,5 @@ AST:
 
 
 todo:
-1. how many proof obligations and how many failed and are repaired. 
 2. library file are not counted. 
 3. back-end checking wrap up 
