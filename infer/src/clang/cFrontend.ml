@@ -801,9 +801,17 @@ let getStmtlocation (instr: Clang_ast_t.stmt) : int option =
   | ArraySubscriptExpr (stmt_info, _, _) 
   | UnaryExprOrTypeTraitExpr (stmt_info, _, _, _)
   | IfStmt (stmt_info, _, _) 
+  | CXXConstructExpr (stmt_info, _, _, _)
+  | ExprWithCleanups (stmt_info, _, _, _)
+  | CXXDeleteExpr (stmt_info, _, _, _)
+  | ForStmt (stmt_info, _)
+  | SwitchStmt (stmt_info, _, _)
+  | CXXOperatorCallExpr (stmt_info, _, _)
+
   | CStyleCastExpr (stmt_info, _, _, _, _)  ->
     let (sl1, sl2) = stmt_info.si_source_range in 
     sl1.sl_line 
+
   | _ -> None 
 
 let maybeIntToListInt l = match l with | None -> [] | Some l -> [l] 
@@ -1080,7 +1088,21 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | RecoveryExpr _ 
   | DeclRefExpr _  
   | DeclStmt (_, [], _) 
-  | WhileStmt _ -> 
+  | WhileStmt _ 
+  | SwitchStmt _ 
+  | ParenExpr _ (* assert(max > min); *)
+  | ForStmt _ 
+  | CallExpr _ (* nested calls:  if (swoole_timer_is_available()) {    *)
+  | CXXOperatorCallExpr _ 
+  | CXXDeleteExpr _ (* delete g_logger_instance; *)
+  | CStyleCastExpr _  (*  char *buf = (char * ) sw_malloc(n); *)
+  | ExprWithCleanups _ (* *value = std::stoi(e);  *)
+  | CXXConstructExpr _ (* va_list args; *)
+  | CompoundAssignOperator _  (* retval += sw_snprintf(sw ...*)
+  | CXXMemberCallExpr _ (* sw_logger()->put *)
+  | CXXConstructExpr _ (* va_list va_list; *)
+  | DoStmt _ ->
+
     let (lineLoc:int option) = getStmtlocation instr in 
     (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
     let fp = match lineLoc with | None -> [] | Some l -> [l] in 
@@ -1088,9 +1110,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(TRUE, Emp, 0, fp)]
 
 
-
   | DeclStmt (_, stmt_list, _) -> 
-
 
     let ev = Singleton (((Clang_ast_proj.get_stmt_kind_string instr ^ " " ^ string_of_int (List.length stmt_list), [])), getStmtlocation instr) in 
     let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
@@ -1101,23 +1121,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     
 
-  
 
-  | ContinueStmt (stmt_info , _)  
-  | BreakStmt (stmt_info , _) 
-  | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), _, _) 
-  | ArraySubscriptExpr (stmt_info, _, _) 
-  | UnaryExprOrTypeTraitExpr (stmt_info, _, _, _)
-  | CStyleCastExpr (stmt_info, _, _, _, _) 
-  | CompoundAssignOperator (stmt_info, _, _, _, _) ->
-    let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), getStmtlocation instr) in 
-    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
-    let (lineLoc:int option) = getStmtlocation instr in 
-
-    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
-    [(TRUE, ev, 0, fp)]
-
-  
+  | ContinueStmt _
+  | BreakStmt _
+  | ParenExpr _
+  | ArraySubscriptExpr _
+  | UnaryExprOrTypeTraitExpr _
+  | CStyleCastExpr _ 
   | _ -> 
     let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), getStmtlocation instr) in 
     let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
@@ -1322,68 +1332,8 @@ let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list =
         let (error_lists:( (es * (int * int) * es) list)) = bugLocalisation error_paths in 
         "\n[Bidirectional Bug Localisation & Possible Proof Repairs] \n\n" 
 
-*)
 
-let getAddressfromDel (dec: Clang_ast_t.decl) : string = 
-  match dec with 
-  | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
-      string_of_source_range  decl_info.di_source_range
-  | _ -> "none"
-
-
-let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specification list) (source_Address:string): unit  = 
-  (match dec with
-    | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
-      let source_Addressnow = string_of_source_range  decl_info.di_source_range in 
-
-      if String.compare source_Address source_Addressnow !=0 then ()
-      else 
-      
-      (
-      match function_decl_info.fdi_body with 
-      | None -> ()
-      | Some stmt -> 
-      let funcName = named_decl_info.ni_name in 
-      print_string (source_Address ^ "\n"); 
-
-      let functionspec = findSpecFrom specifications funcName in 
-      let (_, precondition, postcondition, futurecondition) = 
-        match functionspec with
-        | None -> ((funcName, []), None, None, None)
-        | Some (sign, precondition, postcondition, futurecondition) 
-          -> (sign, precondition, postcondition, futurecondition)
-      in 
-      let () = dynamicSpec := [] in 
-      let () = varSet := [] in 
-      
-      print_string("~~~~~~~~~ In function: "^ funcName ^" ~~~~~~~~~\n" );
-      let (defultPrecondition:programStates) = 
-        match precondition with
-        | None -> [(Ast_utility.TRUE, Kleene (Any), 0, [])]
-        | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
-      in 
-      let () = currentModule := funcName in 
-      let (final:programStates) = 
-          ((normaliseProgramStates
-          (syh_compute_stmt_postcondition 
-            specifications 
-            defultPrecondition
-            futurecondition  
-            stmt))) in 
-      match postcondition with 
-        | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
-        | Some postcondition -> 
-        (
-        let final = programStates2effectwithfootprintlist final in 
-        let info = effectwithfootprintInclusion final postcondition in 
-        let extra_info = 
-          "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
-          "Post-condition checking: " in 
-        print_endline (string_of_inclusion_results extra_info info);
-        ) 
-
-      )
-    | _ -> () (*Clang_ast_proj.get_decl_kind_string dec *)
+        (*Clang_ast_proj.get_decl_kind_string dec *)
     (*| ObjCInterfaceDecl _ -> "ObjCInterfaceDecl"
     | ObjCProtocolDecl _ -> "ObjCProtocolDecl"
     | ObjCCategoryDecl _ -> "ObjCCategoryDecl"
@@ -1399,7 +1349,65 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
     | RecordDecl _ -> "RecordDecl"
     | _ -> "not yet" ^ Clang_ast_proj.get_decl_kind_string dec
     *)
-  )  
+*)
+
+
+let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specification list) (source_Address:string): unit  = 
+  match dec with
+    | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
+      let source_Addressnow = string_of_source_range  decl_info.di_source_range in 
+
+      if String.compare source_Address source_Addressnow !=0 then ()
+      else 
+      
+      (
+      match function_decl_info.fdi_body with 
+      | None -> ()
+      | Some stmt -> 
+      let funcName = named_decl_info.ni_name in 
+
+      let functionspec = findSpecFrom specifications funcName in 
+      let (_, precondition, postcondition, futurecondition) = 
+        match functionspec with
+        | None -> ((funcName, []), None, None, None)
+        | Some (sign, precondition, postcondition, futurecondition) 
+          -> (sign, precondition, postcondition, futurecondition)
+      in 
+      let () = dynamicSpec := [] in 
+      let () = varSet := [] in 
+      
+      let (defultPrecondition:programStates) = 
+        match precondition with
+        | None -> [(Ast_utility.TRUE, Kleene (Any), 0, [])]
+        | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
+      in 
+      let () = currentModule := funcName in 
+      let (final:programStates) = 
+          ((normaliseProgramStates
+          (syh_compute_stmt_postcondition 
+            specifications 
+            defultPrecondition
+            futurecondition  
+            stmt))) in 
+
+      print_string("~~~~~~~~~ In function: "^ funcName ^" ~~~~~~~~~\n" );
+      print_string (string_of_programStates final ^ "\n");
+
+      match postcondition with 
+        | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
+        | Some postcondition -> 
+        (
+        let final = programStates2effectwithfootprintlist final in 
+        let info = effectwithfootprintInclusion final postcondition in 
+        let extra_info = 
+          "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
+          "Post-condition checking: " in 
+        print_endline (string_of_inclusion_results extra_info info);
+        ) 
+
+      )
+    | _ -> () 
+   
 
 
 let retrive_basic_info_from_AST ast_decl: (string * Clang_ast_t.decl list * specification list * int * int * int) = 
