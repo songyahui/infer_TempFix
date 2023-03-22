@@ -61,6 +61,24 @@ type fstElem = Wildcard | Event of (event * line_number)  | NotEvent of event
 
 type effectwithfootprint = (pure * es * int list)
 
+(* Global States *)
+let (dynamicSpec: (specification list) ref) = ref [] 
+let (currentModule: string ref) = ref ""
+let (varSet: (string list) ref) = ref [] 
+let (handlerVar: string option ref) = ref None 
+
+(* net value of request of proving, (total number * failed number)*)
+let (proofObligations: int ref) = ref 0 
+let (failedProofObligations: int ref) = ref 0 
+
+(* number of the assertions are failed *)
+let (totalAssertions: int ref) =  ref 0 
+let (failedAssertions: int ref) =  ref 0 
+
+(* number of the assertions are failed, which are fixed *)
+let (reapiredFailedAssertions: int ref) =  ref 0 
+
+
 let programStates2effectwithfootprintlist eff = 
   List.map eff ~f:(fun (p, es, _, ft)-> (p, es, ft))
 
@@ -835,6 +853,18 @@ let getLineNumFromfstElem (f:fstElem) =
   | Wildcard 
   | NotEvent _ -> -1
 
+
+let modifiyTheProofOblgationCounters re = 
+  let () = proofObligations := !proofObligations + 1 in 
+  if List.length re > 0 then 
+    failedProofObligations := !failedProofObligations +1 
+  else ()
+
+let modifiyTheassertionCounters re = 
+  let () = totalAssertions := !totalAssertions + 1 in 
+  if List.length re > 0 then 
+  failedAssertions := !failedAssertions +1 
+  else ()
   
 let rec inclusion' 
   (currentposition:int)
@@ -933,9 +963,10 @@ let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tre
   in 
   let (f_re, f_tree) = (List.fold_left validPairs ~init:([], []) ~f:(
     fun (accre, acctree) ((p1, es1), (p2, es2)) ->
-    let (re, tree) = 
-    inclusion' 0 es1 es2 []
-    in (List.append accre re, List.append acctree [(Node ((showPure p1 ^ "|-" ^ showPure p2) , [tree]))])
+    let (re, tree) = inclusion' 0 es1 es2 [] in 
+    modifiyTheProofOblgationCounters re; 
+
+    (List.append accre re, List.append acctree [(Node ((showPure p1 ^ "|-" ^ showPure p2) , [tree]))])
     )) in 
     (f_re, Node ("TRS:", f_tree))
 
@@ -950,6 +981,8 @@ let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) :
   (List.fold_left validPairs ~init:([], [], [], []) ~f:(
     fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
     let (re, tree) = inclusion' 0 es1 es2 [] in   
+    modifiyTheProofOblgationCounters re; 
+    modifiyTheassertionCounters re; 
     let (correctTrace', errorTrace') = 
       if List.length re == 0 
       then (List.append correctTrace [li], errorTrace)
@@ -984,6 +1017,9 @@ let bugLocalisation (paths: error_info list): (es * (int * int) * es) list =
       let revlhs = reversees lhs in 
       let revrhs = reversees rhs in 
       let (result, tree) = inclusion' (100000) revlhs revrhs [] in 
+      modifiyTheProofOblgationCounters result; 
+
+
       (*
       print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
 *)
@@ -1159,7 +1195,7 @@ let string_of_inclusion_results (extra_info: string) (info:((error_info list) * 
     (* "Inclusion Succeed!\n" ^  string_of_binary_tree tree   *)
   else 
     extra_info^ 
-    "Inclusion Failed!\n" ^  string_of_binary_tree tree   
+    "Failed!\n" ^  string_of_binary_tree tree   
 
 let string_of_function_sepc (pre, post, future) : string = 
   let pre = match pre with 

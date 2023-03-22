@@ -634,62 +634,7 @@ let rec dealwithContinuekStmt (eff:es) (acc:es): (es * bool) list =
       (Concatenate(acc, Kleene(acc1)), false)
     )
 
-let (dynamicSpec: (specification list) ref) = ref [] 
-let (currentModule: string ref) = ref ""
 
-
-(*let primaryFunctions = []
-(* 
-"ssl_release_record"; "OPENSSL_cleanse"; "memcpy"; 
-"throwExc";
-"setsockopt"; "open"; "close"; "accept"; "listen"; "malloc"; "free"; "sendstring"; "BreakStmt"
-*)
-
-let rec wantToCapture (fName: string) (li:string list) : bool =
-  match li with 
-  | [] -> false 
-  | x::xs -> if String.compare fName x == 0 then true else wantToCapture fName xs 
-
-
-let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt list) : es = 
-(match x with
-| DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
-  let (sl1, sl2) = stmt_info.si_source_range in 
-  let (lineLoc:int option) = sl1.sl_line in 
-
-  (match decl_ref_expr_info.drti_decl_ref with 
-  | None -> Emp 
-  | Some decl_ref ->
-    (
-    match decl_ref.dr_name with 
-    | None -> Emp
-    | Some named_decl_info -> 
-      if wantToCapture (named_decl_info.ni_name) primaryFunctions then 
-        if String.compare (named_decl_info.ni_name) "sendstring" == 0 then 
-          match rest with 
-          | []
-          | [_] -> Singleton(("sendstring", []), lineLoc)
-          | y::ys -> 
-          let ev =  Singleton(("sendstring_" ^ String.sub ((string_of_stmt_list ys "_")) 0 3 ^"", []), lineLoc)   in 
-          let () = dynamicSpec := (string_of_stmt x, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
-          ev
-
-        else 
-          let ev =   Singleton ((named_decl_info.ni_name, []), lineLoc) in 
-          let () = dynamicSpec := (string_of_stmt x, None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
-          ev
-
-      else Emp 
-    )
-  )
-
-| ImplicitCastExpr (_, stmt_list, _, _, _) ->
-  (match stmt_list with 
-  | [] -> Emp 
-  | y :: restY -> extractEventFromFUnctionCall y rest)
-| _ -> Emp
-)
-*)
 
 let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms option = 
   match (t1, t2) with 
@@ -882,7 +827,6 @@ output - postcondition (the extension derived from instr)
 F ｜- {current} instr {postconsition }
 *)
 
-let (varSet: (string list) ref) = ref [] 
 
 let rec findSpecFrom (specs:specification list) (fName: string): specification option = 
   match specs with 
@@ -898,7 +842,6 @@ let string_of_decl (decl:Clang_ast_t.decl) : string =
   (*Clang_ast_proj.get_decl_kind_string*) a.ni_name 
   | _ -> Clang_ast_proj.get_decl_kind_string decl
 
-let (handlerVar: string option ref) = ref None 
 
 let rec var_binding (formal:string list) (actual: basic_type list) : bindings = 
   match (formal, actual) with 
@@ -958,7 +901,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | Some prec -> 
           let info = 
             effectwithfootprintInclusion (programStates2effectwithfootprintlist current') prec in 
-            print_string (string_of_inclusion_results "precheckingRES \n"  info)
+
+            let extra_info = 
+            "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
+            "Pre-condition checking for \'"^calleeName^"\': " in 
+            print_endline (string_of_inclusion_results extra_info info); 
+
             
       in 
 (* STEP 2: obtain the next state *)
@@ -1006,14 +954,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           in 
           let info = 
             effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpec)) futurec in 
-          (*
-          print_string ("futurecheckingRES: "^calleeName^": \n");
-          print_string (string_of_effect futurec ^ "\n");
-          *)
+
           let extra_info = 
-            "\n========== Module: "^ !currentModule ^" ==========\n" ^
-            "futurecheckingRES: "^calleeName^": \n" in 
-          print_string (string_of_inclusion_results extra_info info ^ "\n"); 
+            "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
+            "Future-condition checking for \'"^calleeName^"\': " in 
+          print_endline (string_of_inclusion_results extra_info info); 
 
           (match postc with 
           | None ->  effectRest 
@@ -1235,8 +1180,8 @@ let retriveComments (source:string) : (string list) =
   temp
   
 
-(* lines of code, lines of sepc *)
-let retriveSpecifications (source:string) : (specification list * int * int) = 
+(* lines of code, lines of sepc, number_of_protocol *)
+let retriveSpecifications (source:string) : (specification list * int * int * int) = 
   let ic = open_in source in
   try
       let lines =  (input_lines ic ) in
@@ -1250,7 +1195,7 @@ let retriveSpecifications (source:string) : (specification list * int * int) =
       let partitions = retriveComments line in (*in *)
       let line_of_spec = List.fold_left partitions ~init:0 ~f:(fun acc a -> acc + (List.length (Str.split (Str.regexp "\n") a)))  in 
       let sepcifications = List.map partitions ~f:(fun singlespec -> Parser.specification Lexer.token (Lexing.from_string singlespec)) in
-      (sepcifications, line_of_code, line_of_spec)
+      (sepcifications, line_of_code, line_of_spec, List.length partitions)
       (*
       
       print_string (List.fold_left (fun acc a -> acc ^ forward_verification a progs) "" progs ) ; 
@@ -1415,10 +1360,10 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         let final = programStates2effectwithfootprintlist final in 
         let (error_paths, tree, correctTraces, errorTraces) = effectwithfootprintInclusion final postcondition in 
   
-        print_string ("========== Module: "^ funcName ^" ==========\n");
+        
+        print_endline ("~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~");
         (if List.length error_paths == 0 then "SUCCEED" else "FAILED") ^"\n" ^ 
-        string_of_binary_tree tree    
-         ^ 
+        string_of_binary_tree tree ^ 
         if List.length error_paths == 0 then ""
         else 
         let (error_lists:( (es * (int * int) * es) list)) = bugLocalisation error_paths in 
@@ -1445,13 +1390,13 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
   )  
 
 
-let retrive_basic_info_from_AST ast_decl: (Clang_ast_t.decl list * specification list * int * int) = 
+let retrive_basic_info_from_AST ast_decl: (Clang_ast_t.decl list * specification list * int * int * int) = 
     match ast_decl with
     | Clang_ast_t.TranslationUnitDecl (decl_info, decl_list, _, translation_unit_decl_info) ->
         let source =  translation_unit_decl_info.tudi_input_path in 
-        let (specifications, lines_of_code, lines_of_spec) = retriveSpecifications source in 
+        let (specifications, lines_of_code, lines_of_spec, number_of_protocol) = retriveSpecifications source in 
         
-        (decl_list, specifications, lines_of_code, lines_of_spec)
+        (decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol)
  
     | _ -> assert false
 
@@ -1467,17 +1412,27 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   print_endline ("\n=======================================================");
   print_endline ("================ Here is Yahui's Code =================");
 
-  let (decl_list, specifications, lines_of_code, lines_of_spec) = retrive_basic_info_from_AST ast in 
+  let (decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol) = retrive_basic_info_from_AST ast in 
   let start = Unix.gettimeofday () in 
   let reasoning_Res = List.fold_left decl_list ~init:"" ~f:(fun acc dec -> acc ^ reason_about_declaration dec specifications) in 
   print_string (reasoning_Res ^ "\n");
   
-  print_endline ("[REPORT]:\nInput program has " ^ string_of_int lines_of_code ^ " lines of code, and " ^ string_of_int lines_of_spec ^ " lines of specifications."); 
-  print_endline ("Analysis took "^ string_of_float ((Unix.gettimeofday () -. start))^ " seconds.");
-  
+  (* Input program has  *)
+  let msg = 
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    ^ "[REPORT]:\n" ^ string_of_int lines_of_code 
+    ^ " lines of code;\n" ^ string_of_int lines_of_spec 
+    ^ " lines of specs; for " ^ string_of_int number_of_protocol ^ " protocols.\n"
+    ^ "Analysis took "^ string_of_float ((Unix.gettimeofday () -. start))^ " seconds.\n"
+    ^ "\n" ^ string_of_int !proofObligations ^ " proof obligations and "^ string_of_int (!proofObligations - !failedProofObligations) ^" are valid.\n"
+    ^ string_of_int !totalAssertions ^ " total assertions, and " ^ string_of_int !failedAssertions ^ " are failed; and " 
+    ^  string_of_int !reapiredFailedAssertions ^ " are successfully repaired."  in 
 
-  print_endline ("\n============ Here is the end of Yahui's Code ============");
-  print_endline ("=========================================================\n");
+  print_endline (msg); 
+
+  print_endline ("\n============ Here is the end of Yahui's Code ============\n" 
+                ^ "=========================================================\n");
+  
 
 
   (*
