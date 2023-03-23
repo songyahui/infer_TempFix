@@ -20,14 +20,15 @@ typedef struct swString {
    
 } swString;
 
+/*@ close(fd): 
+    Post (TRUE, close(fd)) 
+    Future  (TRUE, (!_(fd))^*)  @*/
+
 
 /*@ open(path, mode): 
     Post (ret<0, 𝝐) \/ (ret>=0, open(ret))
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
-/*@ close(handler): 
-    Post (TRUE, close(handler)) 
-    Future  (TRUE, (!_(handler))^*)  @*/
 
 
 

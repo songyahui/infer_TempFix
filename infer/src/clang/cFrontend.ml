@@ -857,7 +857,7 @@ let rec var_binding (formal:string list) (actual: basic_type list) : bindings =
   ;;
 
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
-  print_string (string_of_effect ([effect]) ^ "\n");
+  print_string ("synthsisFromSpec" ^ string_of_effect ([effect]) ^ "\n"); 
   let (pi, spec) = effect in 
   let spec =  normalise_es spec in 
   (match spec with 
@@ -865,10 +865,12 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
   | _ -> 
     let rec auc (currectProof:es) envli : string option = 
       match envli with 
-      | [] -> None 
-      | ((fName, li), Some pre, Some post, _) :: xs  -> 
+      | [] -> 
+        (print_string ("directly none\n");
+        None) (* no ingradients from the env *)
+      | ((fName, li), _, Some post, _) :: xs  -> 
         let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
-        print_string (string_of_binary_tree  tree  ^ "\n");
+        print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n");
         let temp = 
           match result with 
           | [] -> Some (fName ^ "(); ") 
@@ -879,10 +881,10 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
               | None  -> None 
               | Some rest -> Some (fName ^ "(); " ^ rest))
             | _ -> auc currectProof xs 
-            ) in 
-        (match temp with 
+            ) in temp
+        (*match temp with 
         | None -> auc currectProof xs 
-        | _ -> temp)
+        | _ -> temp*)
       | x :: xs  -> auc currectProof xs 
     in auc spec env)
 
@@ -899,20 +901,12 @@ let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list =
   if helper correctDots a then acc else List.append acc [a]) 
 
 
-(* 
-^  
-
-
-
-*)
-
 let program_repair (info:((error_info list) * binary_tree * pathList * pathList)) specifications : unit = 
   let (error_paths, tree, correctTraces, errorTraces) = info in 
   if List.length error_paths == 0 then ()
   else 
   let (error_lists:( (es * (int * int) * es) list)) = bugLocalisation error_paths in 
-  print_string ("\n[Bidirectional Bug Localisation & Possible Proof Repairs] \n\n \
-   \n[Program Path Options] \n\n");
+  print_endline ("\n<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>\n\n[Repair Options] \n");
 
   let rec helper li = 
       match li with 
@@ -920,8 +914,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
       | (realspec, _, spec):: res  -> (string_of_es realspec ^ " ~~~> " ^ string_of_es spec ) ^ ";\n" ^ helper res
   in 
   let msg = helper error_lists in 
-  print_string (msg);
+  print_endline (msg);
   
+  print_endline("[Patches]\n");
   let rec auc li = 
       match li with 
       | [] -> ""
@@ -949,16 +944,20 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
         (match list_of_functionCalls with 
         | None -> 
           let (rr, _) = effect_inclusion [(TRUE, Emp)] [(TRUE, spec)] in 
-          if List.length rr == 0 then  " can be deleted." 
+          if List.length rr == 0 then  
+          let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
+          " can be deleted." 
           else 
           " Sorry, there is no path from the environment!"
-        | Some str -> if String.compare str "" == 0 then " can be deleted." 
+        | Some str -> 
+          let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
+          if String.compare str "" == 0 then " can be deleted." 
           else  " can be inserted with code " ^  str ^ ".")
          ^ "\n\n" ^ auc res ^ "[Searching Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us\n"
         ) 
   in 
   let msg = auc error_lists in 
-  print_string (msg)
+  print_endline (msg)
 
  
 
@@ -1019,6 +1018,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
             "Pre-condition checking for \'"^calleeName^"\': " in 
             print_endline (string_of_inclusion_results extra_info info); 
+            program_repair info env; 
 
             
       in 
@@ -1403,7 +1403,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             futurecondition  
             stmt))) in 
 
-      print_string("~~~~~~~~~ In function: "^ funcName ^" ~~~~~~~~~\n" );
+      print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
       print_string (string_of_programStates final ^ "\n");
 
       match postcondition with 
@@ -1416,6 +1416,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
           "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
           "Post-condition checking: " in 
         print_endline (string_of_inclusion_results extra_info info);
+        program_repair info specifications; 
         ) 
 
       )
@@ -1455,14 +1456,27 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   
   (* Input program has  *)
   let msg = 
-    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-    ^ "[REPORT]:\n" ^ string_of_int lines_of_code 
+    "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    ^ "[FINAL REPORT]:\n" ^ string_of_int lines_of_code 
     ^ " lines of code;\n" ^ string_of_int lines_of_spec 
     ^ " lines of specs; for " ^ string_of_int number_of_protocol ^ " protocols.\n"
-    ^ "Analysis took "^ string_of_float ((Unix.gettimeofday () -. start))^ " seconds.\n"
-    ^ "\n" ^ string_of_int !proofObligations ^ " proof obligations and "^ string_of_int (!proofObligations - !failedProofObligations) ^" are valid.\n"
-    ^ string_of_int !totalAssertions ^ " total assertions, and " ^ string_of_int !failedAssertions ^ " are failed; and " 
-    ^  string_of_int !reapiredFailedAssertions ^ " are successfully repaired."  in 
+    ^ "Analysis and repair took "^ string_of_float ((Unix.gettimeofday () -. start))^ " seconds.\n"
+    ^ "\n" 
+    ^ string_of_int !totalAssertions 
+    ^ " total assertions, and " 
+    ^ string_of_int !failedAssertions 
+    ^ (if (!failedAssertions) == 1 then " is" else " are") 
+    ^" failed; and " 
+    ^  string_of_int !reapiredFailedAssertions 
+    ^ (if (!reapiredFailedAssertions) == 1 then " is" else " are") 
+    ^ " successfully repaired."  
+    ^ "\nIn total, there are " 
+    ^ string_of_int !proofObligations ^ " proof obligations, and "
+    ^ string_of_int (!proofObligations - !failedProofObligations) 
+    ^ (if ((!proofObligations - !failedProofObligations) ) == 1 then " is" else " are") ^" valid.\n"
+
+    
+    in 
 
   print_endline (msg); 
 
