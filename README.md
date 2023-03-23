@@ -44,6 +44,9 @@ program synthesis using deductions.
 
 
 infer/bin/infer run -- clang -c ../../git/swoole-src/src/core/*.cc
+infer/bin/infer run -- clang -c ../../git/swoole-src/src/core/base.cc
+
+    char *buf = (char *) sw_malloc(n);
 
 
 1. is that ok to extract the code and analyses it separately 

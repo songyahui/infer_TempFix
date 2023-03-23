@@ -29,9 +29,6 @@ typedef struct swString {
     Post (TRUE, close(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/
 
-/* swoole_error_log: 
-    Post (TRUE, swoole_error_log)   
-*/
 
 
 swString* swoole_file_get_contents(char *filename)

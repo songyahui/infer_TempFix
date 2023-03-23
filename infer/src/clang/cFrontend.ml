@@ -855,6 +855,111 @@ let rec var_binding (formal:string list) (actual: basic_type list) : bindings =
   | (x::xs, v::ys) -> (x, v) :: (var_binding xs ys)
   | _ -> []
   ;;
+
+let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
+  print_string (string_of_effect ([effect]) ^ "\n");
+  let (pi, spec) = effect in 
+  let spec =  normalise_es spec in 
+  (match spec with 
+  | Emp -> Some ""
+  | _ -> 
+    let rec auc (currectProof:es) envli : string option = 
+      match envli with 
+      | [] -> None 
+      | ((fName, li), Some pre, Some post, _) :: xs  -> 
+        let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
+        print_string (string_of_binary_tree  tree  ^ "\n");
+        let temp = 
+          match result with 
+          | [] -> Some (fName ^ "(); ") 
+          | (a, _, b):: _ -> 
+            (match normalise_es a with 
+            | Emp -> 
+              (match synthsisFromSpec (pi, b) env with 
+              | None  -> None 
+              | Some rest -> Some (fName ^ "(); " ^ rest))
+            | _ -> auc currectProof xs 
+            ) in 
+        (match temp with 
+        | None -> auc currectProof xs 
+        | _ -> temp)
+      | x :: xs  -> auc currectProof xs 
+    in auc spec env)
+
+  
+let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list = 
+  let correctDots = flattenList p1 in 
+  let errorDots = flattenList p2 in 
+  let rec helper li a : bool =
+    match li with 
+    | [] -> false 
+    | x :: xs -> if x==a then true else helper xs a
+  in 
+  List.fold_left errorDots ~init:[] ~f:(fun acc a -> 
+  if helper correctDots a then acc else List.append acc [a]) 
+
+
+(* 
+^  
+
+
+
+*)
+
+let program_repair (info:((error_info list) * binary_tree * pathList * pathList)) specifications : unit = 
+  let (error_paths, tree, correctTraces, errorTraces) = info in 
+  if List.length error_paths == 0 then ()
+  else 
+  let (error_lists:( (es * (int * int) * es) list)) = bugLocalisation error_paths in 
+  print_string ("\n[Bidirectional Bug Localisation & Possible Proof Repairs] \n\n \
+   \n[Program Path Options] \n\n");
+
+  let rec helper li = 
+      match li with 
+      | [] -> ""
+      | (realspec, _, spec):: res  -> (string_of_es realspec ^ " ~~~> " ^ string_of_es spec ) ^ ";\n" ^ helper res
+  in 
+  let msg = helper error_lists in 
+  print_string (msg);
+  
+  let rec auc li = 
+      match li with 
+      | [] -> ""
+      | (realspec, (startNum ,endNum ),  spec):: res  -> 
+        let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
+        let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
+        let (startNum, endNum) = 
+          if List.length dotsareOntheErrorPath == 0 then (startNum, endNum)
+          else List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
+        ~f:(fun (min', max') x -> 
+          if x < min' then (x, max')
+          else if x > max' then (min', x)
+          else (min', max')
+          ) in 
+
+        let startTimeStamp = Unix.gettimeofday() in
+        let (specifications: specification list) = List.append specifications !dynamicSpec in 
+        
+        
+        let list_of_functionCalls = synthsisFromSpec (TRUE, spec) (specifications) in
+
+        let startTimeStamp01 = Unix.gettimeofday() in
+
+        ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
+        (match list_of_functionCalls with 
+        | None -> 
+          let (rr, _) = effect_inclusion [(TRUE, Emp)] [(TRUE, spec)] in 
+          if List.length rr == 0 then  " can be deleted." 
+          else 
+          " Sorry, there is no path from the environment!"
+        | Some str -> if String.compare str "" == 0 then " can be deleted." 
+          else  " can be inserted with code " ^  str ^ ".")
+         ^ "\n\n" ^ auc res ^ "[Searching Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us\n"
+        ) 
+  in 
+  let msg = auc error_lists in 
+  print_string (msg)
+
  
 
 let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
@@ -863,6 +968,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     match li with
     | [] -> [(TRUE, Emp, 0, [])]
 
+    | DeclStmt (_, [CStyleCastExpr(_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _)], [del]):: xs  
     | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], [del]) ::xs ->
       let () = handlerVar := Some (string_of_decl del) in 
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
@@ -959,13 +1065,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             | None -> effectRest 
             | Some future -> concatenateTwoEffectswithFlag effectRest (effects2programStates future)
           in 
-          let info = 
-            effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpec)) futurec in 
-
-          let extra_info = 
-            "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
-            "Future-condition checking for \'"^calleeName^"\': " in 
+          let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpec)) futurec in 
+          let extra_info = "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
           print_endline (string_of_inclusion_results extra_info info); 
+          
+          program_repair info env; 
 
           (match postc with 
           | None ->  effectRest 
@@ -1095,7 +1199,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | CallExpr _ (* nested calls:  if (swoole_timer_is_available()) {    *)
   | CXXOperatorCallExpr _ 
   | CXXDeleteExpr _ (* delete g_logger_instance; *)
-  | CStyleCastExpr _  (*  char *buf = (char * ) sw_malloc(n); *)
+  (*| CStyleCastExpr _ *) (*  char *buf = (char * ) sw_malloc(n); *)
   | ExprWithCleanups _ (* *value = std::stoi(e);  *)
   | CXXConstructExpr _ (* va_list args; *)
   | CompoundAssignOperator _  (* retval += sw_snprintf(sw ...*)
@@ -1226,96 +1330,9 @@ let show_effects_option (eff:effect option): string =
 
 
 
-let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
-  print_string (string_of_effect ([effect]) ^ "\n");
-  let (pi, spec) = effect in 
-  let spec =  normalise_es spec in 
-  (match spec with 
-  | Emp -> Some ""
-  | _ -> 
-    let rec auc (currectProof:es) envli : string option = 
-      match envli with 
-      | [] -> None 
-      | ((fName, li), Some pre, Some post, _) :: xs  -> 
-        let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
-        print_string (string_of_binary_tree  tree  ^ "\n");
-        let temp = 
-          match result with 
-          | [] -> Some (fName ^ "(); ") 
-          | (a, _, b):: _ -> 
-            (match normalise_es a with 
-            | Emp -> 
-              (match synthsisFromSpec (pi, b) env with 
-              | None  -> None 
-              | Some rest -> Some (fName ^ "(); " ^ rest))
-            | _ -> auc currectProof xs 
-            ) in 
-        (match temp with 
-        | None -> auc currectProof xs 
-        | _ -> temp)
-      | x :: xs  -> auc currectProof xs 
-    in auc spec env)
-
-  
-let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list = 
-  let correctDots = flattenList p1 in 
-  let errorDots = flattenList p2 in 
-  let rec helper li a : bool =
-    match li with 
-    | [] -> false 
-    | x :: xs -> if x==a then true else helper xs a
-  in 
-  List.fold_left errorDots ~init:[] ~f:(fun acc a -> 
-  if helper correctDots a then acc else List.append acc [a]) 
-
 (* 
 
-^  
-                  (
-                  let rec helper li = 
-                    match li with 
-                    | [] -> ""
-                    | (realspec, _, spec):: res  -> (string_of_es realspec ^ " ~~~> " ^ string_of_es spec ) ^ ";\n" ^ helper res
-                  in helper error_lists)
 
-      "\n[Program Path Options] \n\n" ^  
-
-      (
-      let rec auc li = 
-        match li with 
-        | [] -> ""
-        | (realspec, (startNum ,endNum ),  spec):: res  -> 
-          let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
-          let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
-          let (startNum, endNum) = 
-            if List.length dotsareOntheErrorPath == 0 then (startNum, endNum)
-            else List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
-          ~f:(fun (min', max') x -> 
-            if x < min' then (x, max')
-            else if x > max' then (min', x)
-            else (min', max')
-            ) in 
-
-          let startTimeStamp = Unix.time() in
-          let (specifications: specification list) = List.append specifications !dynamicSpec in 
-          
-          
-          let list_of_functionCalls = synthsisFromSpec (TRUE, spec) (specifications) in
-
-          let startTimeStamp01 = Unix.time() in
-
-          ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
-          (match list_of_functionCalls with 
-          | None -> 
-            let (rr, _) = effect_inclusion [(TRUE, Emp)] [(TRUE, spec)] in 
-            if List.length rr == 0 then  " can be deleted." 
-            else 
-            " Sorry, there is no path from the environment!"
-          | Some str -> if String.compare str "" == 0 then " can be deleted." 
-            else  " can be inserted with code " ^  str ^ ".")
-           ^ "\n\n" ^ auc res ^ "[Searching Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us"
-          ) 
-      in auc error_lists)
 
       (* 
       "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
@@ -1327,10 +1344,6 @@ let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list =
       *)
               
 ^ 
-        if List.length error_paths == 0 then ""
-        else 
-        let (error_lists:( (es * (int * int) * es) list)) = bugLocalisation error_paths in 
-        "\n[Bidirectional Bug Localisation & Possible Proof Repairs] \n\n" 
 
 
         (*Clang_ast_proj.get_decl_kind_string dec *)
