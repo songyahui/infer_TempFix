@@ -39,18 +39,26 @@ basic_type :
 | RETURN {BRET}
 
 parm:
-| {[]}
+| LPAR RPAR {[]}
 | LPAR argument= basic_type RPAR {[argument]}
 
+
+anyEventOrAny:
+| {Any}
+| p=parm { Singleton (("_", p), None) }
+
+neGationAny:
+| UNDERLINE p=parm  { NotSingleton (("_", p))}
+| str = VAR p=parm { NotSingleton ((str, p))}
 
 es:
 | BOTTOM {Bot}
 | EMPTY {Emp}
-| NOTSINGLE str = VAR p=parm { NotSingleton ((str, p)) }
+| NOTSINGLE rest =neGationAny {rest }
 | str = VAR p=parm { Singleton ((str, p), None) }
 | LPAR r = es RPAR { r }
 | a = es DISJ b = es { Disj(a, b) }
-| UNDERLINE {Any}
+| UNDERLINE rest=anyEventOrAny {rest}
 | a = es CONCAT b = es { Concatenate (a, b) } 
 | LPAR a = es  RPAR POWER KLEENE {Kleene a}
 

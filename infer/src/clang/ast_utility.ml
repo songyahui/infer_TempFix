@@ -156,6 +156,15 @@ let string_of_basic_t v =
   | BNULL -> "nil"
   | BRET -> "ret"
 
+let basic_type2_string v = 
+  match v with 
+  | BVAR name -> [name]
+  | BINT _ 
+  | BNULL 
+  | BRET -> []
+
+
+
 let argumentsTerms2basic_types (t: (terms option) list): (basic_type list) = 
   List.fold_left t ~init:[] ~f:(fun acc a ->
     match a with 
@@ -289,6 +298,21 @@ let rec getAllVarFromTerm (t:terms) (acc:string list):string list =
     getAllVarFromTerm t2 cur
 | _ -> acc
 ;;
+
+
+
+let rec getAllVarFromES (es:es): string list = 
+  match es with   
+  | Bot | Emp | Any -> []
+  | NotSingleton (str, btList) 
+  | Singleton ((str, btList), _) ->  
+    List.fold_left btList ~init:[] ~f:(fun acc a -> List.append acc (basic_type2_string a))
+    
+  | Disj(es1, es2) -> List.append (getAllVarFromES es1) (getAllVarFromES es2)
+  | Concatenate (es1, es2) -> List.append (getAllVarFromES es1) (getAllVarFromES es2)
+  | Kleene es1 -> (getAllVarFromES es1)
+
+
 
 let rec getAllVarFromPure (pi:pure) (acc:string list):string list = 
   match pi with
@@ -766,7 +790,12 @@ let showEntailemnt (lhs:es) (rhs:es) : string =
   string_of_es lhs  ^" |- "^ string_of_es rhs ;;
 
 
-  
+let rec deleteFromEnv (env:(specification list)) (fname:string): ((specification list)) = 
+  match env with
+  | [] -> []
+  | x :: xs -> 
+    let ((fName, li), _,_, _) =  x in 
+    if String.compare fName fname == 0 then xs else x :: (deleteFromEnv xs fname)
 
 let compareEntailents (e1, e2) (e3, e4) : bool =
   comparees e1 e3 && comparees e2 e4
@@ -1098,12 +1127,12 @@ let instantiateRet_basic_type (bt:basic_type) (bds:bindings):  basic_type =
   match bt with 
   | BRET -> 
     (match findRetFromBindingsRet bds with
-    | None -> BRET
-    | Some handler ->   BVAR handler
+    | None -> bt
+    | Some handler -> BVAR handler
     )
   | BVAR str -> 
     (match findRetFromBindings bds str with
-    | None -> BRET
+    | None -> bt
     | Some term ->  term 
     )
 
@@ -1161,6 +1190,8 @@ let instantiateAugument (eff:effect option) (bds:bindings) : effect option =
     (*let () = print_string ("instantiateRet after : " ^ string_of_effect temp^ "\n") in *)
      Some (temp)
 
+let instantiateAugumentSome (eff:effect) (bds:bindings) : effect  = 
+  List.map eff ~f:(fun (pi, es) -> (instantiateRetPure pi bds, instantiateRetEs es bds)) 
 
 
 let enforeceLineNum (fp:int list) (eff:effect option) : effect option = 
@@ -1212,3 +1243,4 @@ let string_of_function_sepc (pre, post, future) : string =
     | None -> "No Future"
     | Some eff -> string_of_effect eff 
   in pre ^ "\n" ^ post ^ "\n" ^ future ^ "\n"
+

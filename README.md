@@ -60,5 +60,10 @@ AST:
 
 
 todo:
-2. library file are not counted. 
-3. back-end checking wrap up 
+
+dataset finding and implementation 
+
+infer/bin/infer run -- clang -c ../../git/swoole-src/src/core/base.cc
+
+
+instantiate the repair 

@@ -20,15 +20,18 @@ typedef struct swString {
    
 } swString;
 
-/*@ close(fd): 
-    Post (TRUE, close(fd)) 
-    Future  (TRUE, (!_(fd))^*)  @*/
 
-
-/*@ open(path, mode): 
+/*@ open(path): 
     Post (ret<0, 𝝐) \/ (ret>=0, open(ret))
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
+
+/*@ close(handler): 
+    Post (TRUE, close(handler)) 
+    Future  (TRUE, (!_(handler))^*)  @*/
+
+
+//    Pre (TRUE, (_)^*  ·  open(handler) · (_)^* )
 
 
 
@@ -58,7 +61,7 @@ swString* swoole_file_get_contents(char *filename)
     swString *content = swString_new(filesize);
     if (!content)
     {
-        //close(fd);
+        close(fd);
         return NULL;
     }
 

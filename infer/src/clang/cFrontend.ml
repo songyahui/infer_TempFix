@@ -857,7 +857,7 @@ let rec var_binding (formal:string list) (actual: basic_type list) : bindings =
   ;;
 
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
-  print_string ("synthsisFromSpec" ^ string_of_effect ([effect]) ^ "\n"); 
+  print_string ("synthsisFromSpec " ^ string_of_effect ([effect]) ^ "\n"); 
   let (pi, spec) = effect in 
   let spec =  normalise_es spec in 
   (match spec with 
@@ -866,18 +866,31 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
     let rec auc (currectProof:es) envli : string option = 
       match envli with 
       | [] -> 
-        (print_string ("directly none\n");
-        None) (* no ingradients from the env *)
-      | ((fName, li), _, Some post, _) :: xs  -> 
+        None (* no ingradients from the env *)
+      | ((fName, li::_), _, Some post, _) :: xs  -> 
+        let handler = getAllVarFromES currectProof in 
+        let (vb, arg) = 
+          match handler with 
+          | []->([], "")
+          | x ::_ -> 
+          (*print_string ("using " ^ x^ " to replace "^ li ^"\n"); *)
+          ([(li , BVAR x)], x)
+          in 
+        let post = instantiateAugumentSome post vb in 
         let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
-        print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n");
+        (* print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n"); *)
+
         let temp = 
           match result with 
-          | [] -> Some (fName ^ "(); ") 
+          | [] -> Some (fName ^ "("^ arg ^"); ") 
           | (a, _, b):: _ -> 
             (match normalise_es a with 
             | Emp -> 
-              (match synthsisFromSpec (pi, b) env with 
+              if comparees (normalise_es b) currectProof == true 
+              then auc currectProof xs 
+              else 
+              let recursiveRes = synthsisFromSpec (pi, b) env in 
+              (match recursiveRes with 
               | None  -> None 
               | Some rest -> Some (fName ^ "(); " ^ rest))
             | _ -> auc currectProof xs 
@@ -953,7 +966,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
           if String.compare str "" == 0 then " can be deleted." 
           else  " can be inserted with code " ^  str ^ ".")
-         ^ "\n\n" ^ auc res ^ "[Searching Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us\n"
+         ^ "\n\n" ^ auc res ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n"
         ) 
   in 
   let msg = auc error_lists in 
@@ -1308,6 +1321,7 @@ let retriveSpecifications (source:string) : (specification list * int * int * in
       let partitions = retriveComments line in (*in *)
       let line_of_spec = List.fold_left partitions ~init:0 ~f:(fun acc a -> acc + (List.length (Str.split (Str.regexp "\n") a)))  in 
       let sepcifications = List.map partitions ~f:(fun singlespec -> Parser.specification Lexer.token (Lexing.from_string singlespec)) in
+      (*let _ = List.map sepcifications ~f:(fun (_ , pre, post, future) -> print_endline (string_of_function_sepc (pre, post, future) ) ) in *)
       (sepcifications, line_of_code, line_of_spec, List.length partitions)
       (*
       
