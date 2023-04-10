@@ -1,0 +1,1 @@
+../../../../../git/infer/infer/bin/infer -- javac  /Users/yahuis/Desktop/repair-benchmark/jfreechart/src/main/java/org/jfree/data/DomainInfo.java

@@ -48,6 +48,8 @@ infer/bin/infer run -- clang -c ../../git/swoole-src/src/core/base.cc
 
     char *buf = (char *) sw_malloc(n);
 
+infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/core/base.c
+
 
 1. is that ok to extract the code and analyses it separately 
 2. most likely trace to have the repair. 
