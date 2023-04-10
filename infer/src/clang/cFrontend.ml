@@ -1464,17 +1464,22 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
 
 
-  let (source_Address, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol) = retrive_basic_info_from_AST ast in 
+  let (source_Address, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol) = retrive_basic_info_from_AST ast in
+  let () = totol_Lines_of_Code := !totol_Lines_of_Code + lines_of_code in 
+  let () = totol_specifications := List.append !totol_specifications specifications in 
   let start = Unix.gettimeofday () in 
-  let reasoning_Res = List.map decl_list  ~f:(fun dec -> reason_about_declaration dec specifications source_Address) in 
+  let reasoning_Res = List.map decl_list  ~f:(fun dec -> reason_about_declaration dec !totol_specifications source_Address) in 
   
+  let compution_time = (Unix.gettimeofday () -. start) in 
   (* Input program has  *)
   let msg = 
     "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-    ^ "[FINAL REPORT]:\n" ^ string_of_int lines_of_code 
+    ^ "[FINAL REPORT]:"
+    ^ source_Address ^ "\n"
+    ^ string_of_int ( !totol_Lines_of_Code ) 
     ^ " lines of code;\n" ^ string_of_int lines_of_spec 
-    ^ " lines of specs; for " ^ string_of_int number_of_protocol ^ " protocols.\n"
-    ^ "Analysis and repair took "^ string_of_float ((Unix.gettimeofday () -. start))^ " seconds.\n"
+    ^ " lines of specs; for " ^ string_of_int (List.length !totol_specifications)(*number_of_protocol*) ^ " protocols.\n"
+    ^ "Analysis and repair took "^ string_of_float (compution_time)^ " seconds.\n"
     ^ "\n" 
     ^ string_of_int !totalAssertions 
     ^ " total assertions, and " 
@@ -1494,6 +1499,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
   print_endline (msg); 
 
+
+  let () = totol_execution_time := !totol_execution_time +. compution_time in 
+  print_endline ("totol_execution_time: " ^ string_of_float !totol_execution_time); 
   print_endline ("\n============ Here is the end of Yahui's Code ============\n" 
                 ^ "=========================================================\n");
   

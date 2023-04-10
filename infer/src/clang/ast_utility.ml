@@ -81,6 +81,15 @@ let (failedAssertions: int ref) =  ref 0
 let (reapiredFailedAssertions: int ref) =  ref 0 
 
 
+(* Experimental Summary *)
+let totol_execution_time  = ref 0.0
+let totol_Lines_of_Code  = ref 0
+
+
+
+let (totol_specifications: (specification list) ref)  = ref []
+
+
 let programStates2effectwithfootprintlist eff = 
   List.map eff ~f:(fun (p, es, _, ft)-> (p, es, ft))
 
