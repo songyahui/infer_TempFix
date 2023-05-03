@@ -761,7 +761,8 @@ let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure o
 
 
 let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option = 
-  print_endline (Clang_ast_proj.get_stmt_kind_string instr);
+  (*print_endline (Clang_ast_proj.get_stmt_kind_string instr);
+  *)
 
   match instr with 
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
@@ -932,7 +933,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   if List.length error_paths == 0 then ()
   else 
   let (error_lists:((pure * es * (int * int) * es) list)) = bugLocalisation error_paths in 
-  print_endline ("\n<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>\n\n[Repair Options] \n");
+  print_endline ("\n<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>\n\n[Repair Options] ");
 
   let rec helper li = 
       match li with 
@@ -944,7 +945,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   let msg = helper error_lists in 
   print_endline (msg);
   
-  print_endline("[Patches]\n");
+  print_endline("[Patches] ");
   let rec auc li = 
       match li with 
       | [] -> ""
@@ -996,10 +997,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
   *)
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
-    (*print_string ("==> helper: ");
+    print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
     print_endline ("");
-    *)
+    
 
     match li with
     | [] -> [(TRUE, Emp, 0, [])]
@@ -1012,7 +1013,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
 
     | (CallExpr (stmt_info, stmt_list, ei)) ::xs -> 
-      print_endline ("I am here call");
+      (*print_endline ("I am here call");*)
       
 (* STEP 0: retrive the spec of the callee *)
       let fp = stmt_intfor2FootPrint stmt_info in 
@@ -1025,9 +1026,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           | None -> (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
             
+            (*
             let () = print_string ("=========================\n") in 
             print_string (string_of_event (calleeName, acturelli) ^ ":\n");
-            
+            *)
+
             let spec = findSpecFrom env calleeName in 
             match spec with
             | None -> (("none", []), None, None, None)
@@ -1044,8 +1047,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             
           )
       in 
+      (*
       print_string (string_of_function_sepc (prec, postc, futurec)^"\n"); 
-
+      *)    
 (* STEP 1: check precondition *)
       let () = 
         match prec with 
@@ -1090,12 +1094,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
 (* STEP 3: compute the effect for the rest code *)
+  print_endline ("computing restSpec"  ^ string_of_int(List.length xs));
+
       let effectRest = helper (post') xs in
       
 (* STEP 4: check the future spec of the callee *)
         (match futurec with 
         | None -> 
-        print_endline ("None");
+        (*print_endline ("None");*)
 
           (match postc with 
           | None ->  effectRest 
@@ -1103,6 +1109,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
           )
         | Some futurec -> 
+          print_endline ("restSpec" ^ string_of_programStates effectRest);
 
           let restSpec = 
             match future with
@@ -1110,7 +1117,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             | Some future -> concatenateTwoEffectswithFlag effectRest (effects2programStates future)
           in 
 
-          print_endline ("restSpec" ^ string_of_programStates restSpec);
+          
+          print_endline ("futurec" ^ string_of_effect futurec);
+
 
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpec)) futurec in 
           let extra_info = "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
@@ -1134,9 +1143,28 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
   in 
   match instr with 
+  | ReturnStmt (stmt_info, [ret]) ->
+    let extrapure = 
+      match stmt2Term ret with 
+      | Some (Basic (BINT n)) -> Eq(Basic(BVAR "ret"), Basic(BINT n))
+      | Some (Basic (BVAR str)) -> Eq(Basic(BVAR "ret"), Basic(BVAR str))
+      | _ -> Ast_utility.TRUE
+    in 
+    let fp = stmt_intfor2FootPrint stmt_info in 
+    (*print_string ("Return: "); 
+    let _ = List.map stmt_list ~f:(fun a -> 
+      let temp = stmt2Term a in 
+      match temp with 
+      | None -> print_string ("none")
+      | Some temp -> print_string (string_of_terms temp)
+    ) in 
+    print_string ("\n\n");
+    *)
+    [(extrapure, Emp, 1, fp)]
+  
   | ReturnStmt (stmt_info, stmt_list) ->
     let fp = stmt_intfor2FootPrint stmt_info in 
-    [(TRUE, Emp, 1, fp)]
+    [(Ast_utility.TRUE, Emp, 1, fp)]
   
 
   | CompoundStmt (stmt_info, stmt_list) -> 
@@ -1148,14 +1176,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let fp = stmt_intfor2FootPrint stmt_info in 
 
     let checkRelavent (conditional:  Clang_ast_t.stmt) : (((pure* (string list)) option))  = 
-        print_string ("\n*****\ncheckRelavent: "); 
+        (*print_string ("\n*****\ncheckRelavent: "); 
         print_string (string_of_varSet (!varSet));
-        
+        *)
         match stmt2Pure conditional with 
         | None -> (*print_string ("None; \n");*) None 
         | Some condition -> 
           print_endline (string_of_pure condition);
           print_endline (string_of_pure (Neg condition));
+          
 
           let (varFromPure: string list) = varFromPure condition in 
           if twoStringSetOverlap varFromPure (!varSet) then 
@@ -1363,7 +1392,7 @@ let retriveSpecifications (source:string) : (specification list * int * int * in
       let sepcifications = List.map partitions 
         ~f:(fun singlespec -> 
           print_endline ("Global specifictaions are: ");
-          print_endline (singlespec);
+          print_endline (singlespec ^ "\n");
           Parser.specification Lexer.token (Lexing.from_string singlespec)) in
       
       (*
@@ -1517,6 +1546,11 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
 
   let (source_Address, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol) = retrive_basic_info_from_AST ast in
+  
+  
+  
+  let () = totol_Lines_of_Spec := !totol_Lines_of_Spec + lines_of_spec in 
+
   let () = totol_Lines_of_Code := !totol_Lines_of_Code + lines_of_code in 
   let () = totol_specifications := List.append !totol_specifications specifications in 
   let start = Unix.gettimeofday () in 
@@ -1531,7 +1565,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     ^ "[FINAL REPORT]:"
     ^ source_Address ^ "\n"
     ^ string_of_int ( !totol_Lines_of_Code ) ^ " lines of code;\n" 
-    ^ string_of_int lines_of_spec ^ " lines of specs; for " 
+    ^ string_of_int !totol_Lines_of_Spec ^ " lines of specs; for " 
     ^ string_of_int (List.length !totol_specifications)(*number_of_protocol*) ^ " protocols.\n"
     ^ "Analysis and repair took "^ string_of_float (compution_time)^ " seconds.\n\n"
     ^ string_of_int !totalAssertions ^ " total assertions, and " 

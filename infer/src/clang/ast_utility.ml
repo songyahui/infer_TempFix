@@ -84,6 +84,7 @@ let (reapiredFailedAssertions: int ref) =  ref 0
 (* Experimental Summary *)
 let totol_execution_time  = ref 0.0
 let totol_Lines_of_Code  = ref 0
+let totol_Lines_of_Spec  = ref 0
 
 
 
@@ -182,24 +183,24 @@ let argumentsTerms2basic_types (t: (terms option) list): (basic_type list) =
   )
 
 
-let rec showTerms (t:terms):string = 
+let rec string_of_terms (t:terms):string = 
   match t with
   | Basic v -> string_of_basic_t v 
-  | Plus (t1, t2) -> (showTerms t1) ^ ("+") ^ (showTerms t2)
-  | Minus (t1, t2) -> (showTerms t1) ^ ("-") ^ (showTerms t2)
+  | Plus (t1, t2) -> (string_of_terms t1) ^ ("+") ^ (string_of_terms t2)
+  | Minus (t1, t2) -> (string_of_terms t1) ^ ("-") ^ (string_of_terms t2)
 
 let rec string_of_pure (p:pure):string =   
   match p with
     TRUE -> "⊤"
   | FALSE -> "⊥"
-  | Gt (t1, t2) -> (showTerms t1) ^ ">" ^ (showTerms t2)
-  | Lt (t1, t2) -> (showTerms t1) ^ "<" ^ (showTerms t2)
-  | GtEq (t1, t2) -> (showTerms t1) ^ "≥" ^ (showTerms t2)
-  | LtEq (t1, t2) -> (showTerms t1) ^ "≤" ^ (showTerms t2)
-  | Eq (t1, t2) -> (showTerms t1) ^ "=" ^ (showTerms t2)
+  | Gt (t1, t2) -> (string_of_terms t1) ^ ">" ^ (string_of_terms t2)
+  | Lt (t1, t2) -> (string_of_terms t1) ^ "<" ^ (string_of_terms t2)
+  | GtEq (t1, t2) -> (string_of_terms t1) ^ "≥" ^ (string_of_terms t2)
+  | LtEq (t1, t2) -> (string_of_terms t1) ^ "≤" ^ (string_of_terms t2)
+  | Eq (t1, t2) -> (string_of_terms t1) ^ "=" ^ (string_of_terms t2)
   | PureOr (p1, p2) -> "("^string_of_pure p1 ^ "∨" ^ string_of_pure p2^")"
   | PureAnd (p1, p2) -> string_of_pure p1 ^ "∧" ^ string_of_pure p2
-  | Neg (Eq (t1, t2)) -> "("^(showTerms t1) ^ "!=" ^ (showTerms t2)^")"
+  | Neg (Eq (t1, t2)) -> "("^(string_of_terms t1) ^ "!=" ^ (string_of_terms t2)^")"
   | Neg p -> "!(" ^ string_of_pure p^")"
 
 let rec varFromTerm (t:terms): string list =   
@@ -1295,8 +1296,8 @@ let effectwithfootprint2Effect eff =
 
 let string_of_inclusion_results (extra_info: string) (info:((error_info list) * binary_tree * pathList * pathList)) : string = 
   let (error_paths, tree, correctTraces, errorTraces) = info in 
-  if List.length error_paths == 0 then "" ^
-    "Inclusion Succeed!\n" ^  string_of_binary_tree tree  
+  if List.length error_paths == 0 then "" (*^
+    "Inclusion Succeed!\n" ^  string_of_binary_tree tree  *)
   else 
     extra_info^ 
     "Failed!\n" ^  string_of_binary_tree tree   
