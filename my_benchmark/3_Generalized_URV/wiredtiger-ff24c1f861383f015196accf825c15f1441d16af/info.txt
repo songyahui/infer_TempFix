@@ -1,0 +1,6 @@
+
+src/evict/evict_file.c
+
+Instead of calling __wt_evict_page_clean_update() when discarding pages,
+call __wt_ref_out() directly, __wt_evict_page_clean_update() doesn't do
+any useful additional work.

@@ -1,0 +1,4 @@
+libavformat/adtsenc.c
+As the second argument for init_get_bits (buf) can be crafted, a return value check for this function call is necessary.
+'buf' is  part of  'AVPacket pkt'.
+replace init_get_bits with init_get_bits8.
