@@ -883,7 +883,7 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
         let temp = 
           match result with 
           | [] -> Some (fName ^ "("^ arg ^"); ") 
-          | (a, _, b):: _ -> 
+          | (_, a, _, b):: _ -> 
             (match normalise_es a with 
             | Emp -> 
               if comparees (normalise_es b) currectProof == true 
@@ -918,13 +918,15 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   let (error_paths, tree, correctTraces, errorTraces) = info in 
   if List.length error_paths == 0 then ()
   else 
-  let (error_lists:( (es * (int * int) * es) list)) = bugLocalisation error_paths in 
+  let (error_lists:((pure * es * (int * int) * es) list)) = bugLocalisation error_paths in 
   print_endline ("\n<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>\n\n[Repair Options] \n");
 
   let rec helper li = 
       match li with 
       | [] -> ""
-      | (realspec, _, spec):: res  -> (string_of_es realspec ^ " ~~~> " ^ string_of_es spec ) ^ ";\n" ^ helper res
+      | (pathcondition, realspec, _, spec):: res  -> 
+      ( string_of_pure pathcondition ^ " /\\ " ^ 
+        string_of_es realspec ^ " ~~~> " ^ string_of_es spec ) ^ ";\n" ^ helper res
   in 
   let msg = helper error_lists in 
   print_endline (msg);
@@ -933,7 +935,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   let rec auc li = 
       match li with 
       | [] -> ""
-      | (realspec, (startNum ,endNum ),  spec):: res  -> 
+      | (pathcondition, realspec, (startNum ,endNum ),  spec):: res  -> 
         let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (startNum, endNum) = 
@@ -949,7 +951,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
         let (specifications: specification list) = List.append specifications !dynamicSpec in 
         
         
-        let list_of_functionCalls = synthsisFromSpec (TRUE, spec) (specifications) in
+        let list_of_functionCalls = synthsisFromSpec (pathcondition, spec) (specifications) in
 
         let startTimeStamp01 = Unix.gettimeofday() in
 

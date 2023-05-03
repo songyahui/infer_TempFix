@@ -188,7 +188,7 @@ let rec showTerms (t:terms):string =
   | Plus (t1, t2) -> (showTerms t1) ^ ("+") ^ (showTerms t2)
   | Minus (t1, t2) -> (showTerms t1) ^ ("-") ^ (showTerms t2)
 
-let rec showPure (p:pure):string =   
+let rec string_of_pure (p:pure):string =   
   match p with
     TRUE -> "⊤"
   | FALSE -> "⊥"
@@ -197,10 +197,10 @@ let rec showPure (p:pure):string =
   | GtEq (t1, t2) -> (showTerms t1) ^ "≥" ^ (showTerms t2)
   | LtEq (t1, t2) -> (showTerms t1) ^ "≤" ^ (showTerms t2)
   | Eq (t1, t2) -> (showTerms t1) ^ "=" ^ (showTerms t2)
-  | PureOr (p1, p2) -> "("^showPure p1 ^ "∨" ^ showPure p2^")"
-  | PureAnd (p1, p2) -> showPure p1 ^ "∧" ^ showPure p2
+  | PureOr (p1, p2) -> "("^string_of_pure p1 ^ "∨" ^ string_of_pure p2^")"
+  | PureAnd (p1, p2) -> string_of_pure p1 ^ "∧" ^ string_of_pure p2
   | Neg (Eq (t1, t2)) -> "!("^(showTerms t1) ^ "=" ^ (showTerms t2)^")"
-  | Neg p -> "!(" ^ showPure p^")"
+  | Neg p -> "!(" ^ string_of_pure p^")"
 
 let rec varFromTerm (t:terms): string list =   
   match t with
@@ -373,7 +373,7 @@ let rec existInhistoryTable pi table=
   match table with 
   | [] -> None
   | (x, b)::xs -> 
-    if String.compare x (showPure pi) == 0 then Some b 
+    if String.compare x (string_of_pure pi) == 0 then Some b 
     else existInhistoryTable pi  xs
 
 
@@ -453,7 +453,7 @@ let askZ3 pi =
   
   let _ = counter := !counter + 1 in 
   let re = check pi in 
-  let ()= historyTable := (showPure pi, re)::!historyTable in 
+  let ()= historyTable := (string_of_pure pi, re)::!historyTable in 
   
   re;;
 
@@ -462,7 +462,7 @@ let entailConstrains pi1 pi2 =
 
   let sat = not (askZ3 (Neg (PureOr (Neg pi1, pi2)))) in
   (*
-  print_string (showPure pi1 ^" -> " ^ showPure pi2 ^" == ");
+  print_string (string_of_pure pi1 ^" -> " ^ string_of_pure pi2 ^" == ");
   print_string (string_of_bool (sat) ^ "\n");
   *)
   sat;;
@@ -548,14 +548,14 @@ let string_of_exists exs =
 let rec string_of_effect (eff:effect) : string = 
   match eff with 
   | [] -> ""
-  | [(pi, es)] ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ")"
-  | (pi, es) :: xs ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
+  | [(pi, es)] ->  "(" ^ string_of_pure pi ^ " /\\ " ^ string_of_es es ^ ")"
+  | (pi, es) :: xs ->  "(" ^ string_of_pure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
 
 let rec string_of_programStates (eff:programStates) : string = 
   match eff with 
   | [] -> ""
-  | [(pi, es, code, _)] ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^"," ^ string_of_int code ^")"
-  | (pi, es, code, _) :: xs ->  "(" ^ showPure pi ^ " /\\ " ^ string_of_es es ^"," ^ string_of_int code ^ ") \\/ " ^ string_of_programStates xs
+  | [(pi, es, code, _)] ->  "(" ^ string_of_pure pi ^ " /\\ " ^ string_of_es es ^"," ^ string_of_int code ^")"
+  | (pi, es, code, _) :: xs ->  "(" ^ string_of_pure pi ^ " /\\ " ^ string_of_es es ^"," ^ string_of_int code ^ ") \\/ " ^ string_of_programStates xs
 
 let compareBasic_type (bt1:basic_type) (bt2:basic_type) : bool = 
   match (bt1, bt2) with 
@@ -884,7 +884,7 @@ let rec inclusion (lhs:es) (rhs:es) (ctx: (es*es) list): (bool* binary_tree) =
       in ietrater fstSet 
     
 
-type error_info = (es * int * es)     
+type error_info = (pure * es * int * es)     
     
 let getLineNumFromfstElem (f:fstElem) = 
   match f with 
@@ -907,6 +907,7 @@ let modifiyTheassertionCounters re =
   else ()
   
 let rec inclusion' 
+  (pathcondition:pure)
   (currentposition:int)
   (lhs:es) 
   (rhs:es) 
@@ -919,7 +920,7 @@ let rec inclusion'
 
   if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
   else if nullable lhs && (not (nullable rhs)) then 
-  ([(lhs, currentposition ,rhs)], Node (entailent ^ "  [Disprove]", []) )
+  ([(pathcondition, lhs, currentposition ,rhs)], Node (entailent ^ "  [Disprove]", []) )
 
   else if reoccur lhs rhs ctx then 
     ([], Node (entailent ^ "  [Reoccur]", []) )
@@ -930,17 +931,17 @@ let rec inclusion'
     else 
       match (lhs, rhs) with 
       | (Disj (lhs1, lhs2), _) -> 
-        let (result1, tree1) = inclusion' currentposition lhs1 rhs ((lhs, rhs):: ctx) in 
+        let (result1, tree1) = inclusion' pathcondition currentposition lhs1 rhs ((lhs, rhs):: ctx) in 
         if List.length result1 > 0 then (result1, Node(entailent, [tree1])) 
         else 
-          let (result2, tree2) = inclusion' currentposition lhs2 rhs ((lhs1,rhs)::(lhs, rhs):: ctx) in 
+          let (result2, tree2) = inclusion' pathcondition currentposition lhs2 rhs ((lhs1,rhs)::(lhs, rhs):: ctx) in 
           (result2, Node (entailent ^ "  [DisjL]",[tree1; tree2]))
 
       | (_, Disj (rhs1, rhs2)) -> 
-        let (result1, tree1) = inclusion' currentposition lhs rhs1 ((lhs, rhs):: ctx) in 
+        let (result1, tree1) = inclusion' pathcondition currentposition lhs rhs1 ((lhs, rhs):: ctx) in 
         if List.length result1 == 0 then (result1, Node (entailent, [tree1])) 
         else 
-          let (result2, tree2) = inclusion' currentposition lhs rhs2 ((lhs, rhs):: ctx) in 
+          let (result2, tree2) = inclusion' pathcondition currentposition lhs rhs2 ((lhs, rhs):: ctx) in 
           if List.length result2 == 0 then (result2, Node (entailent, [tree2])) 
           else 
           (List.append result1 result2, Node (entailent ^ "  [DisjR]",[tree1; tree2]))
@@ -955,9 +956,9 @@ let rec inclusion'
             let currentposition = if currentposition == (-1000) then 
             (print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");
             (getLineNumFromfstElem f)) else currentposition in 
-            ([(lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
+            ([(pathcondition, lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
           else 
-            let (result, tree) = inclusion' (getLineNumFromfstElem f) derL derR ((lhs, rhs):: ctx) in 
+            let (result, tree) = inclusion' pathcondition (getLineNumFromfstElem f) derL derR ((lhs, rhs):: ctx) in 
             (result, Node(entailent ^ "  [Unfold]" , [tree])) 
         | f :: restF -> 
           let derL = (derivitives f lhs) in 
@@ -966,9 +967,9 @@ let rec inclusion'
             let currentposition = if currentposition == (-1000) then 
             (print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");
             (getLineNumFromfstElem f)) else currentposition in 
-            ([(lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
+            ([(pathcondition, lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
           else 
-          let (result, tree) = inclusion' (getLineNumFromfstElem f) derL derR ((lhs, rhs):: ctx) in 
+          let (result, tree) = inclusion' pathcondition (getLineNumFromfstElem f) derL derR ((lhs, rhs):: ctx) in 
           (match result with 
           | [] -> 
             let (resultRest, treeRest)  = ietrater restF in 
@@ -989,7 +990,6 @@ let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tre
         let pairs = List.filter pairs' ~f:(fun (piL, piR)->  not (entailConstrains piL piR)) in 
         if List.length pairs == 0 then true 
         else false  
-
        )
   in 
   
@@ -1000,14 +1000,16 @@ let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tre
   *)
 
   let mixLi = cartesian_product lhs rhs in 
-  let validPairs = List.filter mixLi ~f:(fun ((p1, es1), (p2, es2)) -> entailConstrains p1 p2 )
-  in 
+  (* SYH: here is very important, as this is the under approximation of the specifiction *)
+  let validPairs = List.map mixLi 
+    ~f:(fun ((p1, a), (p2, c)) -> ((PureAnd(p1, p2), a), (p2, c))) in 
+  
   let (f_re, f_tree) = (List.fold_left validPairs ~init:([], []) ~f:(
     fun (accre, acctree) ((p1, es1), (p2, es2)) ->
-    let (re, tree) = inclusion' 0 es1 es2 [] in 
+    let (re, tree) = inclusion' p2 0 es1 es2 [] in 
     modifiyTheProofOblgationCounters re; 
 
-    (List.append accre re, List.append acctree [(Node ((showPure p1 ^ "|-" ^ showPure p2) , [tree]))])
+    (List.append accre re, List.append acctree [(Node ((string_of_pure p1 ^ "|-" ^ string_of_pure p2) , [tree]))])
     )) in 
     (f_re, Node ("TRS:", f_tree))
 
@@ -1034,7 +1036,7 @@ let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) :
   let (f_re, f_tree, correctT, errorT) = 
   (List.fold_left validPairs ~init:([], [], [], []) ~f:(
     fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
-    let (re, tree) = inclusion' 0 es1 es2 [] in   
+    let (re, tree) = inclusion' p2 0 es1 es2 [] in   
     modifiyTheProofOblgationCounters re; 
     modifiyTheassertionCounters re; 
     let (correctTrace', errorTrace') = 
@@ -1042,7 +1044,7 @@ let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) :
       then (List.append correctTrace [li], errorTrace)
       else (correctTrace, List.append errorTrace [li])
     in 
-    (List.append accre re, List.append acctree [(Node ((showPure p1 ^ "|-" ^ showPure p2) , [tree]))], 
+    (List.append accre re, List.append acctree [(Node ((string_of_pure p1 ^ "|-" ^ string_of_pure p2) , [tree]))], 
     correctTrace', errorTrace'
     )
     )) in 
@@ -1063,24 +1065,24 @@ let rec reversees (eff:es) : es =
   | Kleene effIn          ->Kleene (reversees effIn)
 
 
-let bugLocalisation (paths: error_info list): (es * (int * int) * es) list = 
+let bugLocalisation (paths: error_info list): (pure * es * (int * int) * es) list = 
   let rec helper li =
     match li with 
     | [] -> []
-    | (lhs, start, rhs):: rest -> 
+    | (pathcondition, lhs, start, rhs):: rest -> 
       let revlhs = reversees lhs in 
       let revrhs = reversees rhs in 
-      let (result, tree) = inclusion' (100000) revlhs revrhs [] in 
+      let (result, tree) = inclusion' pathcondition (100000) revlhs revrhs [] in 
       modifiyTheProofOblgationCounters result; 
 
 
       (*
       print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
 *)
-      let temp = List.map result ~f:(fun (a, n, b)-> 
+      let temp = List.map result ~f:(fun (pathcondition, a, n, b)-> 
 (*      print_string (showEntailemnt (reversees a) (reversees b) ^ "\n ------- \n");
 *)
-        (reversees a, (start, n), reversees b)) in 
+        (pathcondition, reversees a, (start, n), reversees b)) in 
 
       
       List.append temp (helper rest)
