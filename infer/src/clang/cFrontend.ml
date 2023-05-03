@@ -754,11 +754,15 @@ let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure o
     else if String.compare op ">" == 0 then Gt (t1, t2)
     else if String.compare op ">=" == 0 then GtEq (t1, t2)
     else if String.compare op "<=" == 0 then LtEq (t1, t2)
+    else if String.compare op "!=" == 0 then Neg (Eq (t1, t2))
+
     else Eq (t1, t2)
     in Some p 
 
 
 let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option = 
+  print_endline (Clang_ast_proj.get_stmt_kind_string instr);
+
   match instr with 
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
     (match binop_info.boi_kind with
@@ -767,6 +771,7 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     | `GE -> stmt2Pure_helper ">=" (stmt2Term x) (stmt2Term y) 
     | `LE -> stmt2Pure_helper "<=" (stmt2Term x) (stmt2Term y) 
     | `EQ -> stmt2Pure_helper "=" (stmt2Term x) (stmt2Term y) 
+    | `NE -> stmt2Pure_helper "!=" (stmt2Term x) (stmt2Term y) 
     | _ -> None 
     )
 
@@ -779,6 +784,7 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
       | Some p -> Some (Neg p))
     | _ -> None 
     )
+  | ParenExpr (_, x::_, _) -> stmt2Pure x
   
   | _ -> None (* Some (Gt (Var(Clang_ast_proj.get_stmt_kind_string instr), Var (""))) *)
 
@@ -860,7 +866,7 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
   print_string ("synthsisFromSpec " ^ string_of_effect ([effect]) ^ "\n"); 
   let (pi, spec) = effect in 
   let spec =  normalise_es spec in 
-  (match spec with 
+  let patch = (match spec with 
   | Emp -> Some ""
   | _ -> 
     let rec auc (currectProof:es) envli : string option = 
@@ -899,7 +905,14 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
         | None -> auc currectProof xs 
         | _ -> temp*)
       | x :: xs  -> auc currectProof xs 
-    in auc spec env)
+    in auc spec env) in 
+    (match patch with 
+    | None -> None 
+    | Some fix -> 
+       if entailConstrains TRUE pi == false then  
+          Some ("if (" ^ string_of_pure (normalPure pi) ^ "){" ^ fix ^"}")
+       else Some fix)
+
 
   
 let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list = 
@@ -979,12 +992,14 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
 let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
 (future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
 
+  (*
   print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
-
+  *)
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
-    print_string ("==> helper: ");
+    (*print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
     print_endline ("");
+    *)
 
     match li with
     | [] -> [(TRUE, Emp, 0, [])]
@@ -1009,10 +1024,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (match extractEventFromFUnctionCall x rest with 
           | None -> (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
-            (*
+            
             let () = print_string ("=========================\n") in 
             print_string (string_of_event (calleeName, acturelli) ^ ":\n");
-            *)
+            
             let spec = findSpecFrom env calleeName in 
             match spec with
             | None -> (("none", []), None, None, None)
@@ -1133,12 +1148,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let fp = stmt_intfor2FootPrint stmt_info in 
 
     let checkRelavent (conditional:  Clang_ast_t.stmt) : (((pure* (string list)) option))  = 
-        (*print_string ("\n*****\ncheckRelavent: "); 
+        print_string ("\n*****\ncheckRelavent: "); 
         print_string (string_of_varSet (!varSet));
-        *)
+        
         match stmt2Pure conditional with 
         | None -> (*print_string ("None; \n");*) None 
         | Some condition -> 
+          print_endline (string_of_pure condition);
+          print_endline (string_of_pure (Neg condition));
+
           let (varFromPure: string list) = varFromPure condition in 
           if twoStringSetOverlap varFromPure (!varSet) then 
           ((*print_string ("Yes; \n");*)

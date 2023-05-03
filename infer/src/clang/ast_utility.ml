@@ -162,7 +162,7 @@ let string_of_basic_t v =
   match v with 
   | BVAR name -> name
   | BINT n -> string_of_int n
-  | BNULL -> "nil"
+  | BNULL -> "NULL"
   | BRET -> "ret"
 
 let basic_type2_string v = 
@@ -199,7 +199,7 @@ let rec string_of_pure (p:pure):string =
   | Eq (t1, t2) -> (showTerms t1) ^ "=" ^ (showTerms t2)
   | PureOr (p1, p2) -> "("^string_of_pure p1 ^ "∨" ^ string_of_pure p2^")"
   | PureAnd (p1, p2) -> string_of_pure p1 ^ "∧" ^ string_of_pure p2
-  | Neg (Eq (t1, t2)) -> "!("^(showTerms t1) ^ "=" ^ (showTerms t2)^")"
+  | Neg (Eq (t1, t2)) -> "("^(showTerms t1) ^ "!=" ^ (showTerms t2)^")"
   | Neg p -> "!(" ^ string_of_pure p^")"
 
 let rec varFromTerm (t:terms): string list =   
@@ -600,8 +600,31 @@ let rec existPi pi li =
       [] -> false 
     | x :: xs -> if comparePure pi x then true else existPi pi xs 
     )
-    
 
+let rec normalPure (pi : pure) : pure =
+  match pi with
+  | PureAnd (p1, p2) ->
+    let p1 = normalPure p1 in
+    let p2 = normalPure p2 in
+    (match (p1, p2) with
+    | TRUE, _ -> p2
+    | _, TRUE -> p1
+    | FALSE, _ -> FALSE
+    | _, FALSE -> FALSE
+    | _, _ -> PureAnd (p1, p2))
+  | PureOr (p1, p2) ->
+    let p1 = normalPure p1 in
+    let p2 = normalPure p2 in
+    (match (p1, p2) with
+    | TRUE, _ -> TRUE
+    | _, TRUE -> TRUE
+    | FALSE, _ -> p2
+    | _, FALSE -> p1
+    | _, _ -> PureOr (p1, p2))
+  | Neg p1 -> Neg (normalPure p1)
+  | _ -> pi
+    
+(*
 let rec normalPure (pi:pure):pure = 
   let allPi = getAllPi pi [] in
   let rec clear_Pi pi li = 
@@ -622,7 +645,7 @@ let rec normalPure (pi:pure):pure =
     | [] -> TRUE
     | x :: xs ->connectPi xs x
     )
-
+*)
 
 let rec normalise_es (eff:es) : es = 
   match eff with 
@@ -913,6 +936,14 @@ let rec inclusion'
   (rhs:es) 
   (ctx: (es*es) list) : ((error_info list) * binary_tree ) =
 
+(*
+print_endline (string_of_pure pathcondition);
+*)
+if entailConstrains pathcondition FALSE 
+then ([], Node (string_of_pure pathcondition ^ "  [Prove]", []) )
+else 
+
+
   let lhs = normalise_es lhs in 
   let rhs = normalise_es rhs in  
   let entailent = showEntailemnt lhs rhs in 
@@ -1002,7 +1033,10 @@ let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tre
   let mixLi = cartesian_product lhs rhs in 
   (* SYH: here is very important, as this is the under approximation of the specifiction *)
   let validPairs = List.map mixLi 
-    ~f:(fun ((p1, a), (p2, c)) -> ((PureAnd(p1, p2), a), (p2, c))) in 
+    ~f:(fun ((p1, a), (p2, c)) -> 
+      let pathcondition = 
+        if entailConstrains p1 p2 then TRUE else PureAnd(p1, p2) in 
+    ((pathcondition (**), a), (p2, c))) in 
   
   let (f_re, f_tree) = (List.fold_left validPairs ~init:([], []) ~f:(
     fun (accre, acctree) ((p1, es1), (p2, es2)) ->
@@ -1017,26 +1051,38 @@ type pathList = (int list ) list
 
 let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) : 
 ((error_info list) * binary_tree * pathList * pathList) = 
-  print_endline (string_of_effect rhs);
+  
+  (*print_endline (string_of_effect rhs);
 
   print_endline (string_of_int (List.length lhs) ^ " " ^ string_of_int (List.length rhs));
-
+*)
   let mixLi = cartesian_product lhs rhs in 
 
-  print_endline ("mixLi length:" ^ string_of_int (List.length mixLi));
-
+  (*print_endline ("mixLi length:" ^ string_of_int (List.length mixLi));
+*)
   (* SYH: here is very important, as this is the under approximation of the specifiction *)
   let validPairs = List.map mixLi 
-    ~f:(fun ((p1, a, b), (p2, c)) -> ((PureAnd(p1, p2), a, b), (p2, c))) in 
+    ~f:(fun ((p1, a, b), (p2, c)) -> 
+      let pathcondition = 
+        if entailConstrains p1 p2 then TRUE else 
+        PureAnd(p1, p2) in 
+    ((pathcondition, a, b), (p2, c))) in 
     
     (*List.filter mixLi ~f:(fun ((p1, _, _), (p2, _)) -> entailConstrains p1 p2) in *)
 
-  print_endline ("validPairs length:" ^ string_of_int (List.length validPairs));
 
+
+
+
+  (*
+  print_endline ("validPairs length:" ^ string_of_int (List.length validPairs));
+*)
   let (f_re, f_tree, correctT, errorT) = 
   (List.fold_left validPairs ~init:([], [], [], []) ~f:(
     fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
-    let (re, tree) = inclusion' p2 0 es1 es2 [] in   
+
+
+    let (re, tree) = inclusion' p1 0 es1 es2 [] in   
     modifiyTheProofOblgationCounters re; 
     modifiyTheassertionCounters re; 
     let (correctTrace', errorTrace') = 
