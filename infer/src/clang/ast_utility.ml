@@ -915,7 +915,8 @@ let rec inclusion'
   let lhs = normalise_es lhs in 
   let rhs = normalise_es rhs in  
   let entailent = showEntailemnt lhs rhs in 
-  (*print_string (entailent ^ "\n");*)
+  (* print_endline (entailent); *)
+
   if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
   else if nullable lhs && (not (nullable rhs)) then 
   ([(lhs, currentposition ,rhs)], Node (entailent ^ "  [Disprove]", []) )
@@ -1014,9 +1015,22 @@ type pathList = (int list ) list
 
 let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) : 
 ((error_info list) * binary_tree * pathList * pathList) = 
+  print_endline (string_of_effect rhs);
+
+  print_endline (string_of_int (List.length lhs) ^ " " ^ string_of_int (List.length rhs));
+
   let mixLi = cartesian_product lhs rhs in 
-  let validPairs = List.filter mixLi ~f:(fun ((p1, _, _), (p2, _)) -> entailConstrains p1 p2 )
-  in 
+
+  print_endline ("mixLi length:" ^ string_of_int (List.length mixLi));
+
+  (* SYH: here is very important, as this is the under approximation of the specifiction *)
+  let validPairs = List.map mixLi 
+    ~f:(fun ((p1, a, b), (p2, c)) -> ((PureAnd(p1, p2), a, b), (p2, c))) in 
+    
+    (*List.filter mixLi ~f:(fun ((p1, _, _), (p2, _)) -> entailConstrains p1 p2) in *)
+
+  print_endline ("validPairs length:" ^ string_of_int (List.length validPairs));
+
   let (f_re, f_tree, correctT, errorT) = 
   (List.fold_left validPairs ~init:([], [], [], []) ~f:(
     fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
@@ -1233,8 +1247,8 @@ let effectwithfootprint2Effect eff =
 
 let string_of_inclusion_results (extra_info: string) (info:((error_info list) * binary_tree * pathList * pathList)) : string = 
   let (error_paths, tree, correctTraces, errorTraces) = info in 
-  if List.length error_paths == 0 then ""
-    (* "Inclusion Succeed!\n" ^  string_of_binary_tree tree   *)
+  if List.length error_paths == 0 then "" ^
+    "Inclusion Succeed!\n" ^  string_of_binary_tree tree  
   else 
     extra_info^ 
     "Failed!\n" ^  string_of_binary_tree tree   

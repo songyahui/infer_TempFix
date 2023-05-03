@@ -114,7 +114,7 @@ let run_clang_frontend ast_source =
 
 
 let run_and_validate_clang_frontend ast_source =
-  (*print_string("<<<SYH:capture.run_and_validate_clang_frontend>>>\n"); *)
+  print_string("<<<SYH:capture.run_and_validate_clang_frontend>>>\n"); 
 
   try run_clang_frontend ast_source
   with exc ->
@@ -178,7 +178,7 @@ let run_plugin_and_frontend source_path frontend clang_cmd =
 
 
 let cc1_capture clang_cmd =
-  (*print_string("<<<SYH:capture.cc1_capture>>>\n"); *)
+  print_string("<<<SYH:capture.cc1_capture>>>\n"); 
 
   let source_path =
     let root = Unix.getcwd () in

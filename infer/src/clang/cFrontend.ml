@@ -976,16 +976,26 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
 
 let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
 (future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
+
+  print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
+
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
+    print_string ("==> helper: ");
+    let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+    print_endline ("");
+
     match li with
     | [] -> [(TRUE, Emp, 0, [])]
 
     | DeclStmt (_, [CStyleCastExpr(_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _)], [del]):: xs  
-    | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], [del]) ::xs ->
+    | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], [del]) ::xs 
+    | DeclStmt (_, [(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))], [del]) ::xs ->
+
       let () = handlerVar := Some (string_of_decl del) in 
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
 
     | (CallExpr (stmt_info, stmt_list, ei)) ::xs -> 
+      print_endline ("I am here call");
       
 (* STEP 0: retrive the spec of the callee *)
       let fp = stmt_intfor2FootPrint stmt_info in 
@@ -1017,7 +1027,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             
           )
       in 
-      (*print_string (string_of_function_sepc (prec, postc, futurec)^"\n"); *)
+      print_string (string_of_function_sepc (prec, postc, futurec)^"\n"); 
 
 (* STEP 1: check precondition *)
       let () = 
@@ -1064,20 +1074,27 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 (* STEP 3: compute the effect for the rest code *)
       let effectRest = helper (post') xs in
+      
 (* STEP 4: check the future spec of the callee *)
         (match futurec with 
         | None -> 
+        print_endline ("None");
+
           (match postc with 
           | None ->  effectRest 
           | Some postc -> 
             concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
           )
         | Some futurec -> 
+
           let restSpec = 
             match future with
             | None -> effectRest 
             | Some future -> concatenateTwoEffectswithFlag effectRest (effects2programStates future)
           in 
+
+          print_endline ("restSpec" ^ string_of_programStates restSpec);
+
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpec)) futurec in 
           let extra_info = "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
           print_endline (string_of_inclusion_results extra_info info); 
@@ -1105,7 +1122,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(TRUE, Emp, 1, fp)]
   
 
-  | CompoundStmt (stmt_info, stmt_list)-> 
+  | CompoundStmt (stmt_info, stmt_list) -> 
     let fp = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
 
@@ -1285,10 +1302,12 @@ let rec input_lines file =
 
 
 let retriveComments (source:string) : (string list) = 
+  (*print_endline (source); *) 
   let partitions = Str.split (Str.regexp "/\*@") source in 
+  (* print_endline (string_of_int (List.length partitions)); *)
   match partitions with 
   | [] -> assert false 
-  | _ :: rest -> 
+  | _ :: rest -> (*  SYH: Note that specification can't start from line 1 *)
   let partitionEnd = List.map rest ~f:(fun a -> Str.split (Str.regexp "@\*/")  a) in 
   let rec helper (li: string list list): string list = 
     match li with 
@@ -1317,11 +1336,20 @@ let retriveSpecifications (source:string) : (specification list * int * int * in
         | x :: xs -> x ^ "\n" ^ helper xs 
       in 
       let line = helper lines in
+      
       let line_of_code = List.length lines in 
       let partitions = retriveComments line in (*in *)
       let line_of_spec = List.fold_left partitions ~init:0 ~f:(fun acc a -> acc + (List.length (Str.split (Str.regexp "\n") a)))  in 
-      let sepcifications = List.map partitions ~f:(fun singlespec -> Parser.specification Lexer.token (Lexing.from_string singlespec)) in
-      (*let _ = List.map sepcifications ~f:(fun (_ , pre, post, future) -> print_endline (string_of_function_sepc (pre, post, future) ) ) in *)
+      let sepcifications = List.map partitions 
+        ~f:(fun singlespec -> 
+          print_endline ("Global specifictaions are: ");
+          print_endline (singlespec);
+          Parser.specification Lexer.token (Lexing.from_string singlespec)) in
+      
+      (*
+      let _ = List.map sepcifications ~f:(fun (_ , pre, post, future) -> print_endline (string_of_function_sepc (pre, post, future) ) ) in 
+      *)
+
       (sepcifications, line_of_code, line_of_spec, List.length partitions)
       (*
       
@@ -1380,6 +1408,7 @@ let show_effects_option (eff:effect option): string =
 
 
 let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specification list) (source_Address:string): unit  = 
+
   match dec with
     | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
       let source_Addressnow = string_of_source_range  decl_info.di_source_range in 
@@ -1393,6 +1422,8 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
 
+      (* print_endline ("\nreasoning "^ funcName ^"\n" ); *)
+
       let functionspec = findSpecFrom specifications funcName in 
       let (_, precondition, postcondition, futurecondition) = 
         match functionspec with
@@ -1400,6 +1431,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         | Some (sign, precondition, postcondition, futurecondition) 
           -> (sign, precondition, postcondition, futurecondition)
       in 
+
       let () = dynamicSpec := [] in 
       let () = varSet := [] in 
       
@@ -1417,8 +1449,12 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             futurecondition  
             stmt))) in 
 
-      print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
-      print_string (string_of_programStates final ^ "\n");
+      (match final with 
+      | [TRUE, Emp, _, _] -> ()
+      | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
+             print_string (string_of_programStates final ^ "\n")) ;
+
+      
 
       match postcondition with 
         | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
@@ -1442,8 +1478,6 @@ let retrive_basic_info_from_AST ast_decl: (string * Clang_ast_t.decl list * spec
     match ast_decl with
     | Clang_ast_t.TranslationUnitDecl (decl_info, decl_list, _, translation_unit_decl_info) ->
         let source =  translation_unit_decl_info.tudi_input_path in 
-
-
         let (specifications, lines_of_code, lines_of_spec, number_of_protocol) = retriveSpecifications source in 
         (source, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol)
  
@@ -1462,13 +1496,13 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   print_endline ("================ Here is Yahui's Code =================");
 
 
-
-
   let (source_Address, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol) = retrive_basic_info_from_AST ast in
   let () = totol_Lines_of_Code := !totol_Lines_of_Code + lines_of_code in 
   let () = totol_specifications := List.append !totol_specifications specifications in 
   let start = Unix.gettimeofday () in 
-  let reasoning_Res = List.map decl_list  ~f:(fun dec -> reason_about_declaration dec !totol_specifications source_Address) in 
+
+  let reasoning_Res = List.map decl_list  
+    ~f:(fun dec -> reason_about_declaration dec !totol_specifications source_Address) in 
   
   let compution_time = (Unix.gettimeofday () -. start) in 
   (* Input program has  *)
@@ -1476,13 +1510,11 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
     ^ "[FINAL REPORT]:"
     ^ source_Address ^ "\n"
-    ^ string_of_int ( !totol_Lines_of_Code ) 
-    ^ " lines of code;\n" ^ string_of_int lines_of_spec 
-    ^ " lines of specs; for " ^ string_of_int (List.length !totol_specifications)(*number_of_protocol*) ^ " protocols.\n"
-    ^ "Analysis and repair took "^ string_of_float (compution_time)^ " seconds.\n"
-    ^ "\n" 
-    ^ string_of_int !totalAssertions 
-    ^ " total assertions, and " 
+    ^ string_of_int ( !totol_Lines_of_Code ) ^ " lines of code;\n" 
+    ^ string_of_int lines_of_spec ^ " lines of specs; for " 
+    ^ string_of_int (List.length !totol_specifications)(*number_of_protocol*) ^ " protocols.\n"
+    ^ "Analysis and repair took "^ string_of_float (compution_time)^ " seconds.\n\n"
+    ^ string_of_int !totalAssertions ^ " total assertions, and " 
     ^ string_of_int !failedAssertions 
     ^ (if (!failedAssertions) == 1 then " is" else " are") 
     ^" failed; and " 

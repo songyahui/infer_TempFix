@@ -1,1 +1,3 @@
 infer/bin/infer run -- clang -c ../../repair-benchmark/rappel/arch/x86/assemble_intel.c
+
+infer/bin/infer run -- clang -c ../repair-benchmark/rappel/arch/x86/assemble_intel.c

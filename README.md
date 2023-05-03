@@ -33,6 +33,8 @@ infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/LightFTP/Source/ftpser
 infer/bin/infer run -- clang -c /Users/yahuis/Desktop/git/pure-ftpd/src/main.c
 
 
+git show -s --format=%H
+
 git ls-files | xargs cat | wc -l
 git ls-files | xargs wc -l
 

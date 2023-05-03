@@ -1,1 +1,3 @@
 ../../../../../git/infer/infer/bin/infer -- javac  /Users/yahuis/Desktop/repair-benchmark/jfreechart/src/main/java/org/jfree/data/DomainInfo.java
+
+infer/bin/infer run -- javac /Users/yahuis/Desktop/repair-benchmark/jfreechart/src/main/java/org/jfree/chart/internal/Args.java /Users/yahuis/Desktop/repair-benchmark/jfreechart/src/main/java/org/jfree/data/Range.java /Users/yahuis/Desktop/repair-benchmark/jfreechart/src/main/java/org/jfree/data/DomainInfo.java
