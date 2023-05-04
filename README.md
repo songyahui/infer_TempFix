@@ -45,10 +45,6 @@ bidirectional bug localization.
 program synthesis using deductions. 
 
 
-infer/bin/infer run -- clang -c ../../git/swoole-src/src/core/*.cc
-infer/bin/infer run -- clang -c ../../git/swoole-src/src/core/base.cc
-
-    char *buf = (char *) sw_malloc(n);
 
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/core/base.c
 

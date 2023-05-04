@@ -646,11 +646,20 @@ let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms 
     in Some p 
 
 let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
+  (*print_endline ("term kind:" ^ Clang_ast_proj.get_stmt_kind_string instr);
+*)
   match instr with 
   | ImplicitCastExpr (_, x::_, _, _, _) 
-  | MemberExpr (_, x::_, _, _) 
-  | CStyleCastExpr (_, x::_, _, _, _) 
-  | ParenExpr (_, x::_, _) -> stmt2Term x
+    -> 
+    stmt2Term x
+  | CStyleCastExpr (_, x::rest, _, _, _) 
+  | ParenExpr (_, x::rest, _) -> 
+  (*print_string ("ParenExpr/CStyleCastExpr: " ^ (
+    List.fold_left (x::rest) ~init:"" ~f:(fun acc a -> acc ^ "," ^ Clang_ast_proj.get_stmt_kind_string a)
+  )^ "\n");
+  *)
+
+    stmt2Term x
   
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
   (match binop_info.boi_kind with
@@ -675,6 +684,17 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     )
   )
   | NullStmt _ -> Some (Basic(BVAR ("NULL")))
+  | MemberExpr (_, arlist, _, _)  -> 
+    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
+    acc ^ (
+      match a with
+      | None -> "_"
+      | Some t -> string_of_terms t ^ "_"
+    )
+    ) in 
+    Some (Basic(BVAR(name)))
+
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
 
 
@@ -705,6 +725,12 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
 
 let getFirst (a, _) = a
 
+let conjunctPure (pi1:pure) (pi2:pure): pure = 
+  if entailConstrains pi1 pi2 then pi1 
+        else if entailConstrains pi2 pi1 then pi2
+        else  PureAnd (pi1, pi2)
+
+
 let concatenateTwoEffect (eff1:effect) (eff2:effect) : effect = 
   let (mixLi:(((pure * es) * (pure * es)) list)) = cartesian_product eff1 eff2 in 
   List.map mixLi ~f:(fun ((pi1, es1), (pi2, es2)) -> 
@@ -712,14 +738,10 @@ let concatenateTwoEffect (eff1:effect) (eff2:effect) : effect =
     match (pi1, pi2) with
     | (TRUE, p2) -> (p2, trace)
     | (p1, TRUE) -> (p1, trace)
-    | (_, _) -> (PureAnd (pi1, pi2), trace)
+    | (_, _) -> 
+      let newPure = conjunctPure pi1 pi2 in 
+      (newPure, trace)
   )
-
-let conjunctPure (pi1:pure) (pi2:pure): pure = 
-  match (pi1, pi2) with
-    | (TRUE, p2) -> (p2)
-    | (p1, TRUE) -> (p1)
-    | (_, _) -> (PureAnd (pi1, pi2))
 
 
 let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: programStates): programStates = 
@@ -738,10 +760,13 @@ let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: progr
       (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),  t_y, List.append fp1 fp2)
   ) in 
   normaliseProgramStates temp
+
+
+
   
   
 let enforePure (p:pure) (eff:programStates) : programStates = 
-  List.map eff ~f:(fun (p1, es, f, fp) ->(PureAnd(p1, p), es, f, fp)) 
+  List.map eff ~f:(fun (p1, es, f, fp) ->(conjunctPure p p1, es, f, fp)) 
 
 
 let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure option = 
@@ -761,8 +786,7 @@ let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure o
 
 
 let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option = 
-  (*print_endline (Clang_ast_proj.get_stmt_kind_string instr);
-  *)
+  (* print_endline (Clang_ast_proj.get_stmt_kind_string instr); *)
 
   match instr with 
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
@@ -785,7 +809,8 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
       | Some p -> Some (Neg p))
     | _ -> None 
     )
-  | ParenExpr (_, x::_, _) -> stmt2Pure x
+  | ParenExpr (_, x::rest, _) -> 
+    stmt2Pure x
   
   | _ -> None (* Some (Gt (Var(Clang_ast_proj.get_stmt_kind_string instr), Var (""))) *)
 
@@ -997,9 +1022,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
   *)
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
-    print_string ("==> helper: ");
+    (*print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
     print_endline ("");
+    *)
     
 
     match li with
@@ -1094,8 +1120,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
 (* STEP 3: compute the effect for the rest code *)
-  print_endline ("computing restSpec"  ^ string_of_int(List.length xs));
-
+  (*print_endline ("computing restSpec"  ^ string_of_int(List.length xs));
+*)
       let effectRest = helper (post') xs in
       
 (* STEP 4: check the future spec of the callee *)
@@ -1109,13 +1135,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
           )
         | Some futurec -> 
-          print_endline ("restSpec" ^ string_of_programStates effectRest);
+          
+
 
           let restSpec = 
             match future with
             | None -> effectRest 
             | Some future -> concatenateTwoEffectswithFlag effectRest (effects2programStates future)
           in 
+          print_endline ("restSpec + future " ^ string_of_programStates effectRest);
 
           
           print_endline ("futurec" ^ string_of_effect futurec);
@@ -1173,17 +1201,24 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
+    (*print_endline ("IfElse:" ^ string_of_programStates current ^ "\n");
+    *)
+
+
     let fp = stmt_intfor2FootPrint stmt_info in 
 
-    let checkRelavent (conditional:  Clang_ast_t.stmt) : (((pure* (string list)) option))  = 
+    let checkRelavent (conditional:  Clang_ast_t.stmt) : (((pure * (string list)) option))  = 
         (*print_string ("\n*****\ncheckRelavent: "); 
         print_string (string_of_varSet (!varSet));
         *)
         match stmt2Pure conditional with 
         | None -> (*print_string ("None; \n");*) None 
         | Some condition -> 
+          
+          (*
           print_endline (string_of_pure condition);
           print_endline (string_of_pure (Neg condition));
+          *)
           
 
           let (varFromPure: string list) = varFromPure condition in 
@@ -1587,7 +1622,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
 
   let () = totol_execution_time := !totol_execution_time +. compution_time in 
-  print_endline ("totol_execution_time: " ^ string_of_float !totol_execution_time); 
+  print_endline ("Totol_execution_time: " ^ string_of_float !totol_execution_time); 
   print_endline ("\n============ Here is the end of Yahui's Code ============\n" 
                 ^ "=========================================================\n");
   
