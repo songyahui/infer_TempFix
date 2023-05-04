@@ -743,15 +743,51 @@ let concatenateTwoEffect (eff1:effect) (eff2:effect) : effect =
       (newPure, trace)
   )
 
+let rec findReturnValue (pi:pure) : terms option = 
+  match pi with
+  | Eq (Basic (BRET), t2) 
+  | Eq (t2, Basic (BRET)) -> Some t2 
+  | TRUE 
+  | FALSE 
+  | Gt _ 
+  | Lt _ 
+  | GtEq _ 
+  | LtEq _ 
+  | Neg _ 
+  | Eq _ -> None 
+  | PureAnd (pi1, pi2) 
+  | PureOr (pi1,pi2) -> 
+      (match findReturnValue pi1 with 
+      | None -> findReturnValue pi2 
+      | Some t -> Some t)
+  
+(* be carefule with this function, which is specifically used when checking future condition. *)
+let concatenateTwoEffectswithoutFlag (effectLi4X: programStates) (effectRest: programStates): programStates = 
+  let mixLi = cartesian_product effectLi4X effectRest in 
+  
+  let temp = List.map mixLi ~f:(
+    fun ((pi1, eff_x, t_x, fp1),  (pi2, eff_y, t_y, fp2)) -> 
+      match findReturnValue pi1 with 
+      | Some (Basic (BVAR (retTerm))) -> 
+        (conjunctPure pi1 pi2, Concatenate (eff_x, instantiateRetEs eff_y [(retTerm, BRET)]  ),  t_y, List.append fp1 fp2)
+      | _ -> (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),  t_y, List.append fp1 fp2)
+
+  ) in 
+  normaliseProgramStates temp
+  
+
 
 let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: programStates): programStates = 
   let mixLi = cartesian_product effectLi4X effectRest in 
+  
   (*
+  print_endline ("============");
   print_string (string_of_int (List.length effectLi4X) ^ 
   " x " ^  string_of_int (List.length effectRest)^ "\n");
 
   print_string (string_of_int (List.length mixLi) ^ "\n");
-  *)
+  print_endline ("============");
+*)
 
   let temp = List.map mixLi ~f:(
     fun ((pi1, eff_x, t_x, fp1),  (pi2, eff_y, t_y, fp2)) -> 
@@ -760,6 +796,7 @@ let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: progr
       (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),  t_y, List.append fp1 fp2)
   ) in 
   normaliseProgramStates temp
+  
 
 
 
@@ -1111,7 +1148,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       print_string (string_of_varSet (!varSet));
       *)
 
-      let post' = 
+      let current'' = 
         match postc with 
         | None -> current'  
         | Some postc -> 
@@ -1122,44 +1159,45 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 (* STEP 3: compute the effect for the rest code *)
   (*print_endline ("computing restSpec"  ^ string_of_int(List.length xs));
 *)
-      let effectRest = helper (post') xs in
+      let effectRest = helper (current'') xs in
+
+      (*print_endline ("effectRest: " ^ string_of_programStates effectRest);
+*)
       
 (* STEP 4: check the future spec of the callee *)
-        (match futurec with 
-        | None -> 
-        (*print_endline ("None");*)
 
-          (match postc with 
-          | None ->  effectRest 
-          | Some postc -> 
-            concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
-          )
-        | Some futurec -> 
-          
+      let full_extension = 
+        (match postc with 
+        | None ->  effectRest 
+        | Some postc -> 
+          concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
+        ) in 
 
-
-          let restSpec = 
+      (match futurec with 
+      | None -> full_extension
+      | Some futurec -> 
+          let restSpecLHS = 
             match future with
             | None -> effectRest 
-            | Some future -> concatenateTwoEffectswithFlag effectRest (effects2programStates future)
+            | Some ctxfuture -> 
+              (*print_endline ("+ ctx future spec: " ^ string_of_effect ctxfuture);
+              *)
+              concatenateTwoEffectswithoutFlag (effectRest) (effects2programStates ctxfuture)
           in 
-          print_endline ("restSpec + future " ^ string_of_programStates effectRest);
-
           
-          print_endline ("futurec" ^ string_of_effect futurec);
+          (*
+          print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
 
+          print_endline ("|- RHS: " ^ string_of_effect futurec);
+*)
 
-          let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpec)) futurec in 
+          let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
           let extra_info = "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
           print_endline (string_of_inclusion_results extra_info info); 
           
           program_repair info env; 
 
-          (match postc with 
-          | None ->  effectRest 
-          | Some postc -> 
-            concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
-          )
+          full_extension
         )  
 
     | DeclStmt (_, [x], _):: xs  
@@ -1174,8 +1212,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | ReturnStmt (stmt_info, [ret]) ->
     let extrapure = 
       match stmt2Term ret with 
-      | Some (Basic (BINT n)) -> Eq(Basic(BVAR "ret"), Basic(BINT n))
-      | Some (Basic (BVAR str)) -> Eq(Basic(BVAR "ret"), Basic(BVAR str))
+      | Some (Basic (BINT n)) -> Eq(Basic(BRET), Basic(BINT n))
+      | Some (Basic (BVAR str)) -> Eq(Basic(BRET), Basic(BVAR str))
       | _ -> Ast_utility.TRUE
     in 
     let fp = stmt_intfor2FootPrint stmt_info in 
@@ -1424,9 +1462,9 @@ let retriveSpecifications (source:string) : (specification list * int * int * in
       let line_of_code = List.length lines in 
       let partitions = retriveComments line in (*in *)
       let line_of_spec = List.fold_left partitions ~init:0 ~f:(fun acc a -> acc + (List.length (Str.split (Str.regexp "\n") a)))  in 
+      print_endline ("Global specifictaions are: ");
       let sepcifications = List.map partitions 
         ~f:(fun singlespec -> 
-          print_endline ("Global specifictaions are: ");
           print_endline (singlespec ^ "\n");
           Parser.specification Lexer.token (Lexing.from_string singlespec)) in
       
