@@ -1044,7 +1044,8 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
           if String.compare str "" == 0 then " can be deleted." 
           else  " can be inserted with code " ^  str ^ ".")
-         ^ "\n\n" ^ auc res ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n"
+         ^ "\n\n" ^ auc res 
+         ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n"
         ) 
   in 
   let msg = auc error_lists in 
@@ -1055,9 +1056,11 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
 let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
 (future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
 
+  
   (*
   print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
   *)
+  
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
     (*print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
@@ -1086,7 +1089,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | [] -> assert false  
         | x::rest -> 
           (match extractEventFromFUnctionCall x rest with 
-          | None -> (("none", []), None, None, None)
+          | None -> 
+            (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
             
             (*
@@ -1199,6 +1203,20 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
           full_extension
         )  
+
+    | BinaryOperator (_, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
+      (match binop_info.boi_kind with
+      | `Assign -> 
+          print_endline ("Assign binop");
+          let () = handlerVar := Some (string_of_stmt x) in 
+          helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
+       
+          
+      | _ -> 
+        
+        helper current' xs 
+      )
+      
 
     | DeclStmt (_, [x], _):: xs  
     | x ::xs -> 
@@ -1328,7 +1346,17 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   
 
   
+  | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
+      let fp = stmt_intfor2FootPrint stmt_info in 
+      prefixLoction fp (syh_compute_stmt_postcondition env current future x)
 
+  | MemberExpr (stmt_info, x::_, _, _) -> 
+    let ev = Singleton ((("deref", [(BVAR(string_of_stmt x))])), getStmtlocation instr) in 
+    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
+    let (lineLoc:int option) = getStmtlocation instr in 
+
+    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+    [(TRUE, ev, 0, fp)]
 
 
   | UnaryOperator _ (*stmt_info, stmt_list, _, _*)   

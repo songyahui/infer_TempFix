@@ -2,26 +2,49 @@ infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/core/*
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/factory/*
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/lock/*
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/memory/*
+# has a false positive error in swShareMemory_mmap_create in ShareMemory
+
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/network/*
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/os/*
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/pipe/*
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/protocol/*
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/reactor/*
 
+infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/tests/*
+
+
+infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/tests/*
+
+
 # https://github.com/swoole/swoole-src/commit/e12c7db38c9737234695d35d9
 # Swoole (a4256e4) 
 
+# 20959
 infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/src/core/*
-
 infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/src/factory/*
 infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/src/lock/*
 infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/src/memory/*
 infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/src/network/*
-
 infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/src/os/*
 infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/src/pipe/*
 infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/src/protocol/*
 infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/src/reactor/*
 
+# 1628 
+infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/tests/*
 
-infer/bin/infer run -- clang -c ../repair-benchmark/swoole-src/include/reactor/*
+
+# 20959
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/core/*
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/factory/*
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/lock/*
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/memory/*
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/network/*
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/os/*
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/pipe/*
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/protocol/*
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/reactor/*
+
+# 1628 
+infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/tests/*
+
