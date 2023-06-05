@@ -48,3 +48,14 @@ infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/src/
 # 1628 
 infer/bin/infer run --pulse-only -- clang -c ../repair-benchmark/swoole-src/tests/*
 
+
+infer/bin/infer run -- clang -c my_benchmark/urv/2_returnChunkSize.c
+infer/bin/infer run -- clang -c my_benchmark/3_Generalized_URV/FFmpeg-9ffa49496d1aae4cbbb387aac28a9e061a6ab0a6/adtsenc.c
+infer/bin/infer run -- clang -c my_benchmark/3_Generalized_URV/mongo-c-driver-fc4eb63a0581dee88461059a9d61e45a6ed8c56a/mongoc-gridfs-file.c
+
+
+
+
+
+infer/bin/infer run -- clang -c my_benchmark/3_Generalized_URV/sssd-1117cf65b89b6cbd3a3b1e34589f57ab71a35d60/files.c
+

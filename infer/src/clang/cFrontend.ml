@@ -1057,15 +1057,17 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 (future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
 
   
-  (*
+  
   print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
-  *)
+  
   
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
-    (*print_string ("==> helper: ");
+    (*
+    print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
     print_endline ("");
     *)
+    
     
 
     match li with
@@ -1079,7 +1081,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
 
     | (CallExpr (stmt_info, stmt_list, ei)) ::xs -> 
-      (*print_endline ("I am here call");*)
+      print_endline ("I am here call");
       
 (* STEP 0: retrive the spec of the callee *)
       let fp = stmt_intfor2FootPrint stmt_info in 
@@ -1092,6 +1094,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           | None -> 
             (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
+            
             
             (*
             let () = print_string ("=========================\n") in 
@@ -1114,9 +1117,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             
           )
       in 
-      (*
+
+      
+      let () = print_string ("=========================\n") in 
+      print_string (string_of_event (calleeName, []) ^ ":\n");
+      
+      
       print_string (string_of_function_sepc (prec, postc, futurec)^"\n"); 
-      *)    
+        
+
 (* STEP 1: check precondition *)
       let () = 
         match prec with 
@@ -1207,7 +1216,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | BinaryOperator (_, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
       (match binop_info.boi_kind with
       | `Assign -> 
-          print_endline ("Assign binop");
+          (* print_endline ("Assign binop"); *)
           let () = handlerVar := Some (string_of_stmt x) in 
           helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
        
@@ -1218,9 +1227,20 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       )
       
 
-    | DeclStmt (_, [x], _):: xs  
-    | x ::xs -> 
+    | DeclStmt (_, [x], _):: xs  ->
+          (
+            match x with
+            | DeclStmt _ ->  
+              helper current' (x::xs)
       
+            | _ -> 
+            let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
+            let effectRest = helper (concatenateTwoEffectswithFlag current' effectLi4X) xs in 
+            concatenateTwoEffectswithFlag effectLi4X effectRest
+          )
+        
+    | x ::xs -> 
+
       let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
       let effectRest = helper (concatenateTwoEffectswithFlag current' effectLi4X) xs in 
       concatenateTwoEffectswithFlag effectLi4X effectRest

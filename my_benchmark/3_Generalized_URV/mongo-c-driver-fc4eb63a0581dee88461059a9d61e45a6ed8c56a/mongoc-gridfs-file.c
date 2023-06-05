@@ -196,6 +196,19 @@ mongoc_gridfs_file_save (mongoc_gridfs_file_t *file)
 }
 
 
+
+
+
+
+/*@ bson_iter_array(t1, t2, t3): 
+    Post (ret>=0, 𝝐) \/ ((ret<0), bson_init_static(t3)) 
+    Future  (ret<0, (!_(t3))^*)  @*/
+
+
+/*@ bson_init_static(t1, t2, t3): 
+    Post (TRUE, bson_init_static(t2)) @*/
+
+
 /**
  * _mongoc_gridfs_file_new_from_bson:
  *

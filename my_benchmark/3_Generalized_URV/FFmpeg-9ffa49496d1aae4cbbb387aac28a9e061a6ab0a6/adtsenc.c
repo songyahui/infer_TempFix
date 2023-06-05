@@ -48,6 +48,16 @@ typedef struct ADTSContext {
 
 #define ADTS_MAX_FRAME_BYTES ((1 << 14) - 1)
 
+
+/*@ avpriv_mpeg4audio_get_config2(p1, p2, p3, p4, p5): 
+    Post  (ret>=0, 𝝐) \/  ((ret<0), 𝝐) 
+    Future  (ret<0, (!_(ret))^*)  @*/
+
+/*@ skip_bits_long(p1, p2): 
+    Post (TRUE, skip_bits_long(p2))  @*/
+
+
+
 static int adts_decode_extradata(AVFormatContext *s, ADTSContext *adts, const uint8_t *buf, int size)
 {
     GetBitContext gb;
@@ -61,7 +71,7 @@ static int adts_decode_extradata(AVFormatContext *s, ADTSContext *adts, const ui
         return ret;*/
     off = avpriv_mpeg4audio_get_config2(&m4ac, buf, size, 1, s);
     if (off < 0)
-        return off;
+        return 0;
     skip_bits_long(&gb, off);
     adts->objecttype        = m4ac.object_type - 1;
     adts->sample_rate_index = m4ac.sampling_index;

@@ -234,6 +234,15 @@ mongoc_collection_destroy (mongoc_collection_t *collection) /* IN */
  *--------------------------------------------------------------------------
  */
 
+
+/*@ bson_append_iter(p): 
+    Post  (ret>=0, 𝝐) \/  ((ret<0), 𝝐) 
+    Future  (ret<0, (!_(ret))^*)  @*/
+
+/*@ bson_append_iter(p1, p2, p3, p4): 
+    Post (TRUE, bson_append_iter(p1))  @*/
+
+
 mongoc_cursor_t *
 mongoc_collection_aggregate (mongoc_collection_t       *collection, /* IN */
                              mongoc_query_flags_t       flags,      /* IN */

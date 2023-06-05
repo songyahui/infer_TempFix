@@ -31,19 +31,41 @@ typedef struct tls_record_st {
     unsigned char seq_num[SEQ_NUM_SIZE];
 } TLS_RECORD;
 
-
-int ssl3_read_bytes(int type, int *recvd_type, unsigned char *buf,
-                    int len, int peek, int n)
-/*@ ssl3_read_bytes: 
+/* ssl3_read_bytes: 
     Require TRUE, 𝝐
     Ensure  (peek=1, memcpy ·  ssl_release_record )  \/ 
            (!(peek=1), memcpy · (OPENSSL_cleanse \/  𝝐)  · (ssl_release_record \/  𝝐))  @*/
+
+
+
+
+
+
+/*@ askForPeek(): 
+    Post (ret=0, 𝝐) \/ ((ret=1), 𝝐)
+ @*/
+
+/*@ ssl_release_record(): 
+    Post (TRUE, ssl_release_record())
+ @*/
+
+
+
+/*@ ssl3_read_bytes(p1, p2, p3, p4, p5, p6): 
+    Post  (peek=1, ssl_release_record() )  \/ 
+           (!(peek=1), (ssl_release_record() \/  𝝐))  @*/
+
+
+
+int ssl3_read_bytes(int type, int *recvd_type, unsigned char *buf,
+                    int len,  int n)
 {
     TLS_RECORD *rr;
     SSL_CONNECTION *s;
     int totalbytes = 0;
     int curr_rec;
                 n = len - totalbytes;
+    int peek = askForPeek ();
 
             memcpy(buf, &(rr->data[rr->off]), n);
             buf += n;
