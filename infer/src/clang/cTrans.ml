@@ -4790,7 +4790,7 @@ module CTrans_funct (F : CModule_type.CFrontend) : CModule_type.CTranslation = s
 
 
   and instruction_translate trans_state (instr : Clang_ast_t.stmt) =
-  (*print_string("<<<SYH:cTrans.instruction_translate>>>\n");*)
+  print_string("<<<SYH:cTrans.instruction_translate>>>\n");
 
     match instr with
     | GotoStmt (stmt_info, _, {Clang_ast_t.gsi_label= label_name; _}) ->
@@ -5292,6 +5292,7 @@ module CTrans_funct (F : CModule_type.CFrontend) : CModule_type.CTranslation = s
 
 
   let instructions_trans context body extra_instrs exit_node ~is_destructor_wrapper =
+
     let default_trans_state = CTrans_utils.default_trans_state context in
     let trans_state = {default_trans_state with succ_nodes= [exit_node]} in
     let procname = Procdesc.get_proc_name context.CContext.procdesc in
@@ -5314,6 +5315,9 @@ module CTrans_funct (F : CModule_type.CFrontend) : CModule_type.CTranslation = s
         (cxx_inject_field_destructors_in_destructor_body trans_state stmt_info, body)
       else (None, body)
     in
+
+    print_endline ("<<<SYH:cTrans.instructions_trans>>>" ^ Clang_ast_proj.get_stmt_kind_string body); 
+
     let succ_nodes =
       match destructor_res with
       | Some {control= {root_nodes= _ :: _ as root_nodes}} ->

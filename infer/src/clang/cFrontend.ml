@@ -1719,6 +1719,10 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   L.(debug Capture Verbose)
     "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;
   let cfg = compute_icfg translation_unit_context tenv ast in
+
+  print_string("<<<SYH:Finished creating icfg>>>\n");
+
+
   CAddImplicitDeallocImpl.process cfg tenv ;
   CAddImplicitGettersSetters.process cfg tenv ;
   CReplaceDynamicDispatch.process cfg ;

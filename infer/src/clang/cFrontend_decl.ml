@@ -16,6 +16,10 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
   (** Translates the method/function's body into nodes of the cfg. *)
   let add_method ?(is_destructor_wrapper = false) trans_unit_ctx tenv cfg class_decl_opt procname
       body ms has_return_param outer_context_opt extra_instrs =
+
+    print_string ("<<<SYH:cFrontend_decl.add_method>>>\n");
+    (*print_endline (Clang_ast_proj.get_stmt_kind_string body); *)
+
     L.(debug Capture Verbose)
       "@\n@\n>>---------- ADDING METHOD: '%a' ---------<<@\n@\n" Procname.pp procname ;
     incr CFrontend_config.procedures_attempted ;
@@ -32,6 +36,8 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
     let f () =
       match Procname.Hash.find_opt cfg procname with
       | Some procdesc when Procdesc.is_defined procdesc && not (BiabductionModels.mem procname) ->
+          
+          print_endline ("procname:" ^ (Procname.to_string procname));
           L.(debug Capture Verbose)
             "@\n@\n>>---------- Start translating body of function: '%s' ---------<<@\n@."
             (Procname.to_string procname) ;
@@ -55,6 +61,8 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
 
 
   let function_decl trans_unit_ctx tenv cfg func_decl block_data_opt =
+    print_string ("<<<SYH:cFrontend_decl.function_decl>>>\n");
+
     try
       let captured_vars, outer_context_opt =
         match block_data_opt with
@@ -70,12 +78,15 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
         | _ ->
             (None, CType_decl.CProcname.from_decl ~tenv func_decl, None)
       in
+      (* CMethodSignature.t * Clang_ast_t.stmt option * CFrontend_config.instr_type list *)
       let ms, body_opt, extra_instrs =
         CType_decl.method_signature_body_of_decl tenv func_decl ?block_return_type
           ~passed_as_noescape_block_to procname
       in
+
       match body_opt with
-      | Some body ->
+      | Some body -> 
+
           (* Only in the case the function declaration has a defined body we create a procdesc *)
           let return_param_typ_opt = ms.CMethodSignature.return_param_typ in
           let loc_instantiated =
@@ -87,8 +98,9 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
             CMethod_trans.create_local_procdesc ?loc_instantiated trans_unit_ctx cfg tenv ms [body]
               captured_vars
           then
+            (print_endline ("testing then branch"); 
             add_method trans_unit_ctx tenv cfg CContext.ContextNoCls procname body ms
-              return_param_typ_opt outer_context_opt extra_instrs
+              return_param_typ_opt outer_context_opt extra_instrs)
       | None ->
           ()
     with CFrontend_errors.IncorrectAssumption _ -> ()
@@ -379,12 +391,18 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
 
   (* Translate one global declaration *)
   let rec translate_one_declaration trans_unit_ctx tenv cfg decl_trans_context dec =
+
+
     let open Clang_ast_t in
     (* each procedure has different scope: start names from id 0 *)
     Ident.NameGenerator.reset () ;
     let translate dec = translate_one_declaration trans_unit_ctx tenv cfg decl_trans_context dec in
     ( if should_translate_decl trans_unit_ctx dec decl_trans_context then
       let dec_ptr = (Clang_ast_proj.get_decl_tuple dec).di_pointer in
+
+      print_string ("<<<SYH:cFrontend_decl.translate_one_declaration>>>\n");
+      print_endline ("SYH --> " ^ Clang_ast_proj.get_decl_kind_string dec);
+
       match dec with
       | FunctionDecl (_, _, _, _) ->
           function_decl trans_unit_ctx tenv cfg dec None

@@ -727,6 +727,7 @@ module PulseTransferFunctions = struct
                  >>|| PulseOperations.write_id lhs_id rhs_addr_hist )
                 |> SatUnsat.to_list
             in
+            print_endline ("SYH report_results loction 1");
             PulseReport.report_results tenv proc_desc err_log loc results
           in
           let set_global_astates =
@@ -823,6 +824,7 @@ module PulseTransferFunctions = struct
                 astates
           in
           let astate_n = NonDisjDomain.set_captured_variables rhs_exp astate_n in
+          print_endline ("SYH report_results loction 2");
           (PulseReport.report_results tenv proc_desc err_log loc result, path, astate_n)
       | Call (ret, call_exp, actuals, loc, call_flags) ->
           let astate_n = check_modified_before_dtor actuals call_exp astate astate_n in
