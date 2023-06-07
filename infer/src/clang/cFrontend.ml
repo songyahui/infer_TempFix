@@ -25,7 +25,6 @@ end
 (* Translates a file by translating the ast into a cfg. *)
 let compute_icfg trans_unit_ctx tenv ast =
   print_string ("<<<SYH:cFrontend.compute_icfg>>>\n");
-  print_string ("<<<SYH:look for -> cTrans.instruction_translate>>>\n");
   match ast with
   | Clang_ast_t.TranslationUnitDecl (_, decl_list, _, _) ->
       CFrontend_config.global_translation_unit_decls := decl_list ;
@@ -1058,7 +1057,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
   
   
-  print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
+  (*print_endline ((Clang_ast_proj.get_stmt_kind_string instr));*)
   
   
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
@@ -1081,7 +1080,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
 
     | (CallExpr (stmt_info, stmt_list, ei)) ::xs -> 
-      print_endline ("I am here call");
+      (*print_endline ("I am here call");*)
       
 (* STEP 0: retrive the spec of the callee *)
       let fp = stmt_intfor2FootPrint stmt_info in 
@@ -1119,11 +1118,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       in 
 
       
+      (*
       let () = print_string ("=========================\n") in 
       print_string (string_of_event (calleeName, []) ^ ":\n");
       
       
       print_string (string_of_function_sepc (prec, postc, futurec)^"\n"); 
+      *)
         
 
 (* STEP 1: check precondition *)
@@ -1137,7 +1138,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let extra_info = 
             "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
             "Pre-condition checking for \'"^calleeName^"\': " in 
-            print_endline (string_of_inclusion_results extra_info info); 
+            (*print_endline (string_of_inclusion_results extra_info info); *)
             program_repair info env; 
 
             
@@ -1206,7 +1207,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
           let extra_info = "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
-          print_endline (string_of_inclusion_results extra_info info); 
+          (*print_endline (string_of_inclusion_results extra_info info); *)
           
           program_repair info env; 
 
@@ -1635,7 +1636,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         let extra_info = 
           "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
           "Post-condition checking: " in 
-        print_endline (string_of_inclusion_results extra_info info);
+        (*print_endline (string_of_inclusion_results extra_info info); *)
         program_repair info specifications; 
         ) 
 
@@ -1714,7 +1715,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   
 
 
-  (*
+  
   L.(debug Capture Verbose)
     "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;
   let cfg = compute_icfg translation_unit_context tenv ast in
@@ -1729,5 +1730,5 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     || Option.is_some Config.icfg_dotty_outfile
   then DotCfg.emit_frontend_cfg source_file cfg ;
   L.debug Capture Verbose "Stored on disk:@[<v>%a@]@." Cfg.pp_proc_signatures cfg ;
-  *)
+  
   ()

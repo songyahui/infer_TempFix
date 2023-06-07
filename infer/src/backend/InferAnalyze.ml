@@ -66,7 +66,6 @@ let analyze_target : (TaskSchedulerTypes.target, string) Tasks.doer =
 
 
   let analyze_source_file exe_env source_file =
-    print_string("<<<SYH:analyze_target-analyze_source_file>>>\n");
 
     DB.Results_dir.init source_file ;
     L.task_progress SourceFile.pp source_file ~f:(fun () ->
@@ -106,7 +105,6 @@ let analyze_target : (TaskSchedulerTypes.target, string) Tasks.doer =
 
           proc_name_of_uid proc_uid |> analyze_proc_name exe_env
       | File source_file ->
-      print_string("<<<SYH:analyze_target-File>>>\n");
 
           analyze_source_file exe_env source_file
     in
@@ -185,7 +183,7 @@ let analyze source_files_to_analyze =
   if Int.equal Config.jobs 1 then 
 
   (
-    print_string("<<<SYH:InferAnalyze.analyze- run_sequentially>>>\n");
+    print_string("<<<SYH:InferAnalyze.analyze-run_sequentially>>>\n");
     let target_files =
       List.rev_map (Lazy.force source_files_to_analyze) ~f:(fun sf -> TaskSchedulerTypes.File sf)
     in
@@ -195,7 +193,7 @@ let analyze source_files_to_analyze =
   else 
 
   (
-    print_string("<<<SYH:InferAnalyze.analyze- Parallel>>>\n");
+    print_string("<<<SYH:InferAnalyze.analyze-Parallel>>>\n");
     L.environment_info "Parallel jobs: %d@." Config.jobs ;
     let build_tasks_generator () =
       tasks_generator_builder_for (Lazy.force source_files_to_analyze)

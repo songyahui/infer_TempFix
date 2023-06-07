@@ -127,7 +127,6 @@ let analyze exe_env callee_summary =
 
 
 let run_proc_analysis exe_env ~caller_pdesc callee_pdesc =
-  print_string("<<<SYH:Ondemand.run_proc_analysis>>>\n");
   let callee_pname = Procdesc.get_proc_name callee_pdesc in
   let callee_attributes = Procdesc.get_attributes callee_pdesc in
   let log_elapsed_time =
@@ -144,7 +143,6 @@ let run_proc_analysis exe_env ~caller_pdesc callee_pdesc =
       (Option.map caller_pdesc ~f:Procdesc.get_proc_name)
       Procname.pp callee_pname ;
   let preprocess () =
-    print_string("<<<SYH:run_proc_analysis.preprocess()>>>\n");
 
     incr nesting ;
     let source_file = callee_attributes.ProcAttributes.translation_unit in
@@ -157,7 +155,6 @@ let run_proc_analysis exe_env ~caller_pdesc callee_pdesc =
     initial_callee_summary
   in
   let postprocess summary =
-    print_string("<<<SYH:run_proc_analysis.postprocess()>>>\n");
     decr nesting ;
     Summary.OnDisk.store summary ;
     remove_active callee_pname ;
@@ -188,17 +185,14 @@ let run_proc_analysis exe_env ~caller_pdesc callee_pdesc =
   try
     let callee_summary =
       if callee_attributes.ProcAttributes.is_defined then 
-        (print_string ("\n\n");
-        print_string ("++++++++++++++++Analyze+++++++++++++++\n\n");
+        (
         analyze exe_env initial_callee_summary;
         )
       else initial_callee_summary
     in
-    print_string("===========Preanal.postprocess===========\n");
     let final_callee_summary = postprocess callee_summary in
     (* don't forget to reset this so we output messages for future errors too *)
     logged_error := false ;
-    print_string ("\n...............store_issues..............\n");
     final_callee_summary
   with exn -> (
     let backtrace = Printexc.get_backtrace () in
@@ -294,7 +288,6 @@ let analyze_callee exe_env ~lazy_payloads ?caller_summary callee_pname =
 
         summ_opt
     | None when procedure_should_be_analyzed callee_pname ->
-        print_string("<<<SYH:procedure_should_be_analyzed>>>\n");
 
         get_proc_desc callee_pname
         |> Option.bind ~f:(fun callee_pdesc ->
@@ -340,7 +333,6 @@ let analyze_proc_name_no_caller exe_env callee_pname =
 
 
 let analyze_procedures exe_env procs_to_analyze source_file_opt =
-  print_string("<<<SYH:Ondemand.analyze_procedures>>>\n");
 
   let saved_language = !Language.curr_language in
   let analyze_proc_name_call pname =

@@ -37,7 +37,6 @@ let register_file_callback ~checker language (callback : file_callback_t) =
 
 
 let iterate_procedure_callbacks exe_env summary =
-  print_string("<<<SYH:Callbacks.iterate_procedure_callbacks>>>\n");
   let proc_desc = Summary.get_proc_desc summary in
   let proc_name = Procdesc.get_proc_name proc_desc in
   let procedure_language = Procname.get_language proc_name in

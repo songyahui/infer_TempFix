@@ -13,7 +13,6 @@ module Cmd = InferCommandImplementation
 (** Top-level driver that orchestrates build system integration, frontends, backend, and reporting *)
 
 let run driver_mode =
-  print_string("<<<SYH:driver_mode>>>\n");
   let open Driver in
   if Config.dump_textual && not (is_compatible_with_textual_generation driver_mode) then
     L.die UserError "ERROR: Textual generation is only allowed in Java mode currently" ;
@@ -22,12 +21,11 @@ let run driver_mode =
   (* print_string("===========invalidate_changed_procedures===========\n"); *)
   InferAnalyze.invalidate_changed_procedures changed_files ;
   (* print_string("===========capture===========\n"); *)
-  capture driver_mode ~changed_files 
-  (*
+  capture driver_mode ~changed_files ;
   print_string("===========analyze_and_report===========\n");
   analyze_and_report driver_mode ~changed_files ;
   run_epilogue ()
-  *)
+  
 
 
 let run driver_mode = ScubaLogging.execute_with_time_logging "run" (fun () -> run driver_mode)
@@ -174,7 +172,6 @@ let () =
   print_string("<<<SYH:infer-Analyze>>>\n");
       run Driver.Analyze
   | Capture | Compile | Run ->
-      print_string("<<<SYH:infer-Capture | Compile | Run>>>\n");
 
       run (Lazy.force Driver.mode_from_command_line)
   | Help ->

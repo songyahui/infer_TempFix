@@ -38,8 +38,6 @@ let init_global_state_for_capture_and_linters source_file =
 
 
 let run_clang_frontend ast_source =
-  print_string("<<<SYH:capture.run_clang_frontend>>>\n");
-
   let init_time = Mtime_clock.counter () in
   let print_elapsed () =
     L.(debug Capture Quiet) "Elapsed: %a.@\n" Mtime.Span.pp (Mtime_clock.count init_time)
@@ -114,8 +112,6 @@ let run_clang_frontend ast_source =
 
 
 let run_and_validate_clang_frontend ast_source =
-  print_string("<<<SYH:capture.run_and_validate_clang_frontend>>>\n"); 
-
   try run_clang_frontend ast_source
   with exc ->
     IExn.reraise_if exc ~f:(fun () -> not Config.keep_going) ;
@@ -178,8 +174,6 @@ let run_plugin_and_frontend source_path frontend clang_cmd =
 
 
 let cc1_capture clang_cmd =
-  print_string("<<<SYH:capture.cc1_capture>>>\n"); 
-
   let source_path =
     let root = Unix.getcwd () in
     let orig_argv = ClangCommand.get_orig_argv clang_cmd in
