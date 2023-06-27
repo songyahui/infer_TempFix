@@ -472,7 +472,7 @@ let get_message diagnostic =
             F.fprintf fmt "by `%a`, indirectly via call to %a on line %d" Attribute.pp_allocator
               allocator CallEvent.describe f allocation_line
       in
-      F.asprintf "Memory dynamically allocated %a is not freed after the last access at %a"
+      F.asprintf "SYH Memory dynamically allocated %a is not freed after the last access at %a"
         pp_allocation_trace allocation_trace Location.pp location
   | ReadonlySharedPtrParameter {param; typ; location; used_locations} ->
       let pp_used_locations f =

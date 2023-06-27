@@ -1716,6 +1716,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
 
   
+  (*
   L.(debug Capture Verbose)
     "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;
   let cfg = compute_icfg translation_unit_context tenv ast in
@@ -1734,5 +1735,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     || Option.is_some Config.icfg_dotty_outfile
   then DotCfg.emit_frontend_cfg source_file cfg ;
   L.debug Capture Verbose "Stored on disk:@[<v>%a@]@." Cfg.pp_proc_signatures cfg ;
+  *)
   
   ()

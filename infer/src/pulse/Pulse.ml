@@ -18,6 +18,8 @@ open PulseOperationResult.Import
 exception AboutToOOM
 
 let report_topl_errors proc_desc err_log summary =
+  (*print_string("<<<SYH:Pulse.report_topl_errors>>>\n");*)
+
   let f = function
     | ContinueProgram astate ->
         PulseTopl.report_errors proc_desc err_log (AbductiveDomain.Topl.get astate)
@@ -65,7 +67,6 @@ module PulseTransferFunctions = struct
 
   let get_pvar_formals pname =
     IRAttributes.load pname |> Option.map ~f:ProcAttributes.get_pvar_formals
-
 
   let need_specialization astates =
     List.exists astates ~f:(fun res ->
@@ -699,18 +700,33 @@ module PulseTransferFunctions = struct
       (astate_n : NonDisjDomain.t)
       ({InterproceduralAnalysis.tenv; proc_desc; err_log} as analysis_data) _cfg_node
       (instr : Sil.instr) : ExecutionDomain.t list * PathContext.t * NonDisjDomain.t =
+
+    (* PulseOperations.t execution_domain_base_t 
+    print_string (astate);
+    *)
+    print_endline ("<<<SYH:Pulse.exec_instr_aux>>>");
+
+
+
     match astate with
     | AbortProgram _ | ISLLatentMemoryError _ | LatentAbortProgram _ | LatentInvalidAccess _ ->
+        print_endline ("AbortProgram ISLLatentMemoryError LatentAbortProgram LatentInvalidAccess");
         ([astate], path, astate_n)
     (* an exception has been raised, we skip the other instructions until we enter in
        exception edge *)
     | ExceptionRaised _
     (* program already exited, simply propagate the exited state upwards  *)
     | ExitProgram _ ->
+        print_endline ("ExceptionRaised ExitProgram");
+
         ([astate], path, astate_n)
-    | ContinueProgram astate -> (
+    | ContinueProgram astate -> 
+        print_endline ("ContinueProgram");
+    (
       match instr with
       | Load {id= lhs_id; e= rhs_exp; loc; typ} ->
+          print_endline ("Load");
+
           (* [lhs_id := *rhs_exp] *)
           let deref_rhs astate =
             let results =
@@ -727,7 +743,7 @@ module PulseTransferFunctions = struct
                  >>|| PulseOperations.write_id lhs_id rhs_addr_hist )
                 |> SatUnsat.to_list
             in
-            print_endline ("SYH report_results loction 1");
+            (*print_endline ("SYH report_results loction 1");*)
             PulseReport.report_results tenv proc_desc err_log loc results
           in
           let set_global_astates =
@@ -774,6 +790,8 @@ module PulseTransferFunctions = struct
           in
           (List.concat_map set_global_astates ~f:deref_rhs, path, astate_n)
       | Store {e1= lhs_exp; e2= rhs_exp; loc; typ} ->
+          print_endline ("Store");
+
           (* [*lhs_exp := rhs_exp] *)
           let event =
             match lhs_exp with
@@ -824,9 +842,10 @@ module PulseTransferFunctions = struct
                 astates
           in
           let astate_n = NonDisjDomain.set_captured_variables rhs_exp astate_n in
-          print_endline ("SYH report_results loction 2");
           (PulseReport.report_results tenv proc_desc err_log loc result, path, astate_n)
       | Call (ret, call_exp, actuals, loc, call_flags) ->
+                    print_endline ("Call");
+
           let astate_n = check_modified_before_dtor actuals call_exp astate astate_n in
           let astates =
             dispatch_call analysis_data path ret call_exp actuals loc call_flags astate
@@ -843,6 +862,8 @@ module PulseTransferFunctions = struct
           let astate_n = NonDisjDomain.set_passed_to loc call_exp actuals astate_n in
           (astates, path, astate_n)
       | Prune (condition, loc, is_then_branch, if_kind) ->
+      print_endline ("Prune");
+
           let prune_result = PulseOperations.prune path loc ~condition astate in
           let path =
             match PulseOperationResult.sat_ok prune_result with
@@ -864,14 +885,26 @@ module PulseTransferFunctions = struct
           in
           (PulseReport.report_exec_results tenv proc_desc err_log loc results, path, astate_n)
       | Metadata EndBranches ->
+      print_endline ("Metadata EndBranches");
+
           (* We assume that terminated conditions are well-parenthesised, hence an [EndBranches]
              instruction terminates the most recently seen terminated conditional. The empty case
              shouldn't happen but let's not crash by the fault of possible errors in frontends. *)
           let path = {path with conditions= List.tl path.conditions |> Option.value ~default:[]} in
           ([ContinueProgram astate], path, astate_n)
       | Metadata (ExitScope (vars, location)) ->
+      print_endline ("Metadata" ^ "" (*List.fold_left vars ~init:"" ~f:(fun acc a -> acc 
+      ^ ", "^ 
+      (match Loc.get_literal_string (Loc.of_id a) with  
+      | None -> ""
+      | Some str -> str)
+      )*) );
+      
+
           exit_scope vars location path astate astate_n analysis_data
       | Metadata (VariableLifetimeBegins (pvar, typ, location)) when not (Pvar.is_global pvar) ->
+      print_endline ("Metadata 2");
+
           ( [ PulseOperations.realloc_pvar tenv path pvar typ location astate
               |> ExecutionDomain.continue ]
           , path
@@ -884,11 +917,14 @@ module PulseTransferFunctions = struct
           | TryEntry _
           | TryExit _
           | VariableLifetimeBegins _ ) ->
+          print_endline ("Metadata 3");
+
           ([ContinueProgram astate], path, astate_n) )
 
 
   let exec_instr ((astate, path), astate_n) analysis_data cfg_node instr :
       DisjDomain.t list * NonDisjDomain.t =
+    (*print_string("<<<SYH:Pulse.exec_instr>>>\n");*)
     let heap_size = heap_size () in
     ( match Config.pulse_max_heap with
     | Some max_heap_size when heap_size > max_heap_size ->
@@ -1058,6 +1094,8 @@ let analyze ({InterproceduralAnalysis.tenv; proc_desc; err_log} as analysis_data
 
 
 let checker ({InterproceduralAnalysis.proc_desc} as analysis_data) =
+  print_string("<<<SYH:Pulse.checker>>>\n");
+
   if should_analyze proc_desc then (
     try analyze analysis_data
     with AboutToOOM ->
