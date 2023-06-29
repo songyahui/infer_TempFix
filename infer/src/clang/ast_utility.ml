@@ -206,6 +206,20 @@ let rec string_of_pure (p:pure):string =
   | Neg (Eq (t1, t2)) -> "("^(string_of_terms t1) ^ "!=" ^ (string_of_terms t2)^")"
   | Neg p -> "!(" ^ string_of_pure p^")"
 
+let rec string_of_pure_output (p:pure):string =   
+  match p with
+    TRUE -> "⊤"
+  | FALSE -> "⊥"
+  | Gt (t1, t2) -> (string_of_terms t1) ^ ">" ^ (string_of_terms t2)
+  | Lt (t1, t2) -> (string_of_terms t1) ^ "<" ^ (string_of_terms t2)
+  | GtEq (t1, t2) -> (string_of_terms t1) ^ ">=" ^ (string_of_terms t2)
+  | LtEq (t1, t2) -> (string_of_terms t1) ^ "<=" ^ (string_of_terms t2)
+  | Eq (t1, t2) -> (string_of_terms t1) ^ "==" ^ (string_of_terms t2)
+  | PureOr (p1, p2) -> "("^string_of_pure_output p1 ^ "∨" ^ string_of_pure_output p2^")"
+  | PureAnd (p1, p2) -> string_of_pure_output p1 ^ "∧" ^ string_of_pure_output p2
+  | Neg (Eq (t1, t2)) -> "("^(string_of_terms t1) ^ "!=" ^ (string_of_terms t2)^")"
+  | Neg p -> "!(" ^ string_of_pure_output p^")"
+
 let rec varFromTerm (t:terms): string list =   
   match t with
   | Basic (BVAR v) -> [v]
@@ -530,6 +544,9 @@ let rec string_of_es (eff:es) : string =
   | Any -> "_" 
   | Singleton (str, l)  -> 
     string_of_event str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)
+  (* | NotArguments (x::_) -> -> "!_" ^ string_of_basic_t x  
+  currently NotArguments is represented using NotSingleton _
+  *)
   | NotSingleton str          -> "!" ^ string_of_event str 
   | Concatenate (eff1, eff2) ->
       string_of_es eff1 ^ " · " ^ string_of_es eff2 

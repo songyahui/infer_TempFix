@@ -933,10 +933,22 @@ let rec var_binding (formal:string list) (actual: basic_type list) : bindings =
   | _ -> []
   ;;
 
+let specialCases es = 
+  match es with 
+  | Kleene (NotSingleton (str, _)) -> 
+    if String.compare str "_" == 0  then true else false 
+  | _ ->  false 
+  ;;
+
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
   print_string ("synthsisFromSpec " ^ string_of_effect ([effect]) ^ "\n"); 
   let (pi, spec) = effect in 
   let spec =  normalise_es spec in 
+
+  if specialCases spec then (* to check if the expected spec is (!_(u))^*, if ture just exit *)
+    Some ("if (" ^ string_of_pure_output (normalPure pi) ^ "){ return; }")
+  else 
+
   let patch = (match spec with 
   | Emp -> Some ""
   | _ -> 
@@ -981,7 +993,7 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
     | None -> None 
     | Some fix -> 
        if entailConstrains TRUE pi == false then  
-          Some ("if (" ^ string_of_pure (normalPure pi) ^ "){" ^ fix ^"}")
+          Some ("if (" ^ string_of_pure_output (normalPure pi) ^ "){" ^ fix ^"}")
        else Some fix)
 
 
@@ -1249,6 +1261,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           full_extension
         )  
 
+    | BinaryOperator (_, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
+    | BinaryOperator (_, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
+
     | BinaryOperator (_, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
       (match binop_info.boi_kind with
       | `Assign -> 
@@ -1432,8 +1447,8 @@ errorDots path: 65 65 *)
 
 
   | UnaryOperator _ (*stmt_info, stmt_list, _, _*)   
+  | BinaryOperator _ 
   | ImplicitCastExpr _ (*stmt_info, stmt_list, _, _, _*) 
-  | BinaryOperator _ (*stmt_info, stmt_list, _, _*)
   | MemberExpr _
   | NullStmt _
   | CharacterLiteral _ 
@@ -1458,8 +1473,44 @@ errorDots path: 65 65 *)
   | CXXMemberCallExpr _ (* sw_logger()->put *)
   | CXXConstructExpr _ (* va_list va_list; *)
   | DoStmt _ ->
+    
+    
     let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
     [(TRUE, Emp, 0, fp)]
+
+  (*
+  | BinaryOperator (stmt_info, x::y::rest, expr_info, binop_info) ->
+
+      let stmt_list = x::y::rest in 
+      print_endline (List.fold_left stmt_list ~init:"" ~f:(fun acc a -> acc ^ " " ^ (Clang_ast_proj.get_stmt_kind_string a)));
+
+      (match binop_info.boi_kind with
+      | `Assign -> 
+          print_endline ("Assign binop")
+          
+      | _ -> ()
+      );
+
+      (match y with 
+      | ImplicitCastExpr (stmt_info, yx::_, _, _, _) 
+      | CStyleCastExpr (stmt_info, yx::_, _, _, _) -> 
+        print_endline (Clang_ast_proj.get_stmt_kind_string yx)
+
+      | _ -> ()
+
+      ); 
+
+      
+    let (fp, fp1) =  (getStmtlocation instr) in 
+
+
+    let ev = Singleton (((Clang_ast_proj.get_stmt_kind_string instr ^ " " ^ string_of_int (List.length stmt_list), [])), fp) in 
+    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
+
+    let (fp, _) = maybeIntToListInt (fp, fp1) in 
+    [(TRUE, ev, 0, fp)]
+    *)
+
 
 
   | DeclStmt (_, stmt_list, _) -> 
@@ -1687,7 +1738,10 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             stmt))) in 
 
 
-      
+      (match final with 
+          | [TRUE, Emp, _, _] -> ()
+          | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
+               print_string (string_of_programStates final ^ "\n")) ;
 
       match postcondition with 
         | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
@@ -1703,10 +1757,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         let (error_paths, _, _, _) = info in 
         if List.length error_paths == 0 then ()
         else 
-          ((match final with 
-          | [TRUE, Emp, _, _] -> ()
-          | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
-               print_string (string_of_programStates final ^ "\n")) ;
+          (
           program_repair info specifications;) 
         ) 
 
@@ -1732,7 +1783,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   let integer_type_widths = translation_unit_context.CFrontend_config.integer_type_widths in
 
   (*print_endline ("\n======================================================="); *)
-  print_endline ("================ Here is Yahui's Code =================");
+  (*print_endline ("================ Here is Yahui's Code =================");*)
 
 
   let (source_Address, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol) = retrive_basic_info_from_AST ast in
@@ -1752,11 +1803,11 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   (* Input program has  *)
   let msg = 
     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-    ^ "[FINAL REPORT]:"
+    ^ "[CURRENT REPORT]:"
     ^ source_Address ^ "\n"
-    ^ string_of_int ( !totol_Lines_of_Code ) ^ " lines of code;\n" 
+    ^ string_of_int ( !totol_Lines_of_Code ) ^ " lines of code; " 
     ^ string_of_int !totol_Lines_of_Spec ^ " lines of specs; for " 
-    ^ string_of_int (List.length !totol_specifications)(*number_of_protocol*) ^ " protocols.\n"
+    ^ string_of_int (List.length !totol_specifications)(*number_of_protocol*) ^ " protocols. "
     ^ "Analysis and repair took "^ string_of_float (compution_time)^ " seconds.\n\n"
     ^ string_of_int !totalAssertions ^ " total assertions, and " 
     ^ string_of_int !failedAssertions 
@@ -1764,7 +1815,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     ^" failed; and " 
     ^  string_of_int !reapiredFailedAssertions 
     ^ (if (!reapiredFailedAssertions) == 1 then " is" else " are") 
-    ^ " successfully repaired."  
+    ^ " successfully repaired. "  
     (*^ "\nIn total, there are " 
     ^ string_of_int !proofObligations ^ " proof obligations, and "
     ^ string_of_int (!proofObligations - !failedProofObligations) 
@@ -1773,20 +1824,21 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     
     in 
 
-  print_endline (msg); 
+  print_string (msg); 
 
 
   let () = totol_execution_time := !totol_execution_time +. compution_time in 
   print_endline ("Totol_execution_time: " ^ string_of_float !totol_execution_time); 
-  print_endline ("\n============ Here is the end of Yahui's Code ============\n" 
+  (*print_endline ("\n============ Here is the end of Yahui's Code ============\n" 
                 (*^ "=========================================================\n" *));
+                *)
   
   
   L.(debug Capture Verbose)
     "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;
   let cfg = compute_icfg translation_unit_context tenv ast in
 
-  print_string("<<<SYH:Finished creating icfg>>>\n");
+  (*print_string("<<<SYH:Finished creating icfg>>>\n");*)
 
 
   CAddImplicitDeallocImpl.process cfg tenv ;

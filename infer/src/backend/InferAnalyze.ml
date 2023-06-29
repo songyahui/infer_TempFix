@@ -193,7 +193,7 @@ let analyze source_files_to_analyze =
   else 
 
   (
-    print_string("<<<SYH:InferAnalyze.analyze-Parallel>>>\n");
+    (*print_string("<<<SYH:InferAnalyze.analyze-Parallel>>>\n"); *)
     L.environment_info "Parallel jobs: %d@." Config.jobs ;
     let build_tasks_generator () =
       tasks_generator_builder_for (Lazy.force source_files_to_analyze)
@@ -305,7 +305,7 @@ let invalidate_changed_procedures changed_files =
 
 
 let main ~changed_files =
-  print_string("<<<SYH:InferAnalyze.main>>>\n");
+  (*print_string("<<<SYH:InferAnalyze.main>>>\n");*)
 
   let start = ExecutionDuration.counter () in
   register_active_checkers () ;
