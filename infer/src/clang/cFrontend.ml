@@ -675,15 +675,26 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     )
   )
   | NullStmt _ -> Some (Basic(BVAR ("NULL")))
-  | MemberExpr (_, arlist, _, _)  -> 
+  | MemberExpr (_, arlist, _, member_expr_info)  -> 
+    let memArg = member_expr_info.mei_name.ni_name in 
     let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
     let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
     acc ^ (
       match a with
       | None -> "_"
       | Some t -> string_of_terms t ^ "_"
-    )
-    ) in 
+    )) in 
+    Some (Basic(BVAR(name^memArg)))
+
+  | ArraySubscriptExpr (_, arlist, _)  -> 
+    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+    (*print_endline (string_of_int (List.length temp)); *)
+    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
+    acc ^ (
+      match a with
+      | None -> "_"
+      | Some t -> string_of_terms t ^ "_"
+    )) in 
     Some (Basic(BVAR(name)))
 
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
@@ -978,9 +989,10 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
 let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list = 
   let correctDots = flattenList p1 in 
   let errorDots = flattenList p2 in 
+  (*
   print_endline ("correctDots path:" ^ List.fold_left correctDots ~init:"" ~f:(fun acc a -> acc ^" " ^ string_of_int a)) ; 
   print_endline ("errorDots path:" ^ List.fold_left errorDots ~init:"" ~f:(fun acc a -> acc ^" " ^ string_of_int a)) ; 
-
+*)
   let rec helper li a : bool =
     match li with 
     | [] -> false 
@@ -1117,6 +1129,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           | None -> 
             (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
+            
             
             
             (*
@@ -1338,8 +1351,8 @@ errorDots path: 65 65 *)
 
       let (locY, locZ) = maybeIntToListInt (getStmtlocation y) in 
 
-      print_endline ("locY" ^ List.fold_left locY ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
-  
+      (*print_endline ("locY" ^ List.fold_left locY ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
+  *)
       (match checkRelavent x with 
       | None  -> 
         let eff4X = syh_compute_stmt_postcondition env current future x in
@@ -1368,8 +1381,10 @@ errorDots path: 65 65 *)
 
       let (locY, _) = maybeIntToListInt (getStmtlocation y) in 
       let (locZ, _) = maybeIntToListInt (getStmtlocation z) in 
+      (*
       print_endline ("locY" ^ List.fold_left locY ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
       print_endline ("locZ" ^ List.fold_left locZ ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
+      *)
 
       (match checkRelavent x with 
       | None  -> 
@@ -1736,7 +1751,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   let compution_time = (Unix.gettimeofday () -. start) in 
   (* Input program has  *)
   let msg = 
-    "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
     ^ "[FINAL REPORT]:"
     ^ source_Address ^ "\n"
     ^ string_of_int ( !totol_Lines_of_Code ) ^ " lines of code;\n" 

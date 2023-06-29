@@ -1132,8 +1132,9 @@ let bugLocalisation (paths: error_info list): (pure * es * (int * int) * es) lis
 
 
       
+      (*
       print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
-
+*)
       let temp = List.map result ~f:(fun (pathcondition, a, n, b)-> 
 (*      print_string (showEntailemnt (reversees a) (reversees b) ^ "\n ------- \n");
 *)
