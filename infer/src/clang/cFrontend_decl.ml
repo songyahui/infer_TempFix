@@ -17,9 +17,6 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
   let add_method ?(is_destructor_wrapper = false) trans_unit_ctx tenv cfg class_decl_opt procname
       body ms has_return_param outer_context_opt extra_instrs =
 
-    print_string ("<<<SYH:cFrontend_decl.add_method>>>\n");
-    (*print_endline (Clang_ast_proj.get_stmt_kind_string body); *)
-
     L.(debug Capture Verbose)
       "@\n@\n>>---------- ADDING METHOD: '%a' ---------<<@\n@\n" Procname.pp procname ;
     incr CFrontend_config.procedures_attempted ;
@@ -37,7 +34,7 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
       match Procname.Hash.find_opt cfg procname with
       | Some procdesc when Procdesc.is_defined procdesc && not (BiabductionModels.mem procname) ->
           
-          print_endline ("procname:" ^ (Procname.to_string procname));
+          (*print_endline ("procname:" ^ (Procname.to_string procname)); *)
           L.(debug Capture Verbose)
             "@\n@\n>>---------- Start translating body of function: '%s' ---------<<@\n@."
             (Procname.to_string procname) ;
@@ -61,7 +58,6 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
 
 
   let function_decl trans_unit_ctx tenv cfg func_decl block_data_opt =
-    print_string ("<<<SYH:cFrontend_decl.function_decl>>>\n");
 
     try
       let captured_vars, outer_context_opt =
@@ -98,8 +94,7 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
             CMethod_trans.create_local_procdesc ?loc_instantiated trans_unit_ctx cfg tenv ms [body]
               captured_vars
           then
-            (print_endline ("testing then branch"); 
-            add_method trans_unit_ctx tenv cfg CContext.ContextNoCls procname body ms
+            (add_method trans_unit_ctx tenv cfg CContext.ContextNoCls procname body ms
               return_param_typ_opt outer_context_opt extra_instrs)
       | None ->
           ()
@@ -400,8 +395,8 @@ module CFrontend_decl_funct (T : CModule_type.CTranslation) : CModule_type.CFron
     ( if should_translate_decl trans_unit_ctx dec decl_trans_context then
       let dec_ptr = (Clang_ast_proj.get_decl_tuple dec).di_pointer in
 
-      print_string ("<<<SYH:cFrontend_decl.translate_one_declaration>>>\n");
-      print_endline ("SYH --> " ^ Clang_ast_proj.get_decl_kind_string dec);
+      (*print_string ("<<<SYH:cFrontend_decl.translate_one_declaration>>>\n");
+      print_endline ("SYH --> " ^ Clang_ast_proj.get_decl_kind_string dec);*)
 
       match dec with
       | FunctionDecl (_, _, _, _) ->

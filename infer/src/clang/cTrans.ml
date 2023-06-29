@@ -4790,7 +4790,7 @@ module CTrans_funct (F : CModule_type.CFrontend) : CModule_type.CTranslation = s
 
 
   and instruction_translate trans_state (instr : Clang_ast_t.stmt) =
-  print_string("<<<SYH:cTrans.instruction_translate>>>\n");
+  (*print_string("<<<SYH:cTrans.instruction_translate>>>\n");*)
 
     match instr with
     | GotoStmt (stmt_info, _, {Clang_ast_t.gsi_label= label_name; _}) ->
@@ -5316,7 +5316,7 @@ module CTrans_funct (F : CModule_type.CFrontend) : CModule_type.CTranslation = s
       else (None, body)
     in
 
-    print_endline ("<<<SYH:cTrans.instructions_trans>>>" ^ Clang_ast_proj.get_stmt_kind_string body); 
+    (*print_endline ("<<<SYH:cTrans.instructions_trans>>>" ^ Clang_ast_proj.get_stmt_kind_string body); *)
 
     let succ_nodes =
       match destructor_res with

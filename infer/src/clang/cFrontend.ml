@@ -24,7 +24,6 @@ end
 
 (* Translates a file by translating the ast into a cfg. *)
 let compute_icfg trans_unit_ctx tenv ast =
-  print_string ("<<<SYH:cFrontend.compute_icfg>>>\n");
   match ast with
   | Clang_ast_t.TranslationUnitDecl (_, decl_list, _, _) ->
       CFrontend_config.global_translation_unit_decls := decl_list ;
@@ -559,13 +558,6 @@ match gse_info.gse_value with
 
 
 
-let rec syh_compute_decl_pustcondition (decl: Clang_ast_t.decl) : es = 
-  match decl with
-  | VarDecl (_, ndi, qt, vdi) -> 
-    Emp
-  (* clang_prt_raw 1305- int, 901 - char *)
-  | _ -> Emp
-
 let rec dealwithBreakStmt (eff:es) (acc:es) : (es * bool) list = 
   match eff with 
   | Singleton ((str, _), _) -> 
@@ -855,7 +847,12 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
 let prefixLoction (li: int list) (state:programStates) : programStates= 
   List.map state ~f:(fun (a, b, c, d) -> (a, b, c, List.append li d))
 
-let getStmtlocation (instr: Clang_ast_t.stmt) : int option =
+
+let postfixLoction (li: int list) (state:programStates) : programStates= 
+  List.map state ~f:(fun (a, b, c, d) -> (a, b, c, List.append d li))
+
+
+let getStmtlocation (instr: Clang_ast_t.stmt) : (int option * int option) =
   match instr with 
   | CompoundStmt (stmt_info, _) 
   | DeclStmt (stmt_info, _, _) 
@@ -875,20 +872,21 @@ let getStmtlocation (instr: Clang_ast_t.stmt) : int option =
   | ForStmt (stmt_info, _)
   | SwitchStmt (stmt_info, _, _)
   | CXXOperatorCallExpr (stmt_info, _, _)
-
   | CStyleCastExpr (stmt_info, _, _, _, _)  ->
     let (sl1, sl2) = stmt_info.si_source_range in 
-    sl1.sl_line 
+    (sl1.sl_line , sl2.sl_line)
 
-  | _ -> None 
+  | _ -> (None, None) 
 
-let maybeIntToListInt l = match l with | None -> [] | Some l -> [l] 
+let maybeIntToListInt ((s1, s2):(int option * int option )) : (int list * int list)  = 
+  let aux l = match l with | None -> [] | Some l -> [l] 
+  in (aux s1, aux s2)
 
 
-let stmt_intfor2FootPrint (stmt_info:Clang_ast_t.stmt_info): int list = 
-  let (sl1, sl2) = stmt_info.si_source_range in 
-    let (lineLoc:int option) = sl1.sl_line in 
-    maybeIntToListInt lineLoc
+let stmt_intfor2FootPrint (stmt_info:Clang_ast_t.stmt_info): (int list * int list) = 
+  let ((sl1, sl2)) = stmt_info.si_source_range in 
+    (* let (lineLoc:int option) = sl1.sl_line in *)
+  maybeIntToListInt (sl1.sl_line, sl2.sl_line) 
 
 
 (*
@@ -980,6 +978,9 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
 let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list = 
   let correctDots = flattenList p1 in 
   let errorDots = flattenList p2 in 
+  print_endline ("correctDots path:" ^ List.fold_left correctDots ~init:"" ~f:(fun acc a -> acc ^" " ^ string_of_int a)) ; 
+  print_endline ("errorDots path:" ^ List.fold_left errorDots ~init:"" ~f:(fun acc a -> acc ^" " ^ string_of_int a)) ; 
+
   let rec helper li a : bool =
     match li with 
     | [] -> false 
@@ -988,11 +989,22 @@ let computeAllthePointOnTheErrorPath (p1:pathList) (p2:pathList) : int list =
   List.fold_left errorDots ~init:[] ~f:(fun acc a -> 
   if helper correctDots a then acc else List.append acc [a]) 
 
+let computeRange intList = 
+  match intList with 
+  | [] -> (0, 10000000)
+  | x :: xs  -> 
+    List.fold_left xs ~init:(x, x) 
+    ~f:(fun (min, max) a -> 
+      if a < min then (a, max) 
+      else if a > max then (min, a)
+      else (min, max)) 
+
 
 let program_repair (info:((error_info list) * binary_tree * pathList * pathList)) specifications : unit = 
   let (error_paths, tree, correctTraces, errorTraces) = info in 
   if List.length error_paths == 0 then ()
   else 
+  (* here the int int are the strat point and the end point *)
   let (error_lists:((pure * es * (int * int) * es) list)) = bugLocalisation error_paths in 
   print_endline ("\n<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>\n\n[Repair Options] ");
 
@@ -1010,18 +1022,30 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   let rec auc li = 
       match li with 
       | [] -> ""
-      | (pathcondition, realspec, (startNum ,endNum ),  spec):: res  -> 
+      | (pathcondition, realspec, (startNum ,endNum),  spec):: res  -> 
+        (*print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
+*)
         let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
+        let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
+
         let (startNum, endNum) = 
-          if List.length dotsareOntheErrorPath == 0 then (startNum, endNum)
+          let startNum' = if lowerError > startNum then lowerError else startNum in 
+          let endNum' = if upperError < endNum then upperError else endNum in 
+          (startNum', endNum')
+        in 
+
+          
+        (*  if List.length dotsareOntheErrorPath == 0 then (startNum, endNum)
           else List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
         ~f:(fun (min', max') x -> 
           if x < min' then (x, max')
           else if x > max' then (min', x)
           else (min', max')
           ) in 
-
+*)
+        (*print_endline ("post:" ^(string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
+*)
         let startTimeStamp = Unix.gettimeofday() in
         let (specifications: specification list) = List.append specifications !dynamicSpec in 
         
@@ -1083,7 +1107,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       (*print_endline ("I am here call");*)
       
 (* STEP 0: retrive the spec of the callee *)
-      let fp = stmt_intfor2FootPrint stmt_info in 
+      let (fp, _) = stmt_intfor2FootPrint stmt_info in 
 
       let ((calleeName, formalLi), prec, postc, futurec) = 
         match stmt_list with 
@@ -1201,13 +1225,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           
           (*
           print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
-
           print_endline ("|- RHS: " ^ string_of_effect futurec);
 *)
-
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
           let extra_info = "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
-          (*print_endline (string_of_inclusion_results extra_info info); *)
+          print_endline (string_of_inclusion_results extra_info info); 
           
           program_repair info env; 
 
@@ -1255,7 +1277,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       | Some (Basic (BVAR str)) -> Eq(Basic(BRET), Basic(BVAR str))
       | _ -> Ast_utility.TRUE
     in 
-    let fp = stmt_intfor2FootPrint stmt_info in 
+    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     (*print_string ("Return: "); 
     let _ = List.map stmt_list ~f:(fun a -> 
       let temp = stmt2Term a in 
@@ -1268,12 +1290,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(extrapure, Emp, 1, fp)]
   
   | ReturnStmt (stmt_info, stmt_list) ->
-    let fp = stmt_intfor2FootPrint stmt_info in 
+    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
 
   | CompoundStmt (stmt_info, stmt_list) -> 
-    let fp = stmt_intfor2FootPrint stmt_info in 
+    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
 
 
@@ -1282,7 +1304,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     *)
 
 
-    let fp = stmt_intfor2FootPrint stmt_info in 
+
+(* correctDots path: 65 66 65 66 67
+errorDots path: 65 65 *)
 
     let checkRelavent (conditional:  Clang_ast_t.stmt) : (((pure * (string list)) option))  = 
         (*print_string ("\n*****\ncheckRelavent: "); 
@@ -1310,14 +1334,19 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let extra = 
     (match stmt_list with 
     | [x; y] -> 
-      let locY = maybeIntToListInt (getStmtlocation y) in 
+      let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
+
+      let (locY, locZ) = maybeIntToListInt (getStmtlocation y) in 
+
+      print_endline ("locY" ^ List.fold_left locY ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
+  
       (match checkRelavent x with 
       | None  -> 
         let eff4X = syh_compute_stmt_postcondition env current future x in
         let eff4Y = syh_compute_stmt_postcondition env current future y in
-        let final = prefixLoction fp 
+        let final = prefixLoction locX 
           (List.append 
-          (eff4X) 
+          (postfixLoction locZ eff4X) 
           (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y))) in 
         (*let () = print_string ("if else [x, y] None: " ^ string_of_programStates final^ "\n") in 
         *)
@@ -1329,18 +1358,25 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         (*let ()= varSet := (List.append !varSet morevar) in *)
         let eff4X = syh_compute_stmt_postcondition env current future  x in
         let eff4Y = syh_compute_stmt_postcondition env current future  y in
-        prefixLoction fp (List.append (enforePure (Neg condition) eff4X) 
+        prefixLoction locX 
+        (List.append 
+        (postfixLoction locZ (enforePure (Neg condition) eff4X))
         (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
         )
     | [x;y;z] -> 
-      let locY = maybeIntToListInt (getStmtlocation y) in 
-      let locZ = maybeIntToListInt (getStmtlocation z) in 
+      let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
+
+      let (locY, _) = maybeIntToListInt (getStmtlocation y) in 
+      let (locZ, _) = maybeIntToListInt (getStmtlocation z) in 
+      print_endline ("locY" ^ List.fold_left locY ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
+      print_endline ("locZ" ^ List.fold_left locZ ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
+
       (match checkRelavent x with 
       | None  -> 
         let eff4X = syh_compute_stmt_postcondition env current future x in
         let eff4Y = syh_compute_stmt_postcondition env current future y in
         let eff4Z = syh_compute_stmt_postcondition env current future z in
-        prefixLoction fp 
+        prefixLoction locX 
         (List.append 
           ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
           (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
@@ -1351,7 +1387,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         let eff4X = syh_compute_stmt_postcondition env current future x in
         let eff4Y = syh_compute_stmt_postcondition env current future y in
         let eff4Z = syh_compute_stmt_postcondition env current future z in
-        prefixLoction fp (List.append 
+        prefixLoction locX (List.append 
         (prefixLoction locZ (enforePure (Neg condition) (concatenateTwoEffectswithFlag eff4X eff4Z))) 
         (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
         )
@@ -1368,15 +1404,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
   
   | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
-      let fp = stmt_intfor2FootPrint stmt_info in 
+      let (fp, _) = stmt_intfor2FootPrint stmt_info in 
       prefixLoction fp (syh_compute_stmt_postcondition env current future x)
 
   | MemberExpr (stmt_info, x::_, _, _) -> 
-    let ev = Singleton ((("deref", [(BVAR(string_of_stmt x))])), getStmtlocation instr) in 
+    let (fp, _) =  getStmtlocation instr in 
+    let ev = Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) in 
     let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
-    let (lineLoc:int option) = getStmtlocation instr in 
 
-    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+    let fp = match fp with | None -> [] | Some l -> [l] in 
     [(TRUE, ev, 0, fp)]
 
 
@@ -1407,21 +1443,18 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | CXXMemberCallExpr _ (* sw_logger()->put *)
   | CXXConstructExpr _ (* va_list va_list; *)
   | DoStmt _ ->
-
-    let (lineLoc:int option) = getStmtlocation instr in 
-    (*[(TRUE, Singleton( "ret", lineLoc), 1)]*)
-    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
-
+    let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
     [(TRUE, Emp, 0, fp)]
 
 
   | DeclStmt (_, stmt_list, _) -> 
+    let (fp, fp1) =  (getStmtlocation instr) in 
 
-    let ev = Singleton (((Clang_ast_proj.get_stmt_kind_string instr ^ " " ^ string_of_int (List.length stmt_list), [])), getStmtlocation instr) in 
+
+    let ev = Singleton (((Clang_ast_proj.get_stmt_kind_string instr ^ " " ^ string_of_int (List.length stmt_list), [])), fp) in 
     let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
-    let (lineLoc:int option) = getStmtlocation instr in 
 
-    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+    let (fp, _) = maybeIntToListInt (fp, fp1) in 
     [(TRUE, ev, 0, fp)]
 
     
@@ -1434,11 +1467,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | UnaryExprOrTypeTraitExpr _
   | CStyleCastExpr _ 
   | _ -> 
-    let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), getStmtlocation instr) in 
-    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
-    let (lineLoc:int option) = getStmtlocation instr in 
+    let (fp, fp1) =  (getStmtlocation instr) in 
 
-    let fp = match lineLoc with | None -> [] | Some l -> [l] in 
+    let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), fp) in 
+    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
+
+    let (fp, _) = maybeIntToListInt (fp, fp1) in 
+
+
     [(TRUE, ev, 0, fp)]
 
 
@@ -1511,7 +1547,8 @@ let retriveSpecifications (source:string) : (specification list * int * int * in
       let line_of_code = List.length lines in 
       let partitions = retriveComments line in (*in *)
       let line_of_spec = List.fold_left partitions ~init:0 ~f:(fun acc a -> acc + (List.length (Str.split (Str.regexp "\n") a)))  in 
-      print_endline ("Global specifictaions are: ");
+      (if List.length partitions == 0 then ()
+      else print_endline ("Global specifictaions are: "));
       let sepcifications = List.map partitions 
         ~f:(fun singlespec -> 
           print_endline (singlespec ^ "\n");
@@ -1577,6 +1614,17 @@ let show_effects_option (eff:effect option): string =
     *)
 *)
 
+let string_of_optionint intop = 
+  match intop with 
+  | None  -> "None"
+  | Some i -> string_of_int i ;;
+
+let int_of_optionint intop = 
+  match intop with 
+  | None  -> (-1)
+  | Some i -> i ;;
+
+
 
 let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specification list) (source_Address:string): unit  = 
 
@@ -1584,9 +1632,12 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
     | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
       let source_Addressnow = string_of_source_range  decl_info.di_source_range in 
 
+
       if String.compare source_Address source_Addressnow !=0 then ()
       else 
-      
+      let (l1, l2) = decl_info.di_source_range in 
+      let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
+      let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
       match function_decl_info.fdi_body with 
       | None -> ()
@@ -1620,10 +1671,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             futurecondition  
             stmt))) in 
 
-      (match final with 
-      | [TRUE, Emp, _, _] -> ()
-      | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
-             print_string (string_of_programStates final ^ "\n")) ;
 
       
 
@@ -1631,13 +1678,21 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
         | Some postcondition -> 
         (
-        let final = programStates2effectwithfootprintlist final in 
-        let info = effectwithfootprintInclusion final postcondition in 
-        let extra_info = 
+        let final' = programStates2effectwithfootprintlist final in 
+        let info = effectwithfootprintInclusion final' postcondition in 
+        (*let extra_info = 
           "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
           "Post-condition checking: " in 
-        (*print_endline (string_of_inclusion_results extra_info info); *)
-        program_repair info specifications; 
+        print_endline (string_of_inclusion_results extra_info info); *)
+
+        let (error_paths, _, _, _) = info in 
+        if List.length error_paths == 0 then ()
+        else 
+          ((match final with 
+          | [TRUE, Emp, _, _] -> ()
+          | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
+               print_string (string_of_programStates final ^ "\n")) ;
+          program_repair info specifications;) 
         ) 
 
       )
@@ -1655,15 +1710,13 @@ let retrive_basic_info_from_AST ast_decl: (string * Clang_ast_t.decl list * spec
     | _ -> assert false
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
-  print_string("<<<SYH:cFrontend.do_source_file>>>\n");
-
   let tenv = Tenv.create () in
   CType_decl.add_predefined_types tenv ;
   init_global_state_capture () ;
   let source_file = translation_unit_context.CFrontend_config.source_file in
   let integer_type_widths = translation_unit_context.CFrontend_config.integer_type_widths in
 
-  print_endline ("\n=======================================================");
+  (*print_endline ("\n======================================================="); *)
   print_endline ("================ Here is Yahui's Code =================");
 
 
@@ -1697,10 +1750,10 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     ^  string_of_int !reapiredFailedAssertions 
     ^ (if (!reapiredFailedAssertions) == 1 then " is" else " are") 
     ^ " successfully repaired."  
-    ^ "\nIn total, there are " 
+    (*^ "\nIn total, there are " 
     ^ string_of_int !proofObligations ^ " proof obligations, and "
     ^ string_of_int (!proofObligations - !failedProofObligations) 
-    ^ (if ((!proofObligations - !failedProofObligations) ) == 1 then " is" else " are") ^" valid.\n"
+    ^ (if ((!proofObligations - !failedProofObligations) ) == 1 then " is" else " are") ^" valid.\n" *)
 
     
     in 
@@ -1711,12 +1764,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   let () = totol_execution_time := !totol_execution_time +. compution_time in 
   print_endline ("Totol_execution_time: " ^ string_of_float !totol_execution_time); 
   print_endline ("\n============ Here is the end of Yahui's Code ============\n" 
-                ^ "=========================================================\n");
+                (*^ "=========================================================\n" *));
   
-
-
   
-  (*
   L.(debug Capture Verbose)
     "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;
   let cfg = compute_icfg translation_unit_context tenv ast in
@@ -1735,6 +1785,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     || Option.is_some Config.icfg_dotty_outfile
   then DotCfg.emit_frontend_cfg source_file cfg ;
   L.debug Capture Verbose "Stored on disk:@[<v>%a@]@." Cfg.pp_proc_signatures cfg ;
-  *)
+  
   
   ()
