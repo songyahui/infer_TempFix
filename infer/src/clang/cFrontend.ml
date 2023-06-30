@@ -126,6 +126,10 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     )) in 
     Some (Basic(BVAR(name)))
 
+  | UnaryOperator (stmt_info, x::_, expr_info, op_info) ->
+    stmt2Term x 
+      
+
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
 
 
@@ -860,12 +864,19 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
       (match stmt2Pure x with 
       | None -> None 
       | Some p -> Some (Neg p))
-    | _ -> None 
+    | `LNot -> 
+      (match stmt2Term x with 
+      | None -> None 
+      | Some t -> Some (Eq(t, Basic(BINT 0)))
+      )
+      
+    | _ -> 
+      print_endline ("`LNot DeclRefExpr none4"); 
+      None
     )
-  | ParenExpr (_, x::rest, _) -> 
-    stmt2Pure x
+  | ParenExpr (_, x::rest, _) -> stmt2Pure x
   
-  | _ -> None (* Some (Gt (Var(Clang_ast_proj.get_stmt_kind_string instr), Var (""))) *)
+  | _ -> Some (Gt ((Basic( BVAR (Clang_ast_proj.get_stmt_kind_string instr))), Basic( BVAR ("null"))))
 
 
   
@@ -1346,10 +1357,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     *)
 
 
-
-(* correctDots path: 65 66 65 66 67
-errorDots path: 65 65 *)
-
     let checkRelavent (conditional:  Clang_ast_t.stmt) : (((pure * (string list)) option))  = 
         (*print_string ("\n*****\ncheckRelavent: "); 
         print_string (string_of_varSet (!varSet));
@@ -1753,10 +1760,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
 
 
-      (match final with 
-          | [TRUE, Emp, _, _] -> ()
-          | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
-               print_string (string_of_programStates final ^ "\n")) ;
 
       match postcondition with 
         | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
@@ -1773,7 +1776,11 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         if List.length error_paths == 0 then ()
         else 
           (
-          
+          (match final with 
+          | [TRUE, Emp, _, _] -> ()
+          | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
+               print_string (string_of_programStates final ^ "\n")) ;
+
 
           program_repair info specifications;) 
         ) 
