@@ -815,7 +815,8 @@ let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: progr
       else
       (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),  t_y, List.append fp1 fp2)
   ) in 
-  normaliseProgramStates temp
+  let ret = normaliseProgramStates temp in 
+  ret
   
 
 
@@ -1129,8 +1130,8 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
           if String.compare str "" == 0 then " can be deleted." 
           else  " can be inserted with code " ^  str ^ ".")
-         ^ "\n\n" 
-         ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n"
+         ^ "\n" 
+         ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds."
         )
   in 
   print_endline("[Patches] ");
@@ -1328,15 +1329,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             concatenateTwoEffectswithFlag effectLi4X effectRest
           )
 
-    | (IfStmt (stmt_info, stmtList, if_stmt_info)) :: xsifelse -> 
+    | (IfStmt (stmt_info, [x;y;z], if_stmt_info)) :: xsifelse -> 
       let addTail (a:Clang_ast_t.stmt) = 
         match a with
-        | CompoundStmt (c_stmt_info, c_stmt_list) -> Clang_ast_t.CompoundStmt (c_stmt_info, List.append c_stmt_list xsifelse) 
-        | _ -> a 
+        | CompoundStmt (c_stmt_info, c_stmt_list) ->  Clang_ast_t.CompoundStmt (c_stmt_info, List.append c_stmt_list xsifelse) 
+        | _ ->  Clang_ast_t.CompoundStmt (stmt_info, a:: xsifelse)
       in 
-      let statement' = Clang_ast_t.IfStmt (stmt_info, List.map stmtList ~f:(fun a -> addTail a), if_stmt_info) in 
-      syh_compute_stmt_postcondition env current' future statement' 
-
+      let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
+      syh_compute_stmt_postcondition env current' future statement'
 
     | x :: xs -> 
 
@@ -1347,13 +1347,23 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   in 
   match instr with 
   | ReturnStmt (stmt_info, [ret]) ->
+    (*print_endline ("ReturnStmt1:" ^ string_of_stmt_list [ret] " ");*)
+
+    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+    let retTerm = stmt2Term ret in 
     let extrapure = 
-      match stmt2Term ret with 
+      match retTerm with 
       | Some (Basic (BINT n)) -> Eq(Basic(BRET), Basic(BINT n))
       | Some (Basic (BVAR str)) -> Eq(Basic(BRET), Basic(BVAR str))
       | _ -> Ast_utility.TRUE
     in 
-    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+    let fp1 = match fp with | [] -> None | x::_ -> Some x in 
+    let retTerm1 = 
+      match retTerm with 
+      | Some (Basic (BVAR t)) -> [(BVAR t)] 
+      | _ -> [] 
+    in 
+    let es = if List.length retTerm1 ==0 then Emp else Singleton (("RET", retTerm1), fp1) in 
     (*print_string ("Return: "); 
     let _ = List.map stmt_list ~f:(fun a -> 
       let temp = stmt2Term a in 
@@ -1363,9 +1373,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     ) in 
     print_string ("\n\n");
     *)
-    [(extrapure, Emp, 1, fp)]
+    [(extrapure, es, 1, fp)]
   
   | ReturnStmt (stmt_info, stmt_list) ->
+    (*print_endline ("ReturnStmt:" ^ string_of_stmt_list stmt_list " ");*)
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
@@ -1725,10 +1736,6 @@ let show_effects_option (eff:effect option): string =
     *)
 *)
 
-let string_of_optionint intop = 
-  match intop with 
-  | None  -> "None"
-  | Some i -> string_of_int i ;;
 
 let int_of_optionint intop = 
   match intop with 
@@ -1783,6 +1790,13 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             stmt))) in 
 
 
+            (match final with 
+            | [TRUE, Emp, _, _] -> ()
+            | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
+                 print_string (string_of_programStates final ^ "\n")) ;
+
+
+
 
       match postcondition with 
         | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
@@ -1799,10 +1813,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         if List.length error_paths == 0 then ()
         else 
           (
-            (match final with 
-            | [TRUE, Emp, _, _] -> ()
-            | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
-                 print_string (string_of_programStates final ^ "\n")) ;
   
 
           program_repair info specifications;) 

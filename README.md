@@ -71,3 +71,32 @@ infer/bin/infer run -- clang -c ../../git/swoole-src/src/core/base.cc
 
 
 instantiate the repair 
+
+
+// Resource Leak
+/* open(path): 
+    Post (ret<0, 𝝐) \/ (ret>=0, open(ret))
+    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
+
+
+/* close(handler): 
+    Post (TRUE, close(handler)) 
+    Future  (TRUE, (!_(handler))^*)  @*/
+
+
+//NPD
+/*@ localtime(t): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), localtime(ret)) 
+    Future  (ret=0, (!_(ret))^*)  @*/
+
+
+/*@ malloc(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
+    Future  (ret=0, (!_(ret))^*)  @*/
+
+
+/*@ swReactor_get(t, p): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), deref(reactor)) 
+    Future  (ret=0, (!_(ret))^*)  @*/
+
+// Memory Leak

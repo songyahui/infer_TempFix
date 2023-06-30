@@ -808,16 +808,24 @@ let rec basic_type_subset (bt1:basic_type list) (bt2:basic_type list) : bool =
   | [] -> true 
   | y::ys -> if exists_basic_type y bt2 == false then false else basic_type_subset ys bt2
 
+let comapreEventArgs arg1 arg2 = 
+  match (arg1, arg2) with 
+  | ([x], [y]) -> compareBasic_type x y 
+  | _ -> false 
 
 let rec derivitives (f:fstElem) (eff:es) : es = 
   match eff with 
   | Bot        
   | Emp   -> Bot                
   | Any   -> Emp
-  | Singleton (str, _) -> 
+  | Singleton (event, _) -> 
+    let (str, args) = event in 
     (match f with 
     | Wildcard _ -> Bot 
-    | Event (event, _) -> if comapreEvents str event == true then Emp else Bot 
+    | Event (event1, _) -> 
+      let (str1, args1) = event1 in 
+      if String.compare str1 "RET" == 0 && comapreEventArgs args args1 then Emp 
+      else if comapreEvents event event1 == true then Emp else Bot 
     | NotEvent event  ->  Bot
     )
   | NotSingleton str -> 
@@ -937,12 +945,12 @@ let rec inclusion (lhs:es) (rhs:es) (ctx: (es*es) list): (bool* binary_tree) =
 (* the int is the currentposition, meaning from where the inclusion started to be wrong*)
 type error_info = (pure * es * int * es)     
     
-let getLineNumFromfstElem (f:fstElem) = 
+let getLineNumFromfstElem (f:fstElem) lowerbound = 
   match f with 
   | Event(_, Some i) -> i 
   | Event (_, None ) 
   | Wildcard 
-  | NotEvent _ -> -1
+  | NotEvent _ -> lowerbound
 
 
 let modifiyTheProofOblgationCounters re = 
@@ -1013,22 +1021,22 @@ else
           let derR = normalise_es (derivitives f rhs) in 
           if (isBot derR) then 
             let currentposition = if currentposition == (1000) then 
-            (print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");
-            (getLineNumFromfstElem f)) else currentposition in 
+            ( (*print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n"); *)
+            (getLineNumFromfstElem f currentposition)) else currentposition in 
             ([(pathcondition, lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
           else 
-            let (result, tree) = inclusion' pathcondition (getLineNumFromfstElem f) derL derR ((lhs, rhs):: ctx) in 
+            let (result, tree) = inclusion' pathcondition (getLineNumFromfstElem f currentposition) derL derR ((lhs, rhs):: ctx) in 
             (result, Node(entailent ^ "  [Unfold]" , [tree])) 
         | f :: restF -> 
           let derL = (derivitives f lhs) in 
           let derR = normalise_es (derivitives f rhs) in 
           if (isBot derR) then 
             let currentposition = if currentposition == (1000) then 
-            (print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");
-            (getLineNumFromfstElem f)) else currentposition in 
+            ((*print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");*)
+            (getLineNumFromfstElem f currentposition)) else currentposition in 
             ([(pathcondition, lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
           else 
-          let (result, tree) = inclusion' pathcondition (getLineNumFromfstElem f) derL derR ((lhs, rhs):: ctx) in 
+          let (result, tree) = inclusion' pathcondition (getLineNumFromfstElem f currentposition) derL derR ((lhs, rhs):: ctx) in 
           (match result with 
           | [] -> 
             let (resultRest, treeRest)  = ietrater restF in 
@@ -1113,6 +1121,7 @@ let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) :
     fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
 
     let (re, tree) = inclusion' p1 functionStart es1 es2 [] in   
+    (if functionStart == -1 then print_endline ("functionStart -1")  else ());
     modifiyTheProofOblgationCounters re; 
    (* modifiyTheassertionCounters re; *)
     let (correctTrace', errorTrace') = 
@@ -1153,15 +1162,13 @@ let bugLocalisation (paths: error_info list): (pure * es * (int * int) * es) lis
       let (result, tree) = inclusion' pathcondition functionEnd revlhs revrhs [] in 
       modifiyTheProofOblgationCounters result; 
 
-
-      
       (*
       print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
 *)
       let temp = List.map result ~f:(fun (pathcondition, a, n, b)-> 
 (*      print_string (showEntailemnt (reversees a) (reversees b) ^ "\n ------- \n");
 *)
-        (*print_endline ("startpoint:" ^ (string_of_int start)); *)
+        (*print_endline ("startpoint:" ^ (string_of_int start) ^ " endpoint:" ^ (string_of_int n)); *)
         (pathcondition, reversees a, (start, n), reversees b)) in 
 
       
