@@ -54,6 +54,82 @@ let string_of_source_range ((s1, s2):Clang_ast_t.source_range) :string =
   | (_, _) -> "none"
 
 
+
+let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms option = 
+  match (t1, t2) with 
+  | (None, _) 
+  | (_, None ) -> None 
+  | (Some t1, Some t2) -> 
+    let p = 
+      if String.compare op "+" == 0 then Plus (t1, t2)
+    else Minus (t1, t2)
+    in Some p 
+
+let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
+  (*print_endline ("term kind:" ^ Clang_ast_proj.get_stmt_kind_string instr);
+*)
+  match instr with 
+  | ImplicitCastExpr (_, x::_, _, _, _) 
+    -> 
+    stmt2Term x
+  | CStyleCastExpr (_, x::rest, _, _, _) 
+  | ParenExpr (_, x::rest, _) -> 
+  (*print_string ("ParenExpr/CStyleCastExpr: " ^ (
+    List.fold_left (x::rest) ~init:"" ~f:(fun acc a -> acc ^ "," ^ Clang_ast_proj.get_stmt_kind_string a)
+  )^ "\n");
+  *)
+
+    stmt2Term x
+  
+  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
+  (match binop_info.boi_kind with
+  | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
+  | `Sub -> stmt2Term_helper "" (stmt2Term x) (stmt2Term y) 
+  | _ -> None 
+  )
+  | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
+    Some (Basic(BINT (int_of_string(integer_literal_info.ili_value))))
+
+  | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
+  let (sl1, sl2) = stmt_info.si_source_range in 
+
+  (match decl_ref_expr_info.drti_decl_ref with 
+  | None -> None 
+  | Some decl_ref ->
+    (
+    match decl_ref.dr_name with 
+    | None -> None
+    | Some named_decl_info -> Some (Basic(BVAR (named_decl_info.ni_name)))
+      
+    )
+  )
+  | NullStmt _ -> Some (Basic(BVAR ("NULL")))
+  | MemberExpr (_, arlist, _, member_expr_info)  -> 
+    let memArg = member_expr_info.mei_name.ni_name in 
+    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
+    acc ^ (
+      match a with
+      | None -> "_"
+      | Some t -> string_of_terms t ^ "_"
+    )) in 
+    Some (Basic(BVAR(name^memArg)))
+
+  | ArraySubscriptExpr (_, arlist, _)  -> 
+    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+    (*print_endline (string_of_int (List.length temp)); *)
+    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
+    acc ^ (
+      match a with
+      | None -> "_"
+      | Some t -> string_of_terms t ^ "_"
+    )) in 
+    Some (Basic(BVAR(name)))
+
+  | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
+
+
+
 let rec string_of_decl (dec :Clang_ast_t.decl) : string = 
   match dec with 
   | VarDecl (_, ndi, qt, vdi) -> 
@@ -90,8 +166,20 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
   | ReturnStmt (stmt_info, stmt_list) ->
     "ReturnStmt " ^ string_of_stmt_list stmt_list " " 
 
+  (*
   | MemberExpr (stmt_info, stmt_list, _, member_expr_info) ->
     "MemberExpr " ^ string_of_stmt_list stmt_list " " 
+    *)
+
+  | MemberExpr (_, arlist, _, member_expr_info)  -> 
+    let memArg = member_expr_info.mei_name.ni_name in 
+    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
+    acc ^ (
+      match a with
+      | None -> "_"
+      | Some t -> string_of_terms t ^ "_"
+    )) in name^memArg
 
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
     "IntegerLiteral " ^ integer_literal_info.ili_value
@@ -624,80 +712,6 @@ let rec dealwithContinuekStmt (eff:es) (acc:es): (es * bool) list =
       (Concatenate(acc, Kleene(acc1)), false)
     )
 
-
-
-let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms option = 
-  match (t1, t2) with 
-  | (None, _) 
-  | (_, None ) -> None 
-  | (Some t1, Some t2) -> 
-    let p = 
-      if String.compare op "+" == 0 then Plus (t1, t2)
-    else Minus (t1, t2)
-    in Some p 
-
-let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
-  (*print_endline ("term kind:" ^ Clang_ast_proj.get_stmt_kind_string instr);
-*)
-  match instr with 
-  | ImplicitCastExpr (_, x::_, _, _, _) 
-    -> 
-    stmt2Term x
-  | CStyleCastExpr (_, x::rest, _, _, _) 
-  | ParenExpr (_, x::rest, _) -> 
-  (*print_string ("ParenExpr/CStyleCastExpr: " ^ (
-    List.fold_left (x::rest) ~init:"" ~f:(fun acc a -> acc ^ "," ^ Clang_ast_proj.get_stmt_kind_string a)
-  )^ "\n");
-  *)
-
-    stmt2Term x
-  
-  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
-  (match binop_info.boi_kind with
-  | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
-  | `Sub -> stmt2Term_helper "" (stmt2Term x) (stmt2Term y) 
-  | _ -> None 
-  )
-  | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
-    Some (Basic(BINT (int_of_string(integer_literal_info.ili_value))))
-
-  | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
-  let (sl1, sl2) = stmt_info.si_source_range in 
-
-  (match decl_ref_expr_info.drti_decl_ref with 
-  | None -> None 
-  | Some decl_ref ->
-    (
-    match decl_ref.dr_name with 
-    | None -> None
-    | Some named_decl_info -> Some (Basic(BVAR (named_decl_info.ni_name)))
-      
-    )
-  )
-  | NullStmt _ -> Some (Basic(BVAR ("NULL")))
-  | MemberExpr (_, arlist, _, member_expr_info)  -> 
-    let memArg = member_expr_info.mei_name.ni_name in 
-    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
-    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
-    acc ^ (
-      match a with
-      | None -> "_"
-      | Some t -> string_of_terms t ^ "_"
-    )) in 
-    Some (Basic(BVAR(name^memArg)))
-
-  | ArraySubscriptExpr (_, arlist, _)  -> 
-    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
-    (*print_endline (string_of_int (List.length temp)); *)
-    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
-    acc ^ (
-      match a with
-      | None -> "_"
-      | Some t -> string_of_terms t ^ "_"
-    )) in 
-    Some (Basic(BVAR(name)))
-
-  | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
 
 
 let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt list) : event option = 
@@ -1738,6 +1752,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             stmt))) in 
 
 
+
       (match final with 
           | [TRUE, Emp, _, _] -> ()
           | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
@@ -1758,6 +1773,8 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         if List.length error_paths == 0 then ()
         else 
           (
+          
+
           program_repair info specifications;) 
         ) 
 

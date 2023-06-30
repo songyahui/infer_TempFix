@@ -192,6 +192,12 @@ let rec string_of_terms (t:terms):string =
   | Plus (t1, t2) -> (string_of_terms t1) ^ ("+") ^ (string_of_terms t2)
   | Minus (t1, t2) -> (string_of_terms t1) ^ ("-") ^ (string_of_terms t2)
 
+
+let string_of_termOption t : string option  = 
+  match t with 
+  | None -> None 
+  | Some t -> Some (string_of_terms t)
+
 let rec string_of_pure (p:pure):string =   
   match p with
     TRUE -> "⊤"
