@@ -951,11 +951,11 @@ let modifiyTheProofOblgationCounters re =
     failedProofObligations := !failedProofObligations +1 
   else ()
 
-let modifiyTheassertionCounters re = 
+let modifiyTheassertionCounters () = 
   let () = totalAssertions := !totalAssertions + 1 in 
-  if List.length re > 0 then 
+  (*if List.length re > 0 then *)
   failedAssertions := !failedAssertions +1 
-  else ()
+  (*else ()*)
   
 let rec inclusion' 
   (pathcondition:pure)
@@ -1114,7 +1114,7 @@ let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) :
 
     let (re, tree) = inclusion' p1 functionStart es1 es2 [] in   
     modifiyTheProofOblgationCounters re; 
-    modifiyTheassertionCounters re; 
+   (* modifiyTheassertionCounters re; *)
     let (correctTrace', errorTrace') = 
       if List.length re == 0 
       then (List.append correctTrace [li], errorTrace)

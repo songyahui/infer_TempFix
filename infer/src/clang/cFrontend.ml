@@ -1066,23 +1066,34 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   in 
   let msg = helper error_lists in 
   print_endline (msg);
+
+  let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
+
+  (* this is to prevent the same fixes *)
+  let (repairRecord:( (int * int) list) ref) = ref [] in 
+
+
+  let rec existSameRecord recordList start endNum  : bool = 
+    match recordList with 
+    | [] -> false 
+    | (s',e'):: recordListxs -> if start ==s' && endNum==e' then true else existSameRecord recordListxs start endNum
+  in 
   
-  print_endline("[Patches] ");
-  let rec auc li = 
-      match li with 
-      | [] -> ""
-      | (pathcondition, realspec, (startNum ,endNum),  spec):: res  -> 
+  let rec aux arg : unit  = 
+      let (pathcondition, realspec, (startNum ,endNum),  spec) = arg in 
         (*print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
 *)
-        let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
-
         let (startNum, endNum) = 
           let startNum' = if lowerError > startNum then lowerError else startNum in 
           let endNum' = if upperError < endNum then upperError else endNum in 
           (startNum', endNum')
         in 
+
+        if existSameRecord !repairRecord startNum endNum then ()
+        else let () = repairRecord := (startNum ,endNum) :: (!repairRecord) in 
+
 
           
         (*  if List.length dotsareOntheErrorPath == 0 then (startNum, endNum)
@@ -1095,6 +1106,8 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
 *)
         (*print_endline ("post:" ^(string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
 *)
+        modifiyTheassertionCounters (); 
+
         let startTimeStamp = Unix.gettimeofday() in
         let (specifications: specification list) = List.append specifications !dynamicSpec in 
         
@@ -1103,7 +1116,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
 
         let startTimeStamp01 = Unix.gettimeofday() in
 
-        ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
+        print_endline ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
         (match list_of_functionCalls with 
         | None -> 
           let (rr, _) = effect_inclusion [(TRUE, Emp)] [(TRUE, spec)] in 
@@ -1116,12 +1129,12 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
           if String.compare str "" == 0 then " can be deleted." 
           else  " can be inserted with code " ^  str ^ ".")
-         ^ "\n\n" ^ auc res 
+         ^ "\n\n" 
          ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n"
-        ) 
+        )
   in 
-  let msg = auc error_lists in 
-  print_endline (msg)
+  print_endline("[Patches] ");
+  let _ = List.map error_lists ~f:(fun a -> aux a) in ()
 
  
 
@@ -1276,7 +1289,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (*
           print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
           print_endline ("|- RHS: " ^ string_of_effect futurec);
-*)
+          *)
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
           let extra_info = "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
           print_endline (string_of_inclusion_results extra_info info); 
@@ -1314,8 +1327,18 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let effectRest = helper (concatenateTwoEffectswithFlag current' effectLi4X) xs in 
             concatenateTwoEffectswithFlag effectLi4X effectRest
           )
-        
-    | x ::xs -> 
+
+    | (IfStmt (stmt_info, stmtList, if_stmt_info)) :: xsifelse -> 
+      let addTail (a:Clang_ast_t.stmt) = 
+        match a with
+        | CompoundStmt (c_stmt_info, c_stmt_list) -> Clang_ast_t.CompoundStmt (c_stmt_info, List.append c_stmt_list xsifelse) 
+        | _ -> a 
+      in 
+      let statement' = Clang_ast_t.IfStmt (stmt_info, List.map stmtList ~f:(fun a -> addTail a), if_stmt_info) in 
+      syh_compute_stmt_postcondition env current' future statement' 
+
+
+    | x :: xs -> 
 
       let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
       let effectRest = helper (concatenateTwoEffectswithFlag current' effectLi4X) xs in 
@@ -1347,6 +1370,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
 
+  | ForStmt (stmt_info, stmt_list)
   | CompoundStmt (stmt_info, stmt_list) -> 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
@@ -1483,7 +1507,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | WhileStmt _ 
   | SwitchStmt _ 
   | ParenExpr _ (* assert(max > min); *)
-  | ForStmt _ 
+  (*| ForStmt _ *)
   | CallExpr _ (* nested calls:  if (swoole_timer_is_available()) {    *)
   | CXXOperatorCallExpr _ 
   | CXXDeleteExpr _ (* delete g_logger_instance; *)
@@ -1760,7 +1784,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
 
 
-
       match postcondition with 
         | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
         | Some postcondition -> 
@@ -1776,11 +1799,11 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         if List.length error_paths == 0 then ()
         else 
           (
-          (match final with 
-          | [TRUE, Emp, _, _] -> ()
-          | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
-               print_string (string_of_programStates final ^ "\n")) ;
-
+            (match final with 
+            | [TRUE, Emp, _, _] -> ()
+            | _ -> print_string("=====> Actual effects of function: "^ funcName ^" ======>\n" );
+                 print_string (string_of_programStates final ^ "\n")) ;
+  
 
           program_repair info specifications;) 
         ) 
