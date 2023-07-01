@@ -1135,7 +1135,6 @@ let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) :
     fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
 
     let (re, tree) = inclusion' p1 functionStart es1 es2 [] in   
-    (if functionStart == -1 then print_endline ("functionStart -1")  else ());
     modifiyTheProofOblgationCounters re; 
    (* modifiyTheassertionCounters re; *)
     let (correctTrace', errorTrace') = 

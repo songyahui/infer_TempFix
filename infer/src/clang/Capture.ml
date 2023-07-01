@@ -120,8 +120,10 @@ let run_and_validate_clang_frontend ast_source =
 
 let run_clang clang_command read =
   let exit_with_error exit_code =
-    L.external_error "Error: the following clang command did not run successfully:@\n  %a@."
-      ClangCommand.pp clang_command ;
+      (* SYH: here should print the error message is there is a compilation error. *)
+
+    (*L.external_error "Error: the following clang command did not run successfully:@\n  %a@."
+      ClangCommand.pp clang_command ;*)
     L.exit exit_code
   in
   (* NOTE: exceptions will propagate through without exiting here *)
@@ -140,7 +142,6 @@ let run_clang clang_command read =
       exit_with_error n)
   | _ ->
   (print_string("<<<SYH:Clang.Capture.run_clang-Error1>>>\n");
-  
       exit_with_error 1)
 
 

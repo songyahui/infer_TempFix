@@ -1255,7 +1255,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             effectwithfootprintInclusion (programStates2effectwithfootprintlist current') prec in 
 
             let extra_info = 
-            "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
+            "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
             "Pre-condition checking for \'"^calleeName^"\': " in 
             (*print_endline (string_of_inclusion_results extra_info info); *)
             program_repair info env; 
@@ -1323,7 +1323,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           print_endline ("|- RHS: " ^ string_of_effect futurec);
           *)
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
-          let extra_info = "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
+          let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
           print_endline (string_of_inclusion_results extra_info info); 
           
           program_repair info env; 
@@ -1823,10 +1823,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             futurecondition  
             stmt))) in 
 
-            (match final with 
-            | [TRUE, Emp, _, _] -> ()
-            | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
-                 print_string (string_of_programStates final ^ "\n")) ;
 
 
 
@@ -1839,7 +1835,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         let final' = programStates2effectwithfootprintlist final in 
         let info = effectwithfootprintInclusion final' postcondition in 
         (*let extra_info = 
-          "~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
+          "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
           "Post-condition checking: " in 
         print_endline (string_of_inclusion_results extra_info info); *)
 
@@ -1848,6 +1844,11 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         else 
           (
 
+
+          (match final with 
+          | [TRUE, Emp, _, _] -> ()
+          | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
+               print_string (string_of_programStates final ^ "\n")) ;
 
           program_repair info specifications;) 
         ) 
