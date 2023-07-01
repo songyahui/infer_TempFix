@@ -1077,7 +1077,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   let rec existSameRecord recordList start endNum  : bool = 
     match recordList with 
     | [] -> false 
-    | (s',e'):: recordListxs -> if start ==s' && endNum==e' then true else existSameRecord recordListxs start endNum
+    | (s',e'):: recordListxs -> if (*start ==s' &&  *) endNum==e' then true else existSameRecord recordListxs start endNum
   in 
   
   let rec aux arg : unit  = 
@@ -1350,6 +1350,20 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     (*print_endline ("ReturnStmt1:" ^ string_of_stmt_list [ret] " ");*)
 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+    let fp1 = match fp with | [] -> None | x::_ -> Some x in 
+
+    let optionTermToList inp = 
+      match inp  with 
+      | Some (Basic (BVAR t)) -> [(BVAR t)] 
+      | _ -> [] 
+    in 
+
+    let (extrapure, es) = match ret with
+    | CallExpr (stmt_info, _::stmt_list, ei) ->
+      let arg = List.fold_left stmt_list ~init:[] ~f:(fun acc a -> acc @(optionTermToList (stmt2Term a))) in 
+      let es  = Singleton (("RET", arg), fp1) in 
+      (Ast_utility.TRUE, es)
+    | _ -> 
     let retTerm = stmt2Term ret in 
     let extrapure = 
       match retTerm with 
@@ -1357,22 +1371,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       | Some (Basic (BVAR str)) -> Eq(Basic(BRET), Basic(BVAR str))
       | _ -> Ast_utility.TRUE
     in 
-    let fp1 = match fp with | [] -> None | x::_ -> Some x in 
-    let retTerm1 = 
-      match retTerm with 
-      | Some (Basic (BVAR t)) -> [(BVAR t)] 
-      | _ -> [] 
+    let retTerm1 = optionTermToList retTerm in 
+    let es = if List.length (retTerm1 ) ==0 then Emp else Singleton (("RET", (retTerm1)), fp1) in 
+    (extrapure, es)
+
     in 
-    let es = if List.length retTerm1 ==0 then Emp else Singleton (("RET", retTerm1), fp1) in 
-    (*print_string ("Return: "); 
-    let _ = List.map stmt_list ~f:(fun a -> 
-      let temp = stmt2Term a in 
-      match temp with 
-      | None -> print_string ("none")
-      | Some temp -> print_string (string_of_terms temp)
-    ) in 
-    print_string ("\n\n");
-    *)
     [(extrapure, es, 1, fp)]
   
   | ReturnStmt (stmt_info, stmt_list) ->

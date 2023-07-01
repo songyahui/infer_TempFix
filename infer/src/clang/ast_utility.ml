@@ -808,9 +808,23 @@ let rec basic_type_subset (bt1:basic_type list) (bt2:basic_type list) : bool =
   | [] -> true 
   | y::ys -> if exists_basic_type y bt2 == false then false else basic_type_subset ys bt2
 
-let comapreEventArgs arg1 arg2 = 
+  (* arg1 is object.field, and arg2 is object *)
+let rec comapreEventArgs arg1 arg2 = 
+  let compareBasic_type_custimise (bt1:basic_type) (bt2:basic_type) : bool = 
+    match (bt1, bt2) with 
+    | ((BVAR s1), (BVAR s2)) -> 
+      let l1 = String.length s1 in 
+      let l2 = String.length s2 in 
+      if l1 >= l2 then 
+        if String.compare (String.sub s1 0 l2) s2 == 0 then true else false 
+      else false 
+    | (BINT n1, BINT n2) -> n1 == n2 
+    | (BNULL, BNULL)
+    | (BRET, BRET) -> true 
+    | _ -> false 
+  in 
   match (arg1, arg2) with 
-  | ([x], [y]) -> compareBasic_type x y 
+  | ([x], y::ys) -> if compareBasic_type_custimise x y then true else comapreEventArgs arg1 ys 
   | _ -> false 
 
 let rec derivitives (f:fstElem) (eff:es) : es = 
