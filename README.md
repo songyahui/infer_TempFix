@@ -63,15 +63,6 @@ AST:
 /Users/yahuis/Desktop/git/infer/infer/src/atd/clang_ast_t.ml
 
 
-todo:
-
-dataset finding and implementation 
-
-infer/bin/infer run -- clang -c ../../git/swoole-src/src/core/base.cc
-
-
-instantiate the repair 
-
 
 
 /*@  open(path): 
@@ -113,3 +104,9 @@ infer/bin/infer run --pulse-only -- clang -c ../../repair-benchmark/swoole-src/s
 
 
 Done with the swoole benchmark, need to do the temporal bugs. 
+
+Temporal bugs are: 
+infer/bin/infer run --pulse-only -- clang -c my_benchmark/urv/2_returnChunkSize.c
+infer/bin/infer run --pulse-only -- clang -c my_benchmark/3_Generalized_URV/FFmpeg-9ffa49496d1aae4cbbb387aac28a9e061a6ab0a6/adtsenc.c
+infer/bin/infer run --pulse-only -- clang -c my_benchmark/3_Generalized_URV/mongo-c-driver-fc4eb63a0581dee88461059a9d61e45a6ed8c56a/mongoc-gridfs-file.c
+infer/bin/infer run --pulse-only -- clang -c my_benchmark/1_peek.c 

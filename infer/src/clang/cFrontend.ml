@@ -967,7 +967,14 @@ let specialCases es =
   ;;
 
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
-  print_string ("synthsisFromSpec " ^ string_of_effect ([effect]) ^ "\n"); 
+  print_endline ("synthsisFromSpec " ^ string_of_effect ([effect])); 
+  print_endline ("ENV now:\n" ^ List.fold_left env ~init:"" 
+  ~f:(fun acc ((mn, _), _, post, _) -> acc ^ 
+  match post with 
+  | None -> ""
+  | Some eff -> mn ^ ": " ^ string_of_effect eff ^ "\n"
+  ));
+
   let (pi, spec) = effect in 
   let spec =  normalise_es spec in 
 
@@ -975,7 +982,8 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
     Some ("if (" ^ string_of_pure_output (normalPure pi) ^ "){ return; }")
   else 
 
-  let patch = (match spec with 
+  let patch = 
+  (match spec with 
   | Emp -> Some ""
   | _ -> 
     let rec auc (currectProof:es) envli : string option = 
@@ -983,17 +991,18 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
       | [] -> 
         None (* no ingradients from the env *)
       | ((fName, li::_), _, Some post, _) :: xs  -> 
+
         let handler = getAllVarFromES currectProof in 
         let (vb, arg) = 
           match handler with 
           | []->([], "")
           | x ::_ -> 
-          (*print_string ("using " ^ x^ " to replace "^ li ^"\n"); *)
+          print_string ("using " ^ x^ " to replace "^ li ^"\n"); 
           ([(li , BVAR x)], x)
           in 
         let post = instantiateAugumentSome post vb in 
         let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
-        (* print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n"); *)
+        print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n"); 
 
         let temp = 
           match result with 
@@ -1013,6 +1022,28 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
         (*match temp with 
         | None -> auc currectProof xs 
         | _ -> temp*)
+      | ((fName, []), _, Some post, _) :: xs  -> 
+
+        let post = post in 
+        let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
+        print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n"); 
+
+        let temp = 
+          match result with 
+          | [] -> Some (fName ^ "(); ") 
+          | (_, a, _, b):: _ -> 
+            (match normalise_es a with 
+            | Emp -> 
+              if comparees (normalise_es b) currectProof == true 
+              then auc currectProof xs 
+              else 
+              let recursiveRes = synthsisFromSpec (pi, b) env in 
+              (match recursiveRes with 
+              | None  -> None 
+              | Some rest -> Some (fName ^ "(); " ^ rest))
+            | _ -> auc currectProof xs 
+            ) in temp
+            
       | x :: xs  -> auc currectProof xs 
     in auc spec env) in 
     (match patch with 
