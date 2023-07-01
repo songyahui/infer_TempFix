@@ -20,6 +20,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+/*
 #include "libavcodec/get_bits.h"
 #include "libavcodec/put_bits.h"
 #include "libavcodec/codec_id.h"
@@ -45,6 +46,7 @@ typedef struct ADTSContext {
     int mpeg_id;
     uint8_t pce_data[MAX_PCE_SIZE];
 } ADTSContext;
+*/
 
 #define ADTS_MAX_FRAME_BYTES ((1 << 14) - 1)
 
@@ -58,7 +60,7 @@ typedef struct ADTSContext {
 
 
 
-static int adts_decode_extradata(AVFormatContext *s, ADTSContext *adts, const uint8_t *buf, int size)
+static int adts_decode_extradata(void *s, void *adts, const uint8_t *buf, int size)
 {
     GetBitContext gb;
     PutBitContext pb;
@@ -66,12 +68,11 @@ static int adts_decode_extradata(AVFormatContext *s, ADTSContext *adts, const ui
     int off, ret;
 	
     init_get_bits(&gb, buf, size * 8);
-    /*fix liwenhua ret = init_get_bits8(&gb, buf, size);
-    if (ret < 0)
-        return ret;*/
+
     off = avpriv_mpeg4audio_get_config2(&m4ac, buf, size, 1, s);
-    if (off < 0)
-        return 0;
+    // Here is the bug, we should check the return value of avpriv_mpeg4audio_get_config2 here 
+    //if (off < 0)
+       // return 0;
     skip_bits_long(&gb, off);
     adts->objecttype        = m4ac.object_type - 1;
     adts->sample_rate_index = m4ac.sampling_index;

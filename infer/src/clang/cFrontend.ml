@@ -968,12 +968,12 @@ let specialCases es =
 
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
   print_endline ("synthsisFromSpec " ^ string_of_effect ([effect])); 
-  print_endline ("ENV now:\n" ^ List.fold_left env ~init:"" 
+  (*print_endline ("ENV now:\n" ^ List.fold_left env ~init:"" 
   ~f:(fun acc ((mn, _), _, post, _) -> acc ^ 
   match post with 
   | None -> ""
   | Some eff -> mn ^ ": " ^ string_of_effect eff ^ "\n"
-  ));
+  ));*)
 
   let (pi, spec) = effect in 
   let spec =  normalise_es spec in 
@@ -997,12 +997,12 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
           match handler with 
           | []->([], "")
           | x ::_ -> 
-          print_string ("using " ^ x^ " to replace "^ li ^"\n"); 
+          (*print_string ("using " ^ x^ " to replace "^ li ^"\n"); *)
           ([(li , BVAR x)], x)
           in 
         let post = instantiateAugumentSome post vb in 
         let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
-        print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n"); 
+        (*print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n"); *)
 
         let temp = 
           match result with 
@@ -1026,7 +1026,7 @@ let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : strin
 
         let post = post in 
         let (result, tree) = effect_inclusion post ([(pi, currectProof)]) in 
-        print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n"); 
+        (*print_string (fName ^ "\n" ^ string_of_binary_tree  tree  ^ "\n"); *)
 
         let temp = 
           match result with 
@@ -1108,7 +1108,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   let rec existSameRecord recordList start endNum  : bool = 
     match recordList with 
     | [] -> false 
-    | (s',e'):: recordListxs -> if (*start ==s' &&  *) endNum==e' then true else existSameRecord recordListxs start endNum
+    | (s',e'):: recordListxs -> if start ==s' || endNum==e' then true else existSameRecord recordListxs start endNum
   in 
   
   let rec aux arg : unit  = 
@@ -1823,6 +1823,11 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             futurecondition  
             stmt))) in 
 
+            (match final with 
+            | [TRUE, Emp, _, _] -> ()
+            | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
+                 print_string (string_of_programStates final ^ "\n")) ;
+
 
 
 
@@ -1842,11 +1847,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         if List.length error_paths == 0 then ()
         else 
           (
-            (match final with 
-            | [TRUE, Emp, _, _] -> ()
-            | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
-                 print_string (string_of_programStates final ^ "\n")) ;
-
 
 
           program_repair info specifications;) 

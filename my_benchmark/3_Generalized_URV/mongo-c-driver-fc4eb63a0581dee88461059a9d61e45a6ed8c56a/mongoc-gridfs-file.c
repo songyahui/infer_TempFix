@@ -197,9 +197,6 @@ mongoc_gridfs_file_save (mongoc_gridfs_file_t *file)
 
 
 
-
-
-
 /*@ bson_iter_array(t1, t2, t3): 
     Post (ret>=0, 𝝐) \/ ((ret<0), bson_init_static(t3)) 
     Future  (ret<0, (!_(t3))^*)  @*/
@@ -207,6 +204,7 @@ mongoc_gridfs_file_save (mongoc_gridfs_file_t *file)
 
 /*@ bson_init_static(t1, t2, t3): 
     Post (TRUE, bson_init_static(t2)) @*/
+
 
 
 /**
@@ -223,9 +221,13 @@ _mongoc_gridfs_file_new_from_bson (mongoc_gridfs_t *gridfs, const bson_t *data)
    mongoc_gridfs_file_t *file;
    const bson_value_t *value;
    const char *key;
-   bson_iter_t iter;
-   const uint8_t *buf;
-   uint32_t buf_len;
+      int iter, buf_len, buf;
+
+   int ret = bson_iter_array (&iter, &buf_len, &buf);
+         /* fix liwenhua if (!bson_init_static (&file->bson_aliases, buf, buf_len)) {
+            GOTO (failure);
+         }*/
+   bson_init_static (buf, buf, buf_len);
 
    ENTRY;
 
