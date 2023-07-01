@@ -1793,11 +1793,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             stmt))) in 
 
 
-            (match final with 
-            | [TRUE, Emp, _, _] -> ()
-            | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
-                 print_string (string_of_programStates final ^ "\n")) ;
-
 
 
 
@@ -1816,7 +1811,12 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         if List.length error_paths == 0 then ()
         else 
           (
-  
+            (match final with 
+            | [TRUE, Emp, _, _] -> ()
+            | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
+                 print_string (string_of_programStates final ^ "\n")) ;
+
+
 
           program_repair info specifications;) 
         ) 
