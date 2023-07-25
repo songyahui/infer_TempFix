@@ -19,7 +19,7 @@ let clang =
      -open IBase -open IR -open Absint -open Checkers -open TestDeterminators
      -open Biabduction -open Backend))
  (libraries oUnit core IStdlib ATDGenerated IBase IR Absint Checkers
-     TestDeterminators Biabduction Backend Z3)
+     TestDeterminators Biabduction Backend z3)
  (preprocess (pps ppx_compare))
 )|}
     (if clang then ":standard \\ ClangFrontendStubs" else "ClangFrontendStubs")

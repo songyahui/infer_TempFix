@@ -1260,8 +1260,6 @@ let instantiateRet_basic_type (bt:basic_type) (bds:bindings):  basic_type =
     | None -> bt
     | Some term ->  term 
     )
-
-  
   | _ -> bt 
   
 let rec instantiateRetTerm (t:terms) (bds:bindings): terms = 

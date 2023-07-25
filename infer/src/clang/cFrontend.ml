@@ -88,6 +88,7 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
   | _ -> None 
   )
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
+    print_endline (integer_literal_info.ili_value);
     Some (Basic(BINT (int_of_string(integer_literal_info.ili_value))))
 
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
@@ -1124,7 +1125,8 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
         in 
 
         if existSameRecord !repairRecord startNum endNum then ()
-        else let () = repairRecord := (startNum ,endNum) :: (!repairRecord) in 
+        else 
+        let () = repairRecord := (startNum ,endNum) :: (!repairRecord) in 
 
 
           
