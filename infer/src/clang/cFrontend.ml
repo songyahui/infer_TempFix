@@ -1668,32 +1668,7 @@ let rec input_lines file =
 ;;
 
 
-let retriveComments (source:string) : (string list) = 
-  (*print_endline (source); *) 
-  let partitions = Str.split (Str.regexp "/\*@") source in 
-  (* print_endline (string_of_int (List.length partitions)); *)
-  match partitions with 
-  | [] -> assert false 
-  | _ :: rest -> (*  SYH: Note that specification can't start from line 1 *)
-  let partitionEnd = List.map rest ~f:(fun a -> Str.split (Str.regexp "@\*/")  a) in 
-  let rec helper (li: string list list): string list = 
-    match li with 
-    | [] -> []
-    | x :: xs  -> 
-      (match List.hd x with
-      | None -> helper xs 
-      | Some head -> 
-        if String.compare head "" ==0 then helper xs 
-        else 
-          let ele = ("/*@" ^ head ^ "@*/") in 
-          (ele :: helper xs)  ) 
-  in 
-  let temp = helper partitionEnd in 
-  temp
-  
-
-(* lines of code, lines of sepc, number_of_protocol *)
-let retriveSpecifications (source:string) : (specification list * int * int * int) = 
+let retriveLinesOfCode (source:string) : (int) = 
   let ic = open_in source in
   try
       let lines =  (input_lines ic ) in
@@ -1701,30 +1676,10 @@ let retriveSpecifications (source:string) : (specification list * int * int * in
         match li with 
         | [] -> ""
         | x :: xs -> x ^ "\n" ^ helper xs 
-      in 
-      let line = helper lines in
-      
+      in       
       let line_of_code = List.length lines in 
-      let partitions = retriveComments line in (*in *)
-      let line_of_spec = List.fold_left partitions ~init:0 ~f:(fun acc a -> acc + (List.length (Str.split (Str.regexp "\n") a)))  in 
-      (if List.length partitions == 0 then ()
-      else print_endline ("Global specifictaions are: "));
-      let sepcifications = List.map partitions 
-        ~f:(fun singlespec -> 
-          print_endline (singlespec ^ "\n");
-          Parser.specification Lexer.token (Lexing.from_string singlespec)) in
-      
-      (*
-      let _ = List.map sepcifications ~f:(fun (_ , pre, post, future) -> print_endline (string_of_function_sepc (pre, post, future) ) ) in 
-      *)
+      (line_of_code)
 
-      (sepcifications, line_of_code, line_of_spec, List.length partitions)
-      (*
-      
-      print_string (List.fold_left (fun acc a -> acc ^ forward_verification a progs) "" progs ) ; 
-      flush stdout;                (* 现在写入默认设备 *)
-      close_in ic                  (* 关闭输入通道 *)
-      *)
 
     with e ->                      (* 一些不可预见的异常发生 *)
       close_in_noerr ic;           (* 紧急关闭 *)
@@ -1861,15 +1816,84 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
     | _ -> () 
    
 
-
-let retrive_basic_info_from_AST ast_decl: (string * Clang_ast_t.decl list * specification list * int * int * int) = 
+let retrive_basic_info_from_AST ast_decl: (string * Clang_ast_t.decl list * int) = 
     match ast_decl with
     | Clang_ast_t.TranslationUnitDecl (decl_info, decl_list, _, translation_unit_decl_info) ->
         let source =  translation_unit_decl_info.tudi_input_path in 
-        let (specifications, lines_of_code, lines_of_spec, number_of_protocol) = retriveSpecifications source in 
-        (source, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol)
+        let lines_of_code  = retriveLinesOfCode source in 
+        (source, decl_list, lines_of_code) (*, specifications, lines_of_code, lines_of_spec, number_of_protocol *)
  
     | _ -> assert false
+
+
+
+
+let retriveComments (source:string) : (string list) = 
+  (*print_endline (source); *) 
+  let partitions = Str.split (Str.regexp "/\*@") source in 
+  (* print_endline (string_of_int (List.length partitions)); *)
+  match partitions with 
+  | [] -> assert false 
+  | _ :: rest -> (*  SYH: Note that specification can't start from line 1 *)
+  let partitionEnd = List.map rest ~f:(fun a -> Str.split (Str.regexp "@\*/")  a) in 
+  let rec helper (li: string list list): string list = 
+    match li with 
+    | [] -> []
+    | x :: xs  -> 
+      (match List.hd x with
+      | None -> helper xs 
+      | Some head -> 
+        if String.compare head "" ==0 then helper xs 
+        else 
+          let ele = ("/*@" ^ head ^ "@*/") in 
+          (ele :: helper xs)  ) 
+  in 
+  let temp = helper partitionEnd in 
+  temp
+  
+
+
+let retriveSpecifications (source:string) : (Ast_utility.specification list * int * int) = 
+  let ic = open_in source in
+  try
+      let lines =  (input_lines ic ) in
+      let rec helper (li:string list) = 
+        match li with 
+        | [] -> ""
+        | x :: xs -> x ^ "\n" ^ helper xs 
+      in 
+      let line = helper lines in
+      
+      let partitions = retriveComments line in (*in *)
+      let line_of_spec = List.fold_left partitions ~init:0 ~f:(fun acc a -> acc + (List.length (Str.split (Str.regexp "\n") a)))  in 
+      (if List.length partitions == 0 then ()
+      else print_endline ("Global specifictaions are: "));
+      let user_sepcifications = List.map partitions 
+        ~f:(fun singlespec -> 
+          print_endline (singlespec ^ "\n");
+          Parser.specification Lexer.token (Lexing.from_string singlespec)) in
+      
+      (*
+      let _ = List.map sepcifications ~f:(fun (_ , pre, post, future) -> print_endline (string_of_function_sepc (pre, post, future) ) ) in 
+      *)
+
+      (user_sepcifications, line_of_spec, List.length partitions)
+      (*
+      
+      print_string (List.fold_left (fun acc a -> acc ^ forward_verification a progs) "" progs ) ; 
+      flush stdout;                (* 现在写入默认设备 *)
+      close_in ic                  (* 关闭输入通道 *)
+      *)
+
+    with e ->                      (* 一些不可预见的异常发生 *)
+      close_in_noerr ic;           (* 紧急关闭 *)
+      raise e                      (* 以出错的形式退出: 文件已关闭,但通道没有写入东西 *)
+
+   ;;
+
+let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications "/Users/yahuis/Desktop/git/infer_TempFix/infer/src/clang/spec.c" ;; 
+
+
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
   let tenv = Tenv.create () in
@@ -1882,28 +1906,27 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   (*print_endline ("================ Here is Yahui's Code =================");*)
 
 
-  let (source_Address, decl_list, specifications, lines_of_code, lines_of_spec, number_of_protocol) = retrive_basic_info_from_AST ast in
+  let (source_Address, decl_list, lines_of_code) = retrive_basic_info_from_AST ast in
   
   
-  
-  let () = totol_Lines_of_Spec := !totol_Lines_of_Spec + lines_of_spec in 
-
   let () = totol_Lines_of_Code := !totol_Lines_of_Code + lines_of_code in 
-  let () = totol_specifications := List.append !totol_specifications specifications in 
   let start = Unix.gettimeofday () in 
 
   let reasoning_Res = List.map decl_list  
-    ~f:(fun dec -> reason_about_declaration dec !totol_specifications source_Address) in 
+    ~f:(fun dec -> reason_about_declaration dec user_sepcifications source_Address) in 
   
   let compution_time = (Unix.gettimeofday () -. start) in 
+
+  let () = totol_execution_time := !totol_execution_time +. compution_time in 
+
   (* Input program has  *)
   let msg = 
     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
     ^ "[CURRENT REPORT]:"
     ^ source_Address ^ "\n"
     ^ string_of_int ( !totol_Lines_of_Code ) ^ " lines of code; " 
-    ^ string_of_int !totol_Lines_of_Spec ^ " lines of specs; for " 
-    ^ string_of_int (List.length !totol_specifications)(*number_of_protocol*) ^ " protocols. "
+    ^ string_of_int lines_of_spec ^ " lines of specs; for " 
+    ^ string_of_int (List.length user_sepcifications) ^ " protocols. "
     ^ "Analysis and repair took "^ string_of_float (compution_time)^ " seconds.\n\n"
     ^ string_of_int !totalAssertions ^ " total assertions, and " 
     ^ string_of_int !failedAssertions 
@@ -1912,18 +1935,12 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     ^  string_of_int !reapiredFailedAssertions 
     ^ (if (!reapiredFailedAssertions) == 1 then " is" else " are") 
     ^ " successfully repaired. "  
-    (*^ "\nIn total, there are " 
-    ^ string_of_int !proofObligations ^ " proof obligations, and "
-    ^ string_of_int (!proofObligations - !failedProofObligations) 
-    ^ (if ((!proofObligations - !failedProofObligations) ) == 1 then " is" else " are") ^" valid.\n" *)
-
     
     in 
 
   print_string (msg); 
 
 
-  let () = totol_execution_time := !totol_execution_time +. compution_time in 
   print_endline ("Totol_execution_time: " ^ string_of_float !totol_execution_time); 
   (*print_endline ("\n============ Here is the end of Yahui's Code ============\n" 
                 (*^ "=========================================================\n" *));

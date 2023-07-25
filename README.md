@@ -115,4 +115,29 @@ infer/bin/infer run --pulse-only -- clang -c my_benchmark/3_Generalized_URV/mong
 infer/bin/infer run --pulse-only -- clang -c my_benchmark/1_peek.c 
 
 
+Benchmarks:
 
+
+../../infer_TempFix/infer/bin/infer run -- make --keep-going 
+
+x264$ 
+
+./configure --disable-asm
+make -j20
+../../infer_TempFix/infer/bin/infer run  -- make -j20
+make clean
+../../infer_TempFix/infer/bin/infer run  -- make -j20  
+
+
+swoole.c:
+
+infer 0.15.0
+
+VERSION=0.14.0; \
+curl -sSL "https://github.com/facebook/infer/releases/download/v$VERSION/infer-linux64-v$VERSION.tar.xz" \
+| sudo tar -C /opt -xJ && \
+sudo ln -s "/opt/infer-linux64-v$VERSION/bin/infer" /usr/local/bin/infer14
+
+
+TODO: 
+output a file for all the data. 

@@ -207,11 +207,11 @@ let cc1_capture clang_cmd =
 
 
 let capture clang_cmd =
-
+  print_string("<<<SYH:Clang.Capture.capture>>>\n");
   if ClangCommand.can_attach_ast_exporter clang_cmd then
     (* this command compiles some code; replace the invocation of clang with our own clang and
        plugin *)
-    ( (*print_string("<<<SYH:Clang.Capture.capture-if>>>\n"); *)
+    ( 
     cc1_capture clang_cmd)
   else if Option.exists Config.buck_mode ~f:BuckMode.is_clang_compilation_db then
     (* when running with buck's compilation-database, skip commands where frontend cannot be

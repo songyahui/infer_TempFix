@@ -154,7 +154,8 @@ let capture ~changed_files mode =
         BuckJavaFlavor.capture build_cmd
     | Clang {compiler; prog; args} ->
         if Config.is_originator then L.progress "Capturing in make/cc mode ...@." ;
-        Clang.capture compiler ~prog ~args
+        Clang.capture compiler ~prog ~args;
+        ()
     | ClangCompilationDB {db_files} ->
         L.progress "Capturing using compilation database...@." ;
         CaptureCompilationDatabase.capture ~changed_files ~db_files

@@ -85,17 +85,13 @@ let (reapiredFailedAssertions: int ref) =  ref 0
 (* Experimental Summary *)
 let totol_execution_time  = ref 0.0
 let totol_Lines_of_Code  = ref 0
-let totol_Lines_of_Spec  = ref 0
 
 let currentFunctionLineNumber = ref (0, 0) 
 
 
 
-let (totol_specifications: (specification list) ref)  = ref []
-
-
 let programStates2effectwithfootprintlist eff = 
-  List.map eff ~f:(fun (p, es, _, ft)-> (p, es, ft))
+  List.map ~f:(fun (p, es, _, ft)-> (p, es, ft)) eff
 
 let effects2programStates eff = 
   List.map eff ~f:(fun (p, es)-> (p, es, 0, []))
@@ -278,6 +274,7 @@ let rec convertTerm (t:terms):string =
   | (Basic (BNULL)) -> " " ^ "nil" ^ " "
   | Plus (t1, t2) -> ("(+") ^ (convertTerm t1) ^  (convertTerm t2) ^ ")"
   | Minus (t1, t2) -> ("(-") ^ (convertTerm t1) ^  (convertTerm t2) ^ ")"
+  | _ -> "convertTerm error"
   ;;
 
 let rec convertPure (pi:pure) (acc:string):string = 
@@ -344,6 +341,7 @@ let rec getAllVarFromES (es:es): string list =
   | Disj(es1, es2) -> List.append (getAllVarFromES es1) (getAllVarFromES es2)
   | Concatenate (es1, es2) -> List.append (getAllVarFromES es1) (getAllVarFromES es2)
   | Kleene es1 -> (getAllVarFromES es1)
+  | _ -> ["getAllVarFromES error"]
 
 
 
@@ -561,6 +559,8 @@ let rec string_of_es (eff:es) : string =
   | Kleene effIn          ->
       "(" ^ string_of_es effIn ^ ")^*"
 
+  | _ -> "string_of_es error"
+
 let string_of_exists exs = 
   if List.length exs == 0 then ""
   else 
@@ -755,7 +755,7 @@ let rec existEff acc ( pi, es) : bool =
 
 let normalise_effect (eff:effect) : effect = 
   let temp = List.map eff ~f:(fun (pi, es) -> ( normalPure pi, normalise_es es)) in 
-  let noBoteff = List.filter temp ~f:(fun ( pi, es) -> not (isBot es)) in 
+  let noBoteff = List.filter temp ~f:(fun ( _, es) -> not (isBot es)) in 
   let rec helper effList = 
     match effList with 
     | [] -> []
@@ -776,6 +776,7 @@ let rec nullable (eff:es) : bool =
   | Concatenate (eff1, eff2) -> nullable eff1 && nullable eff2  
   | Disj (eff1, eff2) -> nullable eff1 || nullable eff2  
   | Kleene effIn      -> true
+  | _ -> false 
 
 let rec fst (eff:es) : (fstElem list) = 
   match eff with 
@@ -789,6 +790,7 @@ let rec fst (eff:es) : (fstElem list) =
     else (fst eff1)
   | Disj (eff1, eff2) -> List.append (fst eff1) (fst eff2)
   | Kleene effIn      -> (fst effIn) 
+  | _ -> []
 
 let rec exists_basic_type (t:basic_type) (li:basic_type list) : bool = 
     match li with 
@@ -865,7 +867,7 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     else Concatenate (derivitives f eff1, eff2)
   | Disj (eff1, eff2) -> Disj (derivitives f eff1, derivitives f eff2)
   | Kleene effIn      -> Concatenate (derivitives f effIn, eff)
-
+  | _ -> eff
 
 let showEntailemnt (lhs:es) (rhs:es) : string =
   string_of_es lhs  ^" |- "^ string_of_es rhs ;;
@@ -1065,6 +1067,9 @@ let cartesian_product li1 li2 =
 
 
 let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tree) = 
+
+  
+  (*
   let listOflistofPairs = List.filter rhs 
     ~f:(fun (piR, _) -> 
         let pairs' = List.map lhs ~f:(fun (piL, esL)-> (piL, piR)) in 
@@ -1073,8 +1078,6 @@ let effect_inclusion (lhs:effect) (rhs:effect) : ((error_info list) * binary_tre
         else false  
        )
   in 
-  
-  (*
   print_string ("not matched specs:\n" ^ List.fold_left listOflistofPairs ~init:"" 
   ~f:(fun acc a -> acc ^ "\n " ^ string_of_effect [a]) );
   print_string ("\n------------\n");
@@ -1161,6 +1164,7 @@ let rec reversees (eff:es) : es =
   | Disj (eff1, eff2) ->
     Disj (reversees eff1, reversees eff2)
   | Kleene effIn          ->Kleene (reversees effIn)
+  | _ -> eff
 
 
 let bugLocalisation (paths: error_info list): (pure * es * (int * int) * es) list = 
@@ -1301,7 +1305,7 @@ let rec instantiateRetEs (es:es) (bds:bindings): es =
   | Disj(es1, es2) -> Disj(instantiateRetEs es1 bds, instantiateRetEs es2 bds)
   | Concatenate (es1, es2) -> Concatenate(instantiateRetEs es1 bds, instantiateRetEs es2 bds)
   | Kleene es1 -> Kleene (instantiateRetEs es1 bds)
-
+  | _ -> es 
 
 
 let instantiateAugument (eff:effect option) (bds:bindings) : effect option = 
@@ -1337,6 +1341,7 @@ let enforeceLineNum (fp:int list) (eff:effect option) : effect option =
       | Disj(es1, es2) -> Disj(helper es1, helper es2)
       | Concatenate (es1, es2) -> Concatenate(helper es1, helper es2)
       | Kleene es1 -> Kleene (helper es1)
+      | _ -> es
     in 
     Some (List.map eff ~f:(fun (p, es) -> (p, helper es)))
 
