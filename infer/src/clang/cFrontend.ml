@@ -88,8 +88,10 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
   | _ -> None 
   )
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
-    print_endline (integer_literal_info.ili_value);
-    Some (Basic(BINT (int_of_string(integer_literal_info.ili_value))))
+    let int_str = integer_literal_info.ili_value in 
+
+    if String.length int_str > 18 then Some (Basic(BVAR "SYH_BIGINT"))
+    else Some (Basic(BINT (int_of_string(int_str))))
 
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
   let (sl1, sl2) = stmt_info.si_source_range in 
