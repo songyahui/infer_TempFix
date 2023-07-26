@@ -137,14 +137,15 @@ make && make install
 
 infer 0.15.0
 
-VERSION=1.1.0; \
+VERSION=0.15.0; \
 curl -sSL "https://github.com/facebook/infer/releases/download/v$VERSION/infer-linux64-v$VERSION.tar.xz" \
 | sudo tar -C /opt -xJ && \
 sudo ln -s "/opt/infer-linux64-v$VERSION/bin/infer" /usr/local/bin/infer
 
 
 TODO: 
-output a file for all the data. 
+output a file for all the data !!!
+check all the true bugs and try to fix them. 
 
 
 gcc version 11.3.0 (Ubuntu 11.3.0-1ubuntu1~22.04.1)
