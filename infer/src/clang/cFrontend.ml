@@ -1891,8 +1891,13 @@ let retriveSpecifications (source:string) : (Ast_utility.specification list * in
 
    ;;
 
-let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications "/Users/yahuis/Desktop/git/infer_TempFix/infer/src/clang/spec.c" ;; 
 
+let which_system = 1
+let loris1_path = "/home/yahui/future_condition/infer_TempFix/" 
+let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/"
+let path = if which_system == 1  then loris1_path else mac_path 
+let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications (path ^ "spec.c") ;; 
+let output_report =  path ^ "report.txt"
 
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =

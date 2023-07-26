@@ -131,13 +131,38 @@ make clean
 
 swoole.c:
 
+phpize && \
+./configure && \
+make && make install
+
 infer 0.15.0
 
-VERSION=0.14.0; \
+VERSION=1.1.0; \
 curl -sSL "https://github.com/facebook/infer/releases/download/v$VERSION/infer-linux64-v$VERSION.tar.xz" \
 | sudo tar -C /opt -xJ && \
-sudo ln -s "/opt/infer-linux64-v$VERSION/bin/infer" /usr/local/bin/infer14
+sudo ln -s "/opt/infer-linux64-v$VERSION/bin/infer" /usr/local/bin/infer
 
 
 TODO: 
 output a file for all the data. 
+
+
+gcc version 11.3.0 (Ubuntu 11.3.0-1ubuntu1~22.04.1)
+
+
+
+
+
+
+###########################
+编译fio报static declaration of ‘gettid’ follows non-static错误解决方法
+https://bbs.huaweicloud.com/forum/thread-186993-1-1.html
+
+openEuler安装lmbench报netconfig.h: No such file or directory解决方法
+https://bbs.huaweicloud.com/forum/thread-143131-1-1.html
+
+
+brew install libdvdnav 
+
+Snort 3 
+https://linuxhint.com/compile-install-snort-from-source-code-ubuntu/

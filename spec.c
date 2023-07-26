@@ -31,9 +31,9 @@
     Future  (TRUE, (!_(handler))^*)  @*/
 
 
-/* swArray_new(p, i): 
+/*@ swArray_new(p, i): 
     Future  (!(ret=0),  free(ret) )  @*/
 
 
-/* swArray_free(arr): 
-    Pre (TRUE, (_)^* · malloc(arr) · (_)^* ) */
+/*@ swArray_free(arr): 
+    Pre (TRUE, (_)^* · malloc(arr) · (_)^* ) @*/
