@@ -1913,7 +1913,7 @@ let outputFinalReport str path =
 
   let oc = open_out_gen [Open_append; Open_creat] 0o666 path in 
   try 
-    Printf.fprintf oc "%s\n" str;
+    Printf.fprintf oc "%s" str;
     close_out oc;
     ()
 
@@ -1928,12 +1928,13 @@ let outputFinalReport str path =
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
 
 
-  let which_system = 0 in 
+  let which_system = if String.compare (Sys.getcwd()) "/home/yahui" == 0 then 1 else 0 in 
   let loris1_path = "/home/yahui/future_condition/infer_TempFix/"  in 
   let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/" in 
   let path = if which_system == 1  then loris1_path else mac_path  in 
   let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications (path ^ "spec.c") in 
-  let output_report =  path ^ "report.txt" in 
+  let output_report =  path ^ "TempFix-out/report.csv" in 
+  let output_detail =  path ^ "TempFix-out/detail.txt" in 
 
 
 
@@ -1958,9 +1959,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   
   let compution_time = (Unix.gettimeofday () -. start) in 
 
-  let () = totol_execution_time := !totol_execution_time +. compution_time in 
 
   (* Input program has  *)
+(*
   let msg = 
     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
     ^ "[CURRENT REPORT]:"
@@ -1978,15 +1979,24 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     ^ " successfully repaired. \n"  
     ^ "Totol_execution_time: " ^ string_of_float !totol_execution_time 
     
-    in 
-
-  let () = finalReport := !finalReport ^ msg in 
-
-
-  outputFinalReport (!finalReport) output_report ; 
-
-
+    in    
+*)
+let msg = 
+    source_Address ^ ","
+  ^ string_of_int ( !totol_Lines_of_Code ) ^ "," (*  lines of code;  *) 
+  ^ string_of_int lines_of_spec ^ "," (*  lines of specs; *) 
+  ^ string_of_int (List.length user_sepcifications) ^ "," (*  protocols.  *)
+  ^ string_of_float (compution_time)^ "," (* "Analysis and repair took "^ , seconds.\n\n *)
+  ^ string_of_int !totalAssertions ^ ","  (*  total assertions, and  *)
+  ^ string_of_int !failedAssertions ^ "," (* number fialed assertion *)
+  ^ string_of_int !reapiredFailedAssertions ^ "\n" (* number successfully repaired. *)
   
+  in 
+
+
+  outputFinalReport (msg) output_report ; 
+  outputFinalReport (!finalReport) output_detail ; 
+
   
   L.(debug Capture Verbose)
     "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;

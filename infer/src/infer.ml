@@ -169,7 +169,6 @@ let () =
       print_string("<<<SYH:infer-DoliParser>>>\n");
       DoliParser.run (Option.value_exn Config.capture_doli)
   | Analyze ->
-  print_string("<<<SYH:infer-Analyze>>>\n");
       run Driver.Analyze
   | Capture | Compile | Run ->
 
@@ -184,5 +183,6 @@ let () =
       Cmd.debug ()
   | Explore ->
       Cmd.explore () ) ;
+
   (* to make sure the exitcode=0 case is logged, explicitly invoke exit *)
   L.exit 0
