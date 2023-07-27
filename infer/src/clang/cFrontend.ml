@@ -970,7 +970,9 @@ let specialCases es =
   ;;
 
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
-  print_endline ("synthsisFromSpec " ^ string_of_effect ([effect])); 
+
+  let () = finalReport := !finalReport ^ ("synthsisFromSpec " ^ string_of_effect ([effect])) in 
+
   (*print_endline ("ENV now:\n" ^ List.fold_left env ~init:"" 
   ~f:(fun acc ((mn, _), _, post, _) -> acc ^ 
   match post with 
@@ -1090,7 +1092,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   else 
   (* here the int int are the strat point and the end point *)
   let (error_lists:((pure * es * (int * int) * es) list)) = bugLocalisation error_paths in 
-  print_endline ("\n<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>\n\n[Repair Options] ");
+
+  let () = finalReport := !finalReport ^ ("\n<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>\n\n[Repair Options] ") in 
+
 
   let rec helper li = 
       match li with 
@@ -1100,7 +1104,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
         string_of_es realspec ^ " ~~~> " ^ string_of_es spec ) ^ ";\n" ^ helper res
   in 
   let msg = helper error_lists in 
-  print_endline (msg);
+
+  let () = finalReport := !finalReport ^ msg in 
+
 
   let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
 
@@ -1152,7 +1158,8 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
 
         let startTimeStamp01 = Unix.gettimeofday() in
 
-        print_endline ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
+        let temp = 
+        ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
         (match list_of_functionCalls with 
         | None -> 
           let (rr, _) = effect_inclusion [(TRUE, Emp)] [(TRUE, spec)] in 
@@ -1167,9 +1174,14 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           else  " can be inserted with code " ^  str ^ ".")
          ^ "\n" 
          ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds."
-        )
+        ) in 
+
+        let () = finalReport := !finalReport ^ temp in 
+        ()
+
   in 
-  print_endline("[Patches] ");
+  let () = finalReport := !finalReport ^ ("[Patches] ") in 
+
   let _ = List.map error_lists ~f:(fun a -> aux a) in ()
 
  
@@ -1328,7 +1340,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           *)
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
           let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
-          print_endline (string_of_inclusion_results extra_info info); 
+          (*print_endline (string_of_inclusion_results extra_info info); *)
+          let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
           
           program_repair info env; 
 
@@ -1866,23 +1879,24 @@ let retriveSpecifications (source:string) : (Ast_utility.specification list * in
       
       let partitions = retriveComments line in (*in *)
       let line_of_spec = List.fold_left partitions ~init:0 ~f:(fun acc a -> acc + (List.length (Str.split (Str.regexp "\n") a)))  in 
-      (if List.length partitions == 0 then ()
-      else print_endline ("Global specifictaions are: "));
+      (*
+      if List.length partitions == 0 then ()
+      else print_endline ("Global specifictaions are: ")); *)
       let user_sepcifications = List.map partitions 
         ~f:(fun singlespec -> 
-          print_endline (singlespec ^ "\n");
+          (*print_endline (singlespec ^ "\n");*)
           Parser.specification Lexer.token (Lexing.from_string singlespec)) in
       
       (*
       let _ = List.map sepcifications ~f:(fun (_ , pre, post, future) -> print_endline (string_of_function_sepc (pre, post, future) ) ) in 
       *)
 
+      close_in ic ;                 (* 关闭输入通道 *)
       (user_sepcifications, line_of_spec, List.length partitions)
+
       (*
-      
+            flush stdin;                (* 现在写入默认设备 *)
       print_string (List.fold_left (fun acc a -> acc ^ forward_verification a progs) "" progs ) ; 
-      flush stdout;                (* 现在写入默认设备 *)
-      close_in ic                  (* 关闭输入通道 *)
       *)
 
     with e ->                      (* 一些不可预见的异常发生 *)
@@ -1892,15 +1906,37 @@ let retriveSpecifications (source:string) : (Ast_utility.specification list * in
    ;;
 
 
-let which_system = 1
-let loris1_path = "/home/yahui/future_condition/infer_TempFix/" 
-let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/"
-let path = if which_system == 1  then loris1_path else mac_path 
-let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications (path ^ "spec.c") ;; 
-let output_report =  path ^ "report.txt"
+
+
+
+let outputFinalReport str path = 
+
+  let oc = open_out_gen [Open_append; Open_creat] 0o666 path in 
+  try 
+    Printf.fprintf oc "%s\n" str;
+    close_out oc;
+    ()
+
+  with e ->                      (* 一些不可预见的异常发生 *)
+    close_out_noerr oc;           (* 紧急关闭 *)
+    raise e                      (* 以出错的形式退出: 文件已关闭,但通道没有写入东西 *)
+  ;; 
+
+
 
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
+
+
+  let which_system = 0 in 
+  let loris1_path = "/home/yahui/future_condition/infer_TempFix/"  in 
+  let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/" in 
+  let path = if which_system == 1  then loris1_path else mac_path  in 
+  let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications (path ^ "spec.c") in 
+  let output_report =  path ^ "report.txt" in 
+
+
+
   let tenv = Tenv.create () in
   CType_decl.add_predefined_types tenv ;
   init_global_state_capture () ;
@@ -1939,17 +1975,17 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     ^" failed; and " 
     ^  string_of_int !reapiredFailedAssertions 
     ^ (if (!reapiredFailedAssertions) == 1 then " is" else " are") 
-    ^ " successfully repaired. "  
+    ^ " successfully repaired. \n"  
+    ^ "Totol_execution_time: " ^ string_of_float !totol_execution_time 
     
     in 
 
-  print_string (msg); 
+  let () = finalReport := !finalReport ^ msg in 
 
 
-  print_endline ("Totol_execution_time: " ^ string_of_float !totol_execution_time); 
-  (*print_endline ("\n============ Here is the end of Yahui's Code ============\n" 
-                (*^ "=========================================================\n" *));
-                *)
+  outputFinalReport (!finalReport) output_report ; 
+
+
   
   
   L.(debug Capture Verbose)

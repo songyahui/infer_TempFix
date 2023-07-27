@@ -89,6 +89,9 @@ let totol_Lines_of_Code  = ref 0
 let currentFunctionLineNumber = ref (0, 0) 
 
 
+let finalReport = (ref "")
+
+
 
 let programStates2effectwithfootprintlist eff = 
   List.map ~f:(fun (p, es, _, ft)-> (p, es, ft)) eff
