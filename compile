@@ -1,3 +1,5 @@
 ./infer/src/clang/compile
 
 ./build-infer.sh clang
+
+ocamlopt -o infer/bin/tempFix TempFix.ml

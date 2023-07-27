@@ -1,0 +1,60 @@
+import csv
+import os 
+
+
+which_system = 1 if os.getcwd() == "/home/yahui" else 0 
+
+loris1_path = "/home/yahui/future_condition/infer_TempFix/" 
+mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/"
+path = loris1_path if which_system == 1 else mac_path 
+output_report =  path + "TempFix-out/report.csv" 
+output_detail =  path + "TempFix-out/detail.txt" 
+
+print(output_report + "\n")
+print(output_detail + "\n")
+
+
+file = open(output_report, 'r')
+csvreader = csv.reader(file)
+content = list(csvreader) 
+record_length= len(content)
+title = content[0]
+
+def sum_up(col):
+    sum = 0 
+    for i in range(1, record_length):
+        sum = sum + int(content[i][col])
+    return (sum)
+
+def sum_up_float(col):
+    sum = 0 
+    for i in range(1, record_length):
+        sum = sum + float(content[i][col])
+    return (sum)
+
+
+
+#print()
+
+loc = sum_up(1)
+loS = content[1][2]
+protocols = content[1][3]
+exec_time =  sum_up_float(4)
+totol_Assert = content[1][5]
+fail_Assert = content[1][6]
+succeed_Assert = content[1][7]
+
+print("===================================")
+print("[Lines of  Code]" + str(loc))
+print("[Lines of  Spec]" + loS)
+print("[Num  Protocols]" + protocols)
+print("[Totoal  Assert]" + totol_Assert)
+print("[Failed  Assert]" + fail_Assert)
+print("[Succeed Assert]" + succeed_Assert)
+print("[Time  (Second)]" + str(exec_time))
+
+# "Filename, Loc, LoS,  #protocols, Execution Time(s), Totoal Assertion, Failed, Succeed\n"
+
+
+
+

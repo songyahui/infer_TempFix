@@ -23,15 +23,16 @@ let tempFixInitialize () =
     raise e                      (* 以出错的形式退出: 文件已关闭,但通道没有写入东西 *)
   ;; 
 
-
-
-
-
 let tempFixDataAnalysis () = 
   print_endline ("tempFixDataAnalysis")
 
 
 
-
 let () = 
-  tempFixInitialize ()
+  tempFixInitialize ();
+  let _ = Sys.command "../infer_TempFix/infer/bin/infer run --pulse -- make --keep-going" in 
+  let _ = Sys.command "python ../infer_TempFix/TempFixDataAnalysis.py" in 
+  ()
+
+
+
