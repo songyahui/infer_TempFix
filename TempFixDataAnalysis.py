@@ -2,7 +2,7 @@ import csv
 import os 
 
 
-which_system = 1 if os.getcwd() == "/home/yahui" else 0 
+which_system = 1 if os.getcwd() == "/home/yahui/future_condition/infer_TempFix" else 0 
 
 loris1_path = "/home/yahui/future_condition/infer_TempFix/" 
 mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/"
@@ -40,17 +40,17 @@ loc = sum_up(1)
 loS = content[1][2]
 protocols = content[1][3]
 exec_time =  sum_up_float(4)
-totol_Assert = content[1][5]
-fail_Assert = content[1][6]
-succeed_Assert = content[1][7]
+totol_Assert = sum_up(5)
+fail_Assert = sum_up(6)
+succeed_Assert = sum_up(7)
 
 print("===================================")
 print("[Lines of  Code]" + str(loc))
 print("[Lines of  Spec]" + loS)
 print("[Num  Protocols]" + protocols)
-print("[Totoal  Assert]" + totol_Assert)
-print("[Failed  Assert]" + fail_Assert)
-print("[Succeed Assert]" + succeed_Assert)
+print("[Totoal  Assert]" + str(totol_Assert))
+print("[Failed  Assert]" + str(fail_Assert))
+print("[Succeed Assert]" + str(succeed_Assert))
 print("[Time  (Second)]" + str(exec_time))
 
 # "Filename, Loc, LoS,  #protocols, Execution Time(s), Totoal Assertion, Failed, Succeed\n"

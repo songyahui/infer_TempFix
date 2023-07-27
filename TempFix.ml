@@ -1,5 +1,5 @@
 
-let which_system = if String.compare (Sys.getcwd()) "/home/yahui" == 0 then 1 else 0 
+let which_system = if String.compare (Sys.getcwd()) "/home/yahui/future_condition/infer_TempFix" == 0 then 1 else 0 
 let loris1_path = "/home/yahui/future_condition/infer_TempFix/" 
 let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/"
 let path = if which_system == 1  then loris1_path else mac_path 
@@ -23,15 +23,10 @@ let tempFixInitialize () =
     raise e                      (* 以出错的形式退出: 文件已关闭,但通道没有写入东西 *)
   ;; 
 
-let tempFixDataAnalysis () = 
-  print_endline ("tempFixDataAnalysis")
-
-
-
 let () = 
   tempFixInitialize ();
   let _ = Sys.command "../infer_TempFix/infer/bin/infer run --pulse -- make --keep-going" in 
-  let _ = Sys.command "python ../infer_TempFix/TempFixDataAnalysis.py" in 
+  let _ = Sys.command "python3 ../infer_TempFix/TempFixDataAnalysis.py" in 
   ()
 
 
