@@ -1928,7 +1928,7 @@ let outputFinalReport str path =
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
 
 
-  let which_system = if String.compare (Sys.getcwd()) "/home/yahui/future_condition/infer_TempFix" == 0 then 1 else 0 in 
+  let which_system = if String.compare (String.sub (Sys.getcwd()) 0 5 ) "/home" == 0 then 1 else 0 in 
   let loris1_path = "/home/yahui/future_condition/infer_TempFix/"  in 
   let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/" in 
   let path = if which_system == 1  then loris1_path else mac_path  in 
