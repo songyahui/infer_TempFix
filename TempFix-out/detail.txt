@@ -674,3 +674,275 @@ ret=0∧module=0 /\ free(module)@54 ~~~> (!_(module))^*;
 ret=0∧module=0 /\ free(module)@46 ~~~> (!_(module))^*;
 [Patches] synthsisFromSpec (ret=module∧module=0 /\ (!_(module))^*)@ line 39 to line 63 can be inserted with code if (ret==module∧module==0){ return; }.
 [Searching Time] 1.90734863281e-06 seconds.
+~~~~~~~~~ In function: g_malloc ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ret=res∧res=0|-res=0
+*     └── RET(res)@21 |- (!_(res))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=res∧res=0 /\ RET(res)@21 ~~~> (!_(res))^*;
+[Patches] synthsisFromSpec (ret=res∧res=0 /\ (!_(res))^*)@ line 20 to line 21 can be inserted with code if (ret==res∧res==0){ return; }.
+[Searching Time] 3.09944152832e-06 seconds.
+~~~~~~~~~ In function: g_realloc ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ⊤∧newblock=0|-newblock=0
+* │   └── 𝝐 |- (!_(newblock))^*  [Prove]
+* └── ret=newblock∧newblock=0|-newblock=0
+*     └── free(ptr)@43 · RET(newblock)@44 |- (!_(newblock))^*  [Unfold]
+*         └── RET(newblock)@44 |- (!_(newblock))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=newblock∧newblock=0 /\ RET(newblock)@44 ~~~> (!_(newblock))^*;
+[Patches] synthsisFromSpec (ret=newblock∧newblock=0 /\ (!_(newblock))^*)@ line 44 to line 44 can be inserted with code if (ret==newblock∧newblock==0){ return; }.
+[Searching Time] 2.14576721191e-06 seconds.
+~~~~~~~~~ In function: fopen ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ⊤∧ret=0|-ret=0
+*     └── RET(ret)@450 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤∧ret=0 /\ RET(ret)@450 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (⊤∧ret=0 /\ (!_(ret))^*)@ line 448 to line 450 can be inserted with code if (ret==0){ return; }.
+[Searching Time] 9.53674316406e-07 seconds.
+~~~~~~~~~ In function: open ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ret=1∧ret=0|-ret=0
+* │   └── ret=1∧ret=0  [Prove]
+* └── ret≥0∧ret=0|-ret=0
+*     └── RET(ret)@506 · (!close(ret))^* · close(ret) · (_)^* |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret≥0∧ret=0 /\ RET(ret)@506 · (!close(ret))^* · close(ret) · (_)^* ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (ret≥0∧ret=0 /\ (!_(ret))^*)@ line 505 to line 506 can be inserted with code if (ret>=0∧ret==0){ return; }.
+[Searching Time] 1.90734863281e-06 seconds.
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤ /\ 𝝐 ~~~> open(ret);
+⊤∧ret<0 /\ RET(ret)@506 ~~~> 𝝐;
+⊤∧ret≥0 /\ RET(ret)@506 ~~~> open(ret);
+[Patches] synthsisFromSpec (⊤ /\ open(ret))@ line 505 to line 506 Sorry, there is no path from the environment!
+[Searching Time] 0.0205800533295 seconds.
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤ /\ 𝝐 ~~~> close(handler);
+⊤ /\ 𝝐 ~~~> close(handler);
+[Patches] synthsisFromSpec (⊤ /\ close(handler))@ line 512 to line 520 can be inserted with code close(handler); .
+[Searching Time] 5.60283660889e-05 seconds.
+~~~~~~~~~ In function: shmget ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ret=res∧res=0|-res=0
+* │   └── RET(res)@778 |- (!_(res))^*  [Disprove]
+* └── ret=1∧res=0|-res=0
+*     └── 𝝐 |- (!_(res))^*  [Prove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=res∧res=0 /\ RET(res)@778 ~~~> (!_(res))^*;
+[Patches] synthsisFromSpec (ret=res∧res=0 /\ (!_(res))^*)@ line 778 to line 778 can be inserted with code if (ret==res∧res==0){ return; }.
+[Searching Time] 3.81469726562e-06 seconds.
+~~~~~~~~~ In function: realloc ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ret=newblock∧newblock=0|-newblock=0
+* │   └── RET(newblock)@818 |- (!_(newblock))^*  [Disprove]
+* └── ret=newblock∧newblock=0|-newblock=0
+*     └── free(ptr)@815 · RET(newblock)@816 |- (!_(newblock))^*  [Unfold]
+*         └── RET(newblock)@816 |- (!_(newblock))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=newblock∧newblock=0 /\ RET(newblock)@818 ~~~> (!_(newblock))^*;
+ret=newblock∧newblock=0 /\ RET(newblock)@816 ~~~> (!_(newblock))^*;
+[Patches] synthsisFromSpec (ret=newblock∧newblock=0 /\ (!_(newblock))^*)@ line 814 to line 818 can be inserted with code if (ret==newblock∧newblock==0){ return; }.
+[Searching Time] 3.09944152832e-06 seconds.
+~~~~~~~~~ In function: opendir ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ⊤∧ret=0|-ret=0
+*     └── RET(ret)@887 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤∧ret=0 /\ RET(ret)@887 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (⊤∧ret=0 /\ (!_(ret))^*)@ line 885 to line 887 can be inserted with code if (ret==0){ return; }.
+[Searching Time] 2.86102294922e-06 seconds.
+~~~~~~~~~ In function: readline ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ret=ret∧ret=0|-ret=0
+*     └── RET(ret)@1317 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=ret∧ret=0 /\ RET(ret)@1317 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (ret=ret∧ret=0 /\ (!_(ret))^*)@ line 1317 to line 1317 can be inserted with code if (ret==ret∧ret==0){ return; }.
+[Searching Time] 1.90734863281e-06 seconds.
+~~~~~~~~~ In function: socket ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ret=1∧ret=0|-ret=0
+* │   └── ret=1∧ret=0  [Prove]
+* └── ⊤∧ret=0|-ret=0
+*     └── RET(ret)@1910 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤∧ret=0 /\ RET(ret)@1910 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (⊤∧ret=0 /\ (!_(ret))^*)@ line 1909 to line 1910 can be inserted with code if (ret==0){ return; }.
+[Searching Time] 1.90734863281e-06 seconds.
+~~~~~~~~~ In function: xmalloc ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ⊤∧ret=0|-ret=0
+*     └── RET(ret)@1924 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤∧ret=0 /\ RET(ret)@1924 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (⊤∧ret=0 /\ (!_(ret))^*)@ line 1923 to line 1924 can be inserted with code if (ret==0){ return; }.
+[Searching Time] 2.14576721191e-06 seconds.
+~~~~~~~~~ In function: g_malloc ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ret=res∧res=0|-res=0
+*     └── RET(res)@21 |- (!_(res))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=res∧res=0 /\ RET(res)@21 ~~~> (!_(res))^*;
+[Patches] synthsisFromSpec (ret=res∧res=0 /\ (!_(res))^*)@ line 20 to line 21 can be inserted with code if (ret==res∧res==0){ return; }.
+[Searching Time] 3.09944152832e-06 seconds.
+~~~~~~~~~ In function: g_realloc ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ⊤∧newblock=0|-newblock=0
+* │   └── 𝝐 |- (!_(newblock))^*  [Prove]
+* └── ret=newblock∧newblock=0|-newblock=0
+*     └── free(ptr)@43 · RET(newblock)@44 |- (!_(newblock))^*  [Unfold]
+*         └── RET(newblock)@44 |- (!_(newblock))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=newblock∧newblock=0 /\ RET(newblock)@44 ~~~> (!_(newblock))^*;
+[Patches] synthsisFromSpec (ret=newblock∧newblock=0 /\ (!_(newblock))^*)@ line 44 to line 44 can be inserted with code if (ret==newblock∧newblock==0){ return; }.
+[Searching Time] 1.90734863281e-06 seconds.
+~~~~~~~~~ In function: fopen ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ⊤∧ret=0|-ret=0
+*     └── RET(ret)@450 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤∧ret=0 /\ RET(ret)@450 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (⊤∧ret=0 /\ (!_(ret))^*)@ line 448 to line 450 can be inserted with code if (ret==0){ return; }.
+[Searching Time] 1.19209289551e-06 seconds.
+~~~~~~~~~ In function: open ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ret=1∧ret=0|-ret=0
+* │   └── ret=1∧ret=0  [Prove]
+* └── ret≥0∧ret=0|-ret=0
+*     └── RET(ret)@506 · (!close(ret))^* · close(ret) · (_)^* |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret≥0∧ret=0 /\ RET(ret)@506 · (!close(ret))^* · close(ret) · (_)^* ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (ret≥0∧ret=0 /\ (!_(ret))^*)@ line 505 to line 506 can be inserted with code if (ret>=0∧ret==0){ return; }.
+[Searching Time] 2.14576721191e-06 seconds.
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤ /\ 𝝐 ~~~> open(ret);
+⊤∧ret<0 /\ RET(ret)@506 ~~~> 𝝐;
+⊤∧ret≥0 /\ RET(ret)@506 ~~~> open(ret);
+[Patches] synthsisFromSpec (⊤ /\ open(ret))@ line 505 to line 506 Sorry, there is no path from the environment!
+[Searching Time] 0.0169818401337 seconds.
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤ /\ 𝝐 ~~~> close(handler);
+⊤ /\ 𝝐 ~~~> close(handler);
+[Patches] synthsisFromSpec (⊤ /\ close(handler))@ line 512 to line 520 can be inserted with code close(handler); .
+[Searching Time] 6.19888305664e-05 seconds.
+~~~~~~~~~ In function: shmget ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ret=res∧res=0|-res=0
+* │   └── RET(res)@778 |- (!_(res))^*  [Disprove]
+* └── ret=1∧res=0|-res=0
+*     └── 𝝐 |- (!_(res))^*  [Prove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=res∧res=0 /\ RET(res)@778 ~~~> (!_(res))^*;
+[Patches] synthsisFromSpec (ret=res∧res=0 /\ (!_(res))^*)@ line 778 to line 778 can be inserted with code if (ret==res∧res==0){ return; }.
+[Searching Time] 3.09944152832e-06 seconds.
+~~~~~~~~~ In function: realloc ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ret=newblock∧newblock=0|-newblock=0
+* │   └── RET(newblock)@818 |- (!_(newblock))^*  [Disprove]
+* └── ret=newblock∧newblock=0|-newblock=0
+*     └── free(ptr)@815 · RET(newblock)@816 |- (!_(newblock))^*  [Unfold]
+*         └── RET(newblock)@816 |- (!_(newblock))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=newblock∧newblock=0 /\ RET(newblock)@818 ~~~> (!_(newblock))^*;
+ret=newblock∧newblock=0 /\ RET(newblock)@816 ~~~> (!_(newblock))^*;
+[Patches] synthsisFromSpec (ret=newblock∧newblock=0 /\ (!_(newblock))^*)@ line 814 to line 818 can be inserted with code if (ret==newblock∧newblock==0){ return; }.
+[Searching Time] 4.05311584473e-06 seconds.
+~~~~~~~~~ In function: opendir ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ⊤∧ret=0|-ret=0
+*     └── RET(ret)@887 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤∧ret=0 /\ RET(ret)@887 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (⊤∧ret=0 /\ (!_(ret))^*)@ line 885 to line 887 can be inserted with code if (ret==0){ return; }.
+[Searching Time] 4.05311584473e-06 seconds.
+~~~~~~~~~ In function: readline ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ret=ret∧ret=0|-ret=0
+*     └── RET(ret)@1317 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ret=ret∧ret=0 /\ RET(ret)@1317 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (ret=ret∧ret=0 /\ (!_(ret))^*)@ line 1317 to line 1317 can be inserted with code if (ret==ret∧ret==0){ return; }.
+[Searching Time] 2.14576721191e-06 seconds.
+~~~~~~~~~ In function: socket ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* ├── ret=1∧ret=0|-ret=0
+* │   └── ret=1∧ret=0  [Prove]
+* └── ⊤∧ret=0|-ret=0
+*     └── RET(ret)@1910 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤∧ret=0 /\ RET(ret)@1910 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (⊤∧ret=0 /\ (!_(ret))^*)@ line 1909 to line 1910 can be inserted with code if (ret==0){ return; }.
+[Searching Time] 9.53674316406e-07 seconds.
+~~~~~~~~~ In function: xmalloc ~~~~~~~~~
+Future-condition checking for 'malloc': Failed!
+* TRS:
+* └── ⊤∧ret=0|-ret=0
+*     └── RET(ret)@1924 |- (!_(ret))^*  [Disprove]
+
+<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>
+
+[Repair Options] ⊤∧ret=0 /\ RET(ret)@1924 ~~~> (!_(ret))^*;
+[Patches] synthsisFromSpec (⊤∧ret=0 /\ (!_(ret))^*)@ line 1923 to line 1924 can be inserted with code if (ret==0){ return; }.
+[Searching Time] 1.90734863281e-06 seconds.
