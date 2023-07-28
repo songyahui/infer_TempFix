@@ -25,8 +25,8 @@ let tempFixInitialize () =
 
 let () = 
   tempFixInitialize ();
-  let _ = Sys.command ((if which_system == 1  then "../" else "" ) ^ "../infer_TempFix/infer/bin/infer run --pulse -- make --keep-going") in 
-  let _ = Sys.command ("python3 " ^ (if which_system == 1  then "../" else "" ) ^ "../infer_TempFix/TempFixDataAnalysis.py") in 
+  let _ = Sys.command (path ^ "infer/bin/infer run --pulse -- make --keep-going") in 
+  let _ = Sys.command ("python3 " ^ path ^ "TempFixDataAnalysis.py") in 
   ()
 
 

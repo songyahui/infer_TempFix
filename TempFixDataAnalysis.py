@@ -45,13 +45,13 @@ fail_Assert = sum_up(6)
 succeed_Assert = sum_up(7)
 
 print("===================================")
-print("[Lines of  Code]" + str(loc))
-print("[Lines of  Spec]" + loS)
-print("[Num  Protocols]" + protocols)
-print("[Totoal  Assert]" + str(totol_Assert))
-print("[Failed  Assert]" + str(fail_Assert))
-print("[Succeed Assert]" + str(succeed_Assert))
-print("[Time  (Second)]" + str(exec_time))
+print("[Lines of  Code] " + str(loc))
+print("[Lines of  Spec] " + loS)
+print("[Num  Protocols] " + protocols)
+print("[Total   Assert] " + str(totol_Assert))
+print("[Failed  Assert] " + str(fail_Assert))
+print("[      Repaired] " + str(succeed_Assert))
+print("[Total Time (s)] " + str(exec_time))
 
 # "Filename, Loc, LoS,  #protocols, Execution Time(s), Totoal Assertion, Failed, Succeed\n"
 

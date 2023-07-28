@@ -1388,9 +1388,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     | x :: xs -> 
 
+      helper current' xs 
+      (*
       let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
       let effectRest = helper (concatenateTwoEffectswithFlag current' effectLi4X) xs in 
       concatenateTwoEffectswithFlag effectLi4X effectRest
+      *)
+      
 
   in 
   match instr with 
@@ -1432,7 +1436,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
 
-  | ForStmt (stmt_info, stmt_list)
   | CompoundStmt (stmt_info, stmt_list) -> 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
@@ -1553,6 +1556,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(TRUE, ev, 0, fp)]
 
 
+  | ForStmt _ (*stmt_info, stmt_list*)
+  | LabelStmt _ 
+  | GotoStmt _ 
   | UnaryOperator _ (*stmt_info, stmt_list, _, _*)   
   | BinaryOperator _ 
   | ImplicitCastExpr _ (*stmt_info, stmt_list, _, _, _*) 
@@ -1640,10 +1646,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | UnaryExprOrTypeTraitExpr _
   | CStyleCastExpr _ 
   | _ -> 
+    print_endline (Clang_ast_proj.get_stmt_kind_string instr);
     let (fp, fp1) =  (getStmtlocation instr) in 
 
     let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), fp) in 
-    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
 
     let (fp, _) = maybeIntToListInt (fp, fp1) in 
 
@@ -1951,7 +1957,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   let (source_Address, decl_list, lines_of_code) = retrive_basic_info_from_AST ast in
   
   
-  let () = totol_Lines_of_Code := !totol_Lines_of_Code + lines_of_code in 
   let start = Unix.gettimeofday () in 
 
   let reasoning_Res = List.map decl_list  
@@ -1983,7 +1988,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 *)
 let msg = 
     source_Address ^ ","
-  ^ string_of_int ( !totol_Lines_of_Code ) ^ "," (*  lines of code;  *) 
+  ^ string_of_int ( lines_of_code + 1 ) ^ "," (*  lines of code;  *) 
   ^ string_of_int lines_of_spec ^ "," (*  lines of specs; *) 
   ^ string_of_int (List.length user_sepcifications) ^ "," (*  protocols.  *)
   ^ string_of_float (compution_time)^ "," (* "Analysis and repair took "^ , seconds.\n\n *)

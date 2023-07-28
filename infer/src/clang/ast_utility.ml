@@ -83,9 +83,6 @@ let (reapiredFailedAssertions: int ref) =  ref 0
 
 
 (* Experimental Summary *)
-let totol_execution_time  = ref 0.0
-let totol_Lines_of_Code  = ref 0
-
 let currentFunctionLineNumber = ref (0, 0) 
 
 
@@ -1234,9 +1231,10 @@ let normaliseProgramStates (li:programStates) : programStates =
   let rec helper effList = 
     match effList with 
     | [] -> []
-    | x :: xs  -> if existEff_withfootprint xs x then helper xs else x :: helper xs
+    | x :: xs  -> 
+      if existEff_withfootprint xs x then helper xs else x :: helper xs
     
-  in helper temp
+  in (* helper *) temp
 
 let rec findRetFromBindings (bt:bindings) (str: string) : basic_type option =
   match bt with
