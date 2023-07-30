@@ -11,7 +11,7 @@ let tempFixInitialize () =
   let oc_detail = open_out output_detail in 
 
   try 
-    Printf.fprintf oc_report "Filename, Loc, LoS,  #protocols, Execution Time(s), Totoal Assertion, Failed, Succeed\n";
+    Printf.fprintf oc_report "Filename, Loc, LoS,  #protocols, Analysis Time(s), Repair Time(s), Totoal Assertion, Failed, Succeed\n";
     Printf.fprintf oc_detail "";
     close_out oc_report;
     close_out oc_detail;

@@ -80,8 +80,7 @@ let (failedAssertions: int ref) =  ref 0
 
 (* number of the assertions are failed, which are fixed *)
 let (reapiredFailedAssertions: int ref) =  ref 0 
-
-
+let repairTime = ref 0.0
 (* Experimental Summary *)
 let currentFunctionLineNumber = ref (0, 0) 
 
@@ -1234,7 +1233,7 @@ let normaliseProgramStates (li:programStates) : programStates =
     | x :: xs  -> 
       if existEff_withfootprint xs x then helper xs else x :: helper xs
     
-  in (* helper *) temp
+  in helper temp
 
 let rec findRetFromBindings (bt:bindings) (str: string) : basic_type option =
   match bt with

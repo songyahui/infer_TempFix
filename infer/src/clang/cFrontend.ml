@@ -1087,6 +1087,7 @@ let computeRange intList =
 
 
 let program_repair (info:((error_info list) * binary_tree * pathList * pathList)) specifications : unit = 
+  let start = Unix.gettimeofday () in 
   let (error_paths, tree, correctTraces, errorTraces) = info in 
   if List.length error_paths == 0 then ()
   else 
@@ -1182,7 +1183,11 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   in 
   let () = finalReport := !finalReport ^ ("[Patches] ") in 
 
-  let _ = List.map error_lists ~f:(fun a -> aux a) in ()
+  let _ = List.map error_lists ~f:(fun a -> aux a) in 
+
+  let repari_time = (Unix.gettimeofday () -. start) in 
+  repairTime := !repairTime +. repari_time; 
+  ()
 
  
 
@@ -1275,8 +1280,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             "Pre-condition checking for \'"^calleeName^"\': " in 
             (*print_endline (string_of_inclusion_results extra_info info); *)
             program_repair info env; 
-
-            
       in 
 (* STEP 2: obtain the next state *)
 
@@ -1387,13 +1390,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       syh_compute_stmt_postcondition env current' future statement'
 
     | x :: xs -> 
-
-      helper current' xs 
-      (*
+      print_endline ("===================================");
+      print_endline (List.fold_left (li) ~init:"" ~f:(fun acc a -> acc ^ ", " ^ (Clang_ast_proj.get_stmt_kind_string a)));
       let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
-      let effectRest = helper (concatenateTwoEffectswithFlag current' effectLi4X) xs in 
+      let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
+      let effectRest = helper new_history xs in 
       concatenateTwoEffectswithFlag effectLi4X effectRest
-      *)
+    
       
 
   in 
@@ -1646,7 +1649,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | UnaryExprOrTypeTraitExpr _
   | CStyleCastExpr _ 
   | _ -> 
-    print_endline (Clang_ast_proj.get_stmt_kind_string instr);
     let (fp, fp1) =  (getStmtlocation instr) in 
 
     let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), fp) in 
@@ -1956,7 +1958,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
   let (source_Address, decl_list, lines_of_code) = retrive_basic_info_from_AST ast in
   
-  
   let start = Unix.gettimeofday () in 
 
   let reasoning_Res = List.map decl_list  
@@ -1986,12 +1987,17 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
     
     in    
 *)
+
+let analysisTime = compution_time -. !repairTime in 
+
+  
 let msg = 
     source_Address ^ ","
   ^ string_of_int ( lines_of_code + 1 ) ^ "," (*  lines of code;  *) 
   ^ string_of_int lines_of_spec ^ "," (*  lines of specs; *) 
   ^ string_of_int (List.length user_sepcifications) ^ "," (*  protocols.  *)
-  ^ string_of_float (compution_time)^ "," (* "Analysis and repair took "^ , seconds.\n\n *)
+  ^ string_of_float (analysisTime)^ "," (* "Analysis took "^ , seconds.\n\n *)
+  ^ string_of_float (!repairTime)^ "," (* "Repair took "^ , seconds.\n\n *)
   ^ string_of_int !totalAssertions ^ ","  (*  total assertions, and  *)
   ^ string_of_int !failedAssertions ^ "," (* number fialed assertion *)
   ^ string_of_int !reapiredFailedAssertions ^ "\n" (* number successfully repaired. *)
@@ -2000,7 +2006,11 @@ let msg =
 
 
   outputFinalReport (msg) output_report ; 
-  outputFinalReport (!finalReport) output_detail ; 
+  (
+  if String.compare !finalReport "" == 0  then ()
+  else   
+    (let () = finalReport := ("In " ^ source_Address ^ ":\n") ^ !finalReport  in 
+    outputFinalReport (!finalReport) output_detail)) ; 
 
   
   L.(debug Capture Verbose)
