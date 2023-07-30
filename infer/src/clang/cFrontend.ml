@@ -131,6 +131,8 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
 
   | UnaryOperator (stmt_info, x::_, expr_info, op_info) ->
     stmt2Term x 
+
+
       
 
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
@@ -879,6 +881,12 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
       None
     )
   | ParenExpr (_, x::rest, _) -> stmt2Pure x
+
+  | DeclRefExpr _ -> 
+    (match stmt2Term instr with 
+    | Some t -> Some (Neg(Eq(t, Basic(BINT 0))))
+    | _ -> Some (Gt ((Basic( BVAR (Clang_ast_proj.get_stmt_kind_string instr))), Basic( BVAR ("null"))))
+    )
   
   | _ -> Some (Gt ((Basic( BVAR (Clang_ast_proj.get_stmt_kind_string instr))), Basic( BVAR ("null"))))
 
@@ -1390,8 +1398,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       syh_compute_stmt_postcondition env current' future statement'
 
     | x :: xs -> 
-      print_endline ("===================================");
+      (*print_endline ("===================================");
       print_endline (List.fold_left (li) ~init:"" ~f:(fun acc a -> acc ^ ", " ^ (Clang_ast_proj.get_stmt_kind_string a)));
+      *)
       let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
       let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
       let effectRest = helper new_history xs in 
@@ -1805,6 +1814,10 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
 
 
+          (match final with 
+          | [TRUE, Emp, _, _] -> ()
+          | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
+               print_string (string_of_programStates final ^ "\n")) ;
 
 
 
@@ -1825,10 +1838,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
           (
 
 
-          (match final with 
-          | [TRUE, Emp, _, _] -> ()
-          | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
-               print_string (string_of_programStates final ^ "\n")) ;
 
           program_repair info specifications;) 
         ) 

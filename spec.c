@@ -17,8 +17,8 @@
     Future  (ret=0, (!_(ret))^*)  @*/
 
 
-/*@ malloc(path): 
-    Future  (ret=0, (!_(ret))^*)  @*/
+/* malloc(path): 
+    Future  (ret=0, (!_(ret))^*)  */
 
 // Memory Leak
 /*@ malloc(path): 
