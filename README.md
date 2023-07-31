@@ -145,10 +145,36 @@ sudo ln -s "/opt/infer-linux64-v$VERSION/bin/infer" /usr/local/bin/infer
 
 TODO: 
 check all the true bugs and try to fix them. 
+generate future conditions for functions. 
 
 
 
+                      Issue Type(ISSUED_TYPE_ID): #
+              Null Dereference(NULL_DEREFERENCE): 56
+                          Dead Store(DEAD_STORE): 27
+                    Resource Leak(RESOURCE_LEAK): 19
+                      Memory Leak(MEMORY_LEAK_C): 5
+  Uninitialized Value(PULSE_UNINITIALIZED_VALUE): 4
+           Null Dereference(NULLPTR_DEREFERENCE): 2
+===================================
+[Lines of  Code] 41317
+[Lines of  Spec] 18
+[Num  Protocols] 7
+[Total   Assert] 65
+[Failed  Assert] 65
+[      Repaired] 65
+[Analysis   (s)] 13.007244348527662
+[Repair     (s)] 0.4089665412906
 
+
+
+Issue Type(ISSUED_TYPE_ID): #
+  Nullptr Dereference(NULLPTR_DEREFERENCE): 75
+        Null Dereference(NULL_DEREFERENCE): 55
+                  Memory Leak(MEMORY_LEAK): 48
+                    Dead Store(DEAD_STORE): 27
+  Uninitialized Value(UNINITIALIZED_VALUE): 17
+              Resource Leak(RESOURCE_LEAK): 14
 
 ###########################
 编译fio报static declaration of ‘gettid’ follows non-static错误解决方法

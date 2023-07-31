@@ -1182,7 +1182,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           if String.compare str "" == 0 then " can be deleted." 
           else  " can be inserted with code " ^  str ^ ".")
          ^ "\n" 
-         ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds."
+         ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n\n"
         ) in 
 
         let () = finalReport := !finalReport ^ temp in 

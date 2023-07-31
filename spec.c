@@ -11,29 +11,35 @@
     Post (TRUE, close(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/
 
+/*@ socket(domain, type, protocol): 
+    Post (ret<0, 𝝐) \/ (ret>=0, open(domain))
+    Future (ret>=0, (!close(domain))^* · close(domain) · (_)^* )  @*/
+
+
+// swClient_create
 
 //NPD
-/*@ localtime(t): 
-    Future  (ret=0, (!_(ret))^*)  @*/
+/* localtime(t): 
+    Future  (ret=0, (!_(ret))^*)  */
 
 
 /* malloc(path): 
     Future  (ret=0, (!_(ret))^*)  */
 
 // Memory Leak
-/*@ malloc(path): 
+/* malloc(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* ) \/ (ret=0, (!_(ret))^*) @*/
+    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* ) \/ (ret=0, (!_(ret))^*) */
 
 
-/*@ free(handler): 
+/* free(handler): 
     Post (TRUE, free(handler)) 
-    Future  (TRUE, (!_(handler))^*)  @*/
+    Future  (TRUE, (!_(handler))^*)  */
 
 
-/*@ swArray_new(p, i): 
-    Future  (!(ret=0),  free(ret) )  @*/
+/* swArray_new(p, i): 
+    Future  (!(ret=0),  free(ret) )  */
 
 
-/*@ swArray_free(arr): 
-    Pre (TRUE, (_)^* · malloc(arr) · (_)^* ) @*/
+/* swArray_free(arr): 
+    Pre (TRUE, (_)^* · malloc(arr) · (_)^* ) */
