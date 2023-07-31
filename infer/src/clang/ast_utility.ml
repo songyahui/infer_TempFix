@@ -75,8 +75,8 @@ let (failedProofObligations: int ref) = ref 0
 (* number of the assertions are failed 
 assertions are differnet from proof obligations 
 because proof obligations can be triggerred while searching *)
-let (totalAssertions: int ref) =  ref 0 
 let (failedAssertions: int ref) =  ref 0 
+let (repairRecord:( (int * int) list) ref) = ref []  
 
 (* number of the assertions are failed, which are fixed *)
 let (reapiredFailedAssertions: int ref) =  ref 0 
@@ -974,7 +974,6 @@ let modifiyTheProofOblgationCounters re =
   else ()
 
 let modifiyTheassertionCounters () = 
-  let () = totalAssertions := !totalAssertions + 1 in 
   (*if List.length re > 0 then *)
   failedAssertions := !failedAssertions +1 
   (*else ()*)

@@ -8,7 +8,11 @@
 
 /*@ socket(domain, type, protocol): 
     Post (ret<0, 𝝐) \/ (ret>=0, socket(domain))
-    Future (ret>=0, (!close(domain))^* · close(domain) · (_)^* )  @*/
+    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
+
+/*@ swSocket_create(arg): 
+    Post (ret<0, 𝝐) \/ (ret>=0, swSocket_create(arg))
+    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
 /*@ close(handler): 
     Post (TRUE, close(handler)) 

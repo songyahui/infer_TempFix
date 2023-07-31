@@ -1120,7 +1120,6 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
 
   (* this is to prevent the same fixes *)
-  let (repairRecord:( (int * int) list) ref) = ref [] in 
 
 
   let rec existSameRecord recordList start endNum  : bool = 
@@ -1159,13 +1158,13 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
 *)
         modifiyTheassertionCounters (); 
 
-        let startTimeStamp = Unix.gettimeofday() in
+        (*let startTimeStamp = Unix.gettimeofday() in*)
         let (specifications: specification list) = List.append specifications !dynamicSpec in 
         
         
         let list_of_functionCalls = synthsisFromSpec (pathcondition, spec) (specifications) in
 
-        let startTimeStamp01 = Unix.gettimeofday() in
+        (*let startTimeStamp01 = Unix.gettimeofday() in*)
 
         let temp = 
         ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
@@ -1182,7 +1181,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           if String.compare str "" == 0 then " can be deleted." 
           else  " can be inserted with code " ^  str ^ ".")
          ^ "\n" 
-         ^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n\n"
+         (*^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n\n"*)
         ) in 
 
         let () = finalReport := !finalReport ^ temp in 
@@ -1286,6 +1285,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let extra_info = 
             "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
             "Pre-condition checking for \'"^calleeName^"\': " in 
+            let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
             (*print_endline (string_of_inclusion_results extra_info info); *)
             program_repair info env; 
       in 
@@ -1827,10 +1827,10 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         (
         let final' = programStates2effectwithfootprintlist final in 
         let info = effectwithfootprintInclusion final' postcondition in 
-        (*let extra_info = 
+        let extra_info = 
           "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
           "Post-condition checking: " in 
-        print_endline (string_of_inclusion_results extra_info info); *)
+        print_endline (string_of_inclusion_results extra_info info); 
 
         let (error_paths, _, _, _) = info in 
         if List.length error_paths == 0 then ()
@@ -1839,6 +1839,8 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
 
 
+
+          let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
           program_repair info specifications;) 
         ) 
 
@@ -2007,7 +2009,6 @@ let msg =
   ^ string_of_int (List.length user_sepcifications) ^ "," (*  protocols.  *)
   ^ string_of_float (analysisTime)^ "," (* "Analysis took "^ , seconds.\n\n *)
   ^ string_of_float (!repairTime)^ "," (* "Repair took "^ , seconds.\n\n *)
-  ^ string_of_int !totalAssertions ^ ","  (*  total assertions, and  *)
   ^ string_of_int !failedAssertions ^ "," (* number fialed assertion *)
   ^ string_of_int !reapiredFailedAssertions ^ "\n" (* number successfully repaired. *)
   
@@ -2021,7 +2022,7 @@ let msg =
     (let () = finalReport := ("In " ^ source_Address ^ ":\n") ^ !finalReport  in 
     outputFinalReport (!finalReport) output_detail)) ; 
 
-  
+  (*
   L.(debug Capture Verbose)
     "@\n Start building call/cfg graph for '%a'....@\n" SourceFile.pp source_file ;
   let cfg = compute_icfg translation_unit_context tenv ast in
@@ -2040,6 +2041,6 @@ let msg =
     || Option.is_some Config.icfg_dotty_outfile
   then DotCfg.emit_frontend_cfg source_file cfg ;
   L.debug Capture Verbose "Stored on disk:@[<v>%a@]@." Cfg.pp_proc_signatures cfg ;
-  
+  *)
   
   ()

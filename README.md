@@ -112,7 +112,7 @@ infer/bin/infer run --pulse-only -- clang -c my_benchmark/3_Generalized_URV/FFmp
 
 infer/bin/infer run --pulse-only -- clang -c my_benchmark/3_Generalized_URV/mongo-c-driver-fc4eb63a0581dee88461059a9d61e45a6ed8c56a/mongoc-gridfs-file.c
 
-infer/bin/infer run --pulse-only -- clang -c my_benchmark/1_peek.c 
+infer/bin/infer run --pulse -- clang -c my_benchmark/1_peek.c 
 
 
 Benchmarks:

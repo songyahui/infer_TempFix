@@ -39,24 +39,22 @@ def sum_up_float(col):
 loc = sum_up(1)
 loS = content[1][2]
 protocols = content[1][3]
-anaysis_time =  sum_up_float(4)
-repari_time =  sum_up_float(5)
-totol_Assert = sum_up(6)
-fail_Assert = sum_up(7)
-succeed_Assert = sum_up(8)
+analysis_time =  sum_up_float(4)
+repair_time =  sum_up_float(5)
+fail_Assert = sum_up(6)
+succeed_Assert = sum_up(7)
 
 print("===================================")
 print("[Lines of  Code] " + str(loc))
 print("[Lines of  Spec] " + loS)
 print("[Num  Protocols] " + protocols)
-print("[Total   Assert] " + str(totol_Assert))
 print("[Failed  Assert] " + str(fail_Assert))
 print("[      Repaired] " + str(succeed_Assert))
-print("[Analysis   (s)] " + str(anaysis_time))
-print("[Repair     (s)] " + str(repari_time))
+print("[Analysis   (s)] " + str(analysis_time))
+print("[Repair     (s)] " + str(repair_time))
 
 
-# "Filename, Loc, LoS,  #protocols, Execution Time(s), Totoal Assertion, Failed, Succeed\n"
+# "Filename, Loc, LoS,  #protocols, analysis Time(s), repair time,  Failed, Repaired\n"
 
 
 
