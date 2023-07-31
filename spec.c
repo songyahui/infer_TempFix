@@ -7,11 +7,11 @@
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
 /*@ socket(domain, type, protocol): 
-    Post (ret<0, 𝝐) \/ (ret>=0, socket(domain))
+    Post (ret<0, 𝝐) \/ (ret>=0, socket(ret))
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
 /*@ swSocket_create(arg): 
-    Post (ret<0, 𝝐) \/ (ret>=0, swSocket_create(arg))
+    Post (ret<0, 𝝐) \/ (ret>=0, swSocket_create(ret))
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
 /*@ close(handler): 

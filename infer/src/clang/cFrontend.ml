@@ -132,8 +132,25 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
   | UnaryOperator (stmt_info, x::_, expr_info, op_info) ->
     stmt2Term x 
 
+  | CXXDependentScopeMemberExpr (stmt_info, arlist, expr_info) ->
+    
+    (*
+    let msg = 
+      List.fold_left arlist ~init:"" ~f:(fun acc a -> 
+    acc ^ (
+      match stmt2Term a with
+      | None -> " _ "
+      | Some t -> string_of_terms t ^ ","
+    )) in 
+    print_endline msg; 
+    Some (Basic (BVAR msg)) 
+*)
+None 
 
-      
+  | RecoveryExpr (stmt_info, x::_, _) -> stmt2Term x 
+
+  | RecoveryExpr (stmt_info, [], _) -> None
+
 
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
 
@@ -256,402 +273,15 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
   | WhileStmt (stmt_info, [decl_stmt; condition; body]) ->
     "WhileStmt " ^  string_of_stmt_list ([body]) " " 
 
-  | RecoveryExpr _ -> "RecoveryExpr"
+  | RecoveryExpr (stmt_info, x::_, _) -> "RecoveryExpr " ^ string_of_stmt x
   | BreakStmt _ -> "BreakStmt"
 
 
   | _ -> "not yet " ^ Clang_ast_proj.get_stmt_kind_string instr;;
-(*  
-  match stmt with 
-| GotoStmt (stmt_info, _, {Clang_ast_t.gsi_label= label_name; _}) ->
-  gotoStmt_trans trans_state stmt_info label_name
-| LabelStmt (stmt_info, stmt_list, label_name) -> 
-  labelStmt_trans trans_state stmt_info stmt_list label_name
-| ArraySubscriptExpr (_, stmt_list, expr_info) -> 
-  arraySubscriptExpr_trans trans_state expr_info stmt_list
-  binaryOperator_trans_with_cond trans_state stmt_info stmt_list expr_info binop_info
-| AtomicExpr (stmt_info, stmt_list, expr_info, atomic_info) ->
-  atomicExpr_trans trans_state atomic_info stmt_info expr_info stmt_list
-| CallExpr (stmt_info, stmt_list, ei) | UserDefinedLiteral (stmt_info, stmt_list, ei) ->
-  callExpr_trans trans_state stmt_info stmt_list ei
-| ConstantExpr (_, stmt_list, _) -> (
-match stmt_list with
-| [stmt] ->
-    instruction_translate trans_state stmt
-| stmts ->
-    L.die InternalError "Expected exactly one statement in ConstantExpr, got %d"
-      (List.length stmts) )
-| CXXMemberCallExpr (stmt_info, stmt_list, ei) ->
-  cxxMemberCallExpr_trans trans_state stmt_info stmt_list ei
-| CXXOperatorCallExpr (stmt_info, stmt_list, ei) ->
-  callExpr_trans trans_state stmt_info stmt_list ei
-| CXXConstructExpr (stmt_info, stmt_list, expr_info, cxx_constr_info)
-| CXXTemporaryObjectExpr (stmt_info, stmt_list, expr_info, cxx_constr_info) ->
-  cxxConstructExpr_trans trans_state stmt_info stmt_list expr_info cxx_constr_info
-    ~is_inherited_ctor:false
-| CXXInheritedCtorInitExpr (stmt_info, stmt_list, expr_info, cxx_construct_inherited_expr_info)
-->
-  cxxConstructExpr_trans trans_state stmt_info stmt_list expr_info
-    cxx_construct_inherited_expr_info ~is_inherited_ctor:true
-| ObjCMessageExpr (stmt_info, stmt_list, expr_info, obj_c_message_expr_info) ->
-  objCMessageExpr_trans trans_state stmt_info obj_c_message_expr_info stmt_list expr_info
-| CompoundStmt (_, stmt_list) ->
-  (* No node for this statement. We just collect its statement list*)
-  compoundStmt_trans trans_state stmt_list
-| ConditionalOperator (stmt_info, stmt_list, expr_info) ->
-  (* Ternary operator "cond ? exp1 : exp2" *)
-  conditionalOperator_trans trans_state stmt_info stmt_list expr_info
-  ifStmt_trans trans_state stmt_info if_stmt_info
-  switchStmt_trans trans_state stmt_info switch_stmt_info
-| CaseStmt (stmt_info, stmt_list) ->
-  caseStmt_trans trans_state stmt_info stmt_list
-| DefaultStmt (stmt_info, stmt_list) ->
-  defaultStmt_trans trans_state stmt_info stmt_list
-| StmtExpr ({Clang_ast_t.si_source_range}, stmt_list, _) ->
-  stmtExpr_trans trans_state si_source_range stmt_list
-| ForStmt (stmt_info, [init; decl_stmt; condition; increment; body]) ->
-  forStmt_trans trans_state ~init ~decl_stmt ~condition ~increment ~body stmt_info
-| WhileStmt (stmt_info, [condition; body]) ->
-  whileStmt_trans trans_state ~decl_stmt:None ~condition ~body stmt_info
-| WhileStmt (stmt_info, [decl_stmt; condition; body]) ->
-  whileStmt_trans trans_state ~decl_stmt:(Some decl_stmt) ~condition ~body stmt_info
-  doStmt_trans trans_state ~condition ~body stmt_info
-| CXXForRangeStmt (stmt_info, stmt_list) ->
-  cxxForRangeStmt_trans trans_state stmt_info stmt_list
-| ObjCForCollectionStmt (stmt_info, [item; items; body]) ->
-  objCForCollectionStmt_trans trans_state item items body stmt_info
-| NullStmt _ ->
-  no_op_trans trans_state.succ_nodes
-| CompoundAssignOperator (stmt_info, stmt_list, expr_info, binary_operator_info, _) ->
-  binaryOperator_trans trans_state binary_operator_info stmt_info expr_info stmt_list
-  declRefExpr_trans trans_state stmt_info decl_ref_expr_info
-| ObjCPropertyRefExpr (_, stmt_list, _, _) ->
-  objCPropertyRefExpr_trans trans_state stmt_list
-| CXXThisExpr (stmt_info, _, expr_info) ->
-  cxxThisExpr_trans trans_state stmt_info expr_info
-| OpaqueValueExpr (stmt_info, _, _, opaque_value_expr_info) ->
-  opaqueValueExpr_trans trans_state opaque_value_expr_info
-    stmt_info.Clang_ast_t.si_source_range
-| PseudoObjectExpr (_, stmt_list, _) ->
-  pseudoObjectExpr_trans trans_state stmt_list
-  unaryExprOrTypeTraitExpr_trans trans_state unary_expr_or_type_trait_expr_info
-| BuiltinBitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _)
-| CXXReinterpretCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _, _)
-| CXXConstCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _, _)
-| CXXStaticCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _, _)
-| CXXFunctionalCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) ->
-  cast_exprs_trans trans_state stmt_info stmt_list expr_info cast_kind
-| ObjCBridgedCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _, objc_bridge_cast_ei) ->
-  let objc_bridge_cast_kind = objc_bridge_cast_ei.Clang_ast_t.obcei_cast_kind in
-  cast_exprs_trans trans_state stmt_info stmt_list expr_info ~objc_bridge_cast_kind cast_kind
-  integerLiteral_trans trans_state expr_info integer_literal_info
-| OffsetOfExpr (stmt_info, _, expr_info, offset_of_expr_info) ->
-  offsetOf_trans trans_state expr_info offset_of_expr_info stmt_info
-  stringLiteral_trans trans_state expr_info (String.concat ~sep:"" str_list)
-| GNUNullExpr (_, _, expr_info) ->
-  gNUNullExpr_trans trans_state expr_info
-| CXXNullPtrLiteralExpr (_, _, expr_info) ->
-  nullPtrExpr_trans trans_state expr_info
-| ObjCSelectorExpr (_, _, expr_info, selector) ->
-  objCSelectorExpr_trans trans_state expr_info selector
-| ObjCEncodeExpr (_, _, expr_info, objc_encode_expr_info) ->
-  objCEncodeExpr_trans trans_state expr_info objc_encode_expr_info
-| ObjCProtocolExpr (_, _, expr_info, decl_ref) ->
-  objCProtocolExpr_trans trans_state expr_info decl_ref
-| ObjCIvarRefExpr (stmt_info, stmt_list, _, obj_c_ivar_ref_expr_info) ->
-  objCIvarRefExpr_trans trans_state stmt_info stmt_list obj_c_ivar_ref_expr_info
-  memberExpr_trans trans_state stmt_info stmt_list member_expr_info
-  if
-    is_logical_negation_of_int trans_state.context.CContext.tenv expr_info unary_operator_info
-  then
-    let conditional =
-      Ast_expressions.trans_negation_with_conditional stmt_info expr_info stmt_list
-    in
-    instruction trans_state conditional
-  else unaryOperator_trans trans_state stmt_info expr_info stmt_list unary_operator_info
-  returnStmt_trans trans_state stmt_info stmt_list
-| ExprWithCleanups (stmt_info, stmt_list, _, _) ->
-  exprWithCleanups_trans trans_state stmt_info stmt_list
-  parenExpr_trans trans_state si_source_range stmt_list
-| ObjCBoolLiteralExpr (_, _, expr_info, n)
-| CXXBoolLiteralExpr (_, _, expr_info, n) ->
-  characterLiteral_trans trans_state expr_info n
-  floatingLiteral_trans trans_state expr_info float_string
-| CXXScalarValueInitExpr (_, _, expr_info) ->
-  cxxScalarValueInitExpr_trans trans_state expr_info
-| ObjCBoxedExpr (stmt_info, stmts, info, boxed_expr_info) ->
-  (* Sometimes clang does not return a boxing method (a name of function to apply), e.g.,
-     [@("str")].  In that case, it uses "unknownSelector:" instead of giving up the
-     translation. *)
-  let sel =
-    Option.value boxed_expr_info.Clang_ast_t.obei_boxing_method ~default:"unknownSelector:"
-  in
-  objCBoxedExpr_trans trans_state info sel stmt_info stmts
-| ObjCArrayLiteral (stmt_info, stmts, expr_info, array_literal_info) ->
-  objCArrayLiteral_trans trans_state expr_info stmt_info stmts array_literal_info
-| ObjCDictionaryLiteral (stmt_info, stmts, expr_info, dict_literal_info) ->
-  objCDictionaryLiteral_trans trans_state expr_info stmt_info stmts dict_literal_info
-| ObjCStringLiteral (stmt_info, stmts, info) ->
-  objCStringLiteral_trans trans_state stmt_info stmts info
-  breakStmt_trans trans_state stmt_info
-| ContinueStmt (stmt_info, _) ->
-  continueStmt_trans trans_state stmt_info
-| ObjCAtSynchronizedStmt (_, stmt_list) ->
-  objCAtSynchronizedStmt_trans trans_state stmt_list
-| ObjCIndirectCopyRestoreExpr (_, stmt_list, _) ->
-  let control, returns =
-    instructions Procdesc.Node.ObjCIndirectCopyRestoreExpr trans_state stmt_list
-  in
-  mk_trans_result (last_or_mk_fresh_void_exp_typ returns) control
-| BlockExpr (stmt_info, _, expr_info, decl) ->
-  blockExpr_trans trans_state stmt_info expr_info decl
-| ObjCAutoreleasePoolStmt (stmt_info, stmts) ->
-  objCAutoreleasePoolStmt_trans trans_state stmt_info stmts
-| ObjCAtTryStmt (_, stmts) ->
-  compoundStmt_trans trans_state stmts
-| CXXTryStmt (stmt_info, try_stmts) ->
-  tryStmt_trans trans_state stmt_info try_stmts
-| CXXCatchStmt _ ->
-  (* should by handled by try statement *)
-  assert false
-| ObjCAtThrowStmt (stmt_info, stmts) | CXXThrowExpr (stmt_info, stmts, _) ->
-  objc_cxx_throw_trans trans_state stmt_info stmts
-| ObjCAtFinallyStmt (_, stmts) ->
-  compoundStmt_trans trans_state stmts
-| ObjCAtCatchStmt _ ->
-  compoundStmt_trans trans_state []
-| PredefinedExpr (_, _, expr_info, _) ->
-  stringLiteral_trans trans_state expr_info ""
-| BinaryConditionalOperator (stmt_info, stmts, expr_info) ->
-  binaryConditionalOperator_trans trans_state stmt_info stmts expr_info
-| CXXNewExpr (stmt_info, _, expr_info, cxx_new_expr_info) ->
-  cxxNewExpr_trans trans_state stmt_info expr_info cxx_new_expr_info
-| CXXDeleteExpr (stmt_info, stmt_list, _, delete_expr_info) ->
-  cxxDeleteExpr_trans trans_state stmt_info stmt_list delete_expr_info
-| MaterializeTemporaryExpr (stmt_info, stmt_list, expr_info, _) ->
-  materializeTemporaryExpr_trans trans_state stmt_info stmt_list expr_info
-| CXXBindTemporaryExpr (stmt_info, stmt_list, expr_info, _) ->
-  cxxBindTemporaryExpr_trans trans_state stmt_info stmt_list expr_info
-| CompoundLiteralExpr (stmt_info, stmt_list, expr_info) ->
-  compoundLiteralExpr_trans trans_state stmt_list stmt_info expr_info
-| InitListExpr (stmt_info, stmts, expr_info) ->
-  initListExpr_trans trans_state stmt_info expr_info stmts
-| CXXDynamicCastExpr (stmt_info, stmts, _, _, qual_type, _) ->
-  cxxDynamicCastExpr_trans trans_state stmt_info stmts qual_type
-| CXXDefaultArgExpr (_, _, _, default_expr_info)
-| CXXDefaultInitExpr (_, _, _, default_expr_info) ->
-  cxxDefaultExpr_trans trans_state default_expr_info
-| ImplicitValueInitExpr (stmt_info, _, _) ->
-  implicitValueInitExpr_trans trans_state stmt_info
-| GenericSelectionExpr (stmt_info, stmts, _, gse_info) -> (
-match gse_info.gse_value with
-| Some value ->
-    instruction trans_state value
-| None ->
-    genericSelectionExprUnknown_trans trans_state stmt_info stmts )
-| SizeOfPackExpr _ ->
-  mk_trans_result (Exp.get_undefined false, StdTyp.void) empty_control
-| GCCAsmStmt (stmt_info, stmts) ->
-  gccAsmStmt_trans trans_state stmt_info stmts
-| CXXPseudoDestructorExpr _ ->
-  cxxPseudoDestructorExpr_trans ()
-| CXXTypeidExpr (stmt_info, stmts, expr_info) ->
-  cxxTypeidExpr_trans trans_state stmt_info stmts expr_info
-| CXXStdInitializerListExpr (stmt_info, stmts, expr_info) ->
-  cxxStdInitializerListExpr_trans trans_state stmt_info stmts expr_info
-| LambdaExpr (stmt_info, _, expr_info, lambda_expr_info) ->
-  let trans_state' = {trans_state with priority= Free} in
-  lambdaExpr_trans trans_state' stmt_info expr_info lambda_expr_info
-| AttributedStmt (stmt_info, stmts, attrs) ->
-  attributedStmt_trans trans_state stmt_info stmts attrs
-| TypeTraitExpr (_, _, expr_info, type_trait_info) ->
-  booleanValue_trans trans_state expr_info type_trait_info.Clang_ast_t.xtti_value
-| CXXNoexceptExpr (_, _, expr_info, cxx_noexcept_expr_info) ->
-  booleanValue_trans trans_state expr_info cxx_noexcept_expr_info.Clang_ast_t.xnee_value
-| VAArgExpr (_, [], expr_info) ->
-  undefined_expr trans_state expr_info
-| VAArgExpr (stmt_info, stmt :: _, ei) ->
-  va_arg_trans trans_state stmt_info stmt ei
-| ArrayInitIndexExpr _ | ArrayInitLoopExpr _ ->
-  no_op_trans trans_state.succ_nodes
-(* vector instructions for OpenCL etc. we basically ignore these for now; just translate the
- sub-expressions *)
-| ObjCAvailabilityCheckExpr (_, _, expr_info, _) ->
-  undefined_expr trans_state expr_info
-| SubstNonTypeTemplateParmExpr (_, stmts, _) | SubstNonTypeTemplateParmPackExpr (_, stmts, _) ->
-  let[@warning "-8"] [expr] = stmts in
-  instruction trans_state expr
-(* Infer somehow ended up in templated non instantiated code - right now
- it's not supported and failure in those cases is expected. *)
-| CXXDependentScopeMemberExpr ({Clang_ast_t.si_source_range}, _, _) ->
-  CFrontend_errors.unimplemented __POS__ si_source_range
-    ~ast_node:(Clang_ast_proj.get_stmt_kind_string instr)
-    "Translation of templated code is unsupported: %a"
-    (Pp.of_string ~f:Clang_ast_j.string_of_stmt)
-    instr
-| ForStmt ({Clang_ast_t.si_source_range}, _)
-| WhileStmt ({Clang_ast_t.si_source_range}, _)
-| DoStmt ({Clang_ast_t.si_source_range}, _)
-| ObjCForCollectionStmt ({Clang_ast_t.si_source_range}, _) ->
-  CFrontend_errors.incorrect_assumption __POS__ si_source_range "Unexpected shape for %a: %a"
-    (Pp.of_string ~f:Clang_ast_proj.get_stmt_kind_string)
-    instr
-    (Pp.of_string ~f:Clang_ast_j.string_of_stmt)
-    instr
-| AddrLabelExpr _
-| ArrayTypeTraitExpr _
-| AsTypeExpr _
-| CapturedStmt _
-| ChooseExpr _
-| CoawaitExpr _
-| ConceptSpecializationExpr _
-| ConvertVectorExpr _
-| CoreturnStmt _
-| CoroutineBodyStmt _
-| CoyieldExpr _
-| CUDAKernelCallExpr _
-| CXXAddrspaceCastExpr _
-| CXXFoldExpr _
-| CXXRewrittenBinaryOperator _
-| CXXUnresolvedConstructExpr _
-| CXXUuidofExpr _
-| DependentCoawaitExpr _
-| DependentScopeDeclRefExpr _
-| DesignatedInitExpr _
-| DesignatedInitUpdateExpr _
-| ExpressionTraitExpr _
-| ExtVectorElementExpr _
-| FunctionParmPackExpr _
-| ImaginaryLiteral _
-| IndirectGotoStmt _
-| MatrixSubscriptExpr _
-| MSAsmStmt _
-| MSDependentExistsStmt _
-| MSPropertyRefExpr _
-| MSPropertySubscriptExpr _
-| NoInitExpr _
-| ObjCIsaExpr _
-| ObjCSubscriptRefExpr _
-| OMPArraySectionExpr _
-| OMPArrayShapingExpr _
-| OMPAtomicDirective _
-| OMPBarrierDirective _
-| OMPCancelDirective _
-| OMPCancellationPointDirective _
-| OMPCanonicalLoop _
-| OMPCriticalDirective _
-| OMPDepobjDirective _
-| OMPDispatchDirective _
-| OMPDistributeDirective _
-| OMPDistributeParallelForDirective _
-| OMPDistributeParallelForSimdDirective _
-| OMPDistributeSimdDirective _
-| OMPFlushDirective _
-| OMPForDirective _
-| OMPForSimdDirective _
-| OMPGenericLoopDirective _
-| OMPInteropDirective _
-| OMPIteratorExpr _
-| OMPMaskedDirective _
-| OMPMaskedTaskLoopDirective _
-| OMPMaskedTaskLoopSimdDirective _
-| OMPMasterDirective _
-| OMPMasterTaskLoopDirective _
-| OMPMasterTaskLoopSimdDirective _
-| OMPMetaDirective _
-| OMPOrderedDirective _
-| OMPParallelDirective _
-| OMPParallelForDirective _
-| OMPParallelForSimdDirective _
-| OMPParallelGenericLoopDirective _
-| OMPParallelMaskedDirective _
-| OMPParallelMaskedTaskLoopDirective _
-| OMPParallelMaskedTaskLoopSimdDirective _
-| OMPParallelMasterDirective _
-| OMPParallelMasterTaskLoopDirective _
-| OMPParallelMasterTaskLoopSimdDirective _
-| OMPParallelSectionsDirective _
-| OMPScanDirective _
-| OMPSectionDirective _
-| OMPSectionsDirective _
-| OMPSimdDirective _
-| OMPSingleDirective _
-| OMPTargetDataDirective _
-| OMPTargetDirective _
-| OMPTargetEnterDataDirective _
-| OMPTargetExitDataDirective _
-| OMPTargetParallelDirective _
-| OMPTargetParallelForDirective _
-| OMPTargetParallelForSimdDirective _
-| OMPTargetParallelGenericLoopDirective _
-| OMPTargetSimdDirective _
-| OMPTargetTeamsDirective _
-| OMPTargetTeamsDistributeDirective _
-| OMPTargetTeamsDistributeParallelForDirective _
-| OMPTargetTeamsDistributeParallelForSimdDirective _
-| OMPTargetTeamsDistributeSimdDirective _
-| OMPTargetTeamsGenericLoopDirective _
-| OMPTargetUpdateDirective _
-| OMPTaskDirective _
-| OMPTaskgroupDirective _
-| OMPTaskLoopDirective _
-| OMPTaskLoopSimdDirective _
-| OMPTaskwaitDirective _
-| OMPTaskyieldDirective _
-| OMPTeamsDirective _
-| OMPTeamsDistributeDirective _
-| OMPTeamsDistributeParallelForDirective _
-| OMPTeamsDistributeParallelForSimdDirective _
-| OMPTeamsDistributeSimdDirective _
-| OMPTeamsGenericLoopDirective _
-| OMPTileDirective _
-| OMPUnrollDirective _
-| PackExpansionExpr _
-| ParenListExpr _
-| RequiresExpr _
-| SEHExceptStmt _
-| SEHFinallyStmt _
-| SEHLeaveStmt _
-| SEHTryStmt _
-| ShuffleVectorExpr _
-| SourceLocExpr _
-| SYCLUniqueStableNameExpr _
-| TypoExpr _
-| UnresolvedLookupExpr _
-| UnresolvedMemberExpr _ -> 
-  let (stmt_info, stmts), ret_typ =
-    match Clang_ast_proj.get_expr_tuple instr with
-    | Some (stmt_info, stmts, expr_info) ->
-        let ret_typ = CType_decl.get_type_from_expr_info expr_info trans_state.context.tenv in
-        ((stmt_info, stmts), ret_typ)
-    | None ->
-        let stmt_tuple = Clang_ast_proj.get_stmt_tuple instr in
-        (stmt_tuple, StdTyp.void)
-  in
-  skip_unimplemented
-    ~reason:
-      (Printf.sprintf "unimplemented construct: %s, found at %s"
-         (Clang_ast_proj.get_stmt_kind_string instr)
-         (Clang_ast_j.string_of_source_range stmt_info.Clang_ast_t.si_source_range) )
-    trans_state stmt_info ret_typ stmts
 
-*)
 
-  (*
-  let record_li = 
-    ["/Applications"; 
-     "/Users/yahuis/Desktop/git/LightFTP/Source/gnutls";
-     "/Users/yahuis/Desktop/git/LightFTP/Source/tinydtls"] in 
-  let rec aux li:bool = 
-    match li with 
-    | [] ->  false 
-    | x :: xs -> 
-      (*print_string (str ^ "\n" ^ x ^ "\n" ^ string_of_int (String.compare (String.sub str 0 (String.length x)) x)^ "\n");
-    *)
-      if String.compare (String.sub str 0 (String.length x)) x  == 0 then 
-      true else aux xs 
-  in aux record_li
-*)
+
+
 
 
 
@@ -1479,6 +1109,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
 
+  | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
   | CompoundStmt (stmt_info, stmt_list) -> 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
@@ -1643,11 +1274,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | SwitchStmt (_, _::stmt_list, _) -> 
     let stateSummary = List.map stmt_list ~f:(fun x -> syh_compute_stmt_postcondition env current future x) in 
     flattenList stateSummary 
-    
+
   | DefaultStmt (stmt_info, stmt_list) 
   | CaseStmt (stmt_info, stmt_list) -> 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
+
 
 
 
@@ -1671,14 +1303,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | ArraySubscriptExpr _
   | UnaryExprOrTypeTraitExpr _
   | CStyleCastExpr _ 
+
   | _ -> 
     let (fp, fp1) =  (getStmtlocation instr) in 
     let (fp', _) = maybeIntToListInt (fp, fp1) in 
 
-    let arg = match fp' with | [] -> -1 | x ::_ -> x in 
 
-
-    let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, [(BINT arg)]), fp) in 
+    let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), fp) in 
 
 
 
