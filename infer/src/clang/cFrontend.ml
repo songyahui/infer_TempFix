@@ -1406,6 +1406,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       )
       
 
+    | BreakStmt _ :: _ -> current'
     | DeclStmt (_, [x], _):: xs  ->
           (
             match x with
@@ -1614,7 +1615,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | RecoveryExpr _ 
   | DeclRefExpr _  
   | WhileStmt _ 
-  | SwitchStmt _ 
   | ParenExpr _ (* assert(max > min); *)
   (*| ForStmt _ *)
   | CallExpr _ (* nested calls:  if (swoole_timer_is_available()) {    *)
@@ -1640,40 +1640,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
       
+  | SwitchStmt (_, _::stmt_list, _) -> 
+    let stateSummary = List.map stmt_list ~f:(fun x -> syh_compute_stmt_postcondition env current future x) in 
+    flattenList stateSummary 
+    
+  | DefaultStmt (stmt_info, stmt_list) 
+  | CaseStmt (stmt_info, stmt_list) -> 
+    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+    prefixLoction fp (helper current stmt_list)
 
-
-  (*
-  | BinaryOperator (stmt_info, x::y::rest, expr_info, binop_info) ->
-
-      let stmt_list = x::y::rest in 
-      print_endline (List.fold_left stmt_list ~init:"" ~f:(fun acc a -> acc ^ " " ^ (Clang_ast_proj.get_stmt_kind_string a)));
-
-      (match binop_info.boi_kind with
-      | `Assign -> 
-          print_endline ("Assign binop")
-          
-      | _ -> ()
-      );
-
-      (match y with 
-      | ImplicitCastExpr (stmt_info, yx::_, _, _, _) 
-      | CStyleCastExpr (stmt_info, yx::_, _, _, _) -> 
-        print_endline (Clang_ast_proj.get_stmt_kind_string yx)
-
-      | _ -> ()
-
-      ); 
-
-      
-    let (fp, fp1) =  (getStmtlocation instr) in 
-
-
-    let ev = Singleton (((Clang_ast_proj.get_stmt_kind_string instr ^ " " ^ string_of_int (List.length stmt_list), [])), fp) in 
-    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
-
-    let (fp, _) = maybeIntToListInt (fp, fp1) in 
-    [(TRUE, ev, 0, fp)]
-    *)
 
 
 
@@ -1698,13 +1673,16 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | CStyleCastExpr _ 
   | _ -> 
     let (fp, fp1) =  (getStmtlocation instr) in 
+    let (fp', _) = maybeIntToListInt (fp, fp1) in 
 
-    let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, []), fp) in 
-
-    let (fp, _) = maybeIntToListInt (fp, fp1) in 
+    let arg = match fp' with | [] -> -1 | x ::_ -> x in 
 
 
-    [(TRUE, ev, 0, fp)]
+    let ev = Singleton ((Clang_ast_proj.get_stmt_kind_string instr, [(BINT arg)]), fp) in 
+
+
+
+    [(TRUE, ev, 0, fp')]
 
 
 

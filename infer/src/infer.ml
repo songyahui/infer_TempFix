@@ -22,7 +22,9 @@ let run driver_mode =
   InferAnalyze.invalidate_changed_procedures changed_files ;
   (* print_string("===========capture===========\n"); *)
   capture driver_mode ~changed_files ;
+  (*
   analyze_and_report driver_mode ~changed_files ;
+  *)
   run_epilogue ()
   
   

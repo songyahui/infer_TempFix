@@ -188,3 +188,6 @@ brew install libdvdnav
 
 Snort 3 
 https://linuxhint.com/compile-install-snort-from-source-code-ubuntu/
+
+
+Turn on the infer analyze_and_report: "analyze_and_report"
