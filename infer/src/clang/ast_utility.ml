@@ -65,6 +65,7 @@ type effectwithfootprint = (pure * es * int list)
 (* Global States *)
 let (dynamicSpec: (specification list) ref) = ref [] 
 let (currentModule: string ref) = ref ""
+let (variablesInScope: (string list) ref) = ref [] 
 let (varSet: (string list) ref) = ref [] 
 let (handlerVar: string option ref) = ref None 
 

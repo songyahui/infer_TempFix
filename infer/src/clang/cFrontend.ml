@@ -187,7 +187,7 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
     acc ^ (
       match a with
       | None -> "_"
-      | Some t -> string_of_terms t ^ "_"
+      | Some t -> string_of_terms t ^ "."
     )) in name^memArg
 
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
@@ -961,6 +961,8 @@ let string_of_decl (decl:Clang_ast_t.decl) : string =
   match decl with
   | Clang_ast_t.VarDecl (_, a , _, _) -> 
   (*Clang_ast_proj.get_decl_kind_string*) a.ni_name 
+  | ParmVarDecl (_, ndi, _, _) -> ndi.ni_name
+
   | _ -> Clang_ast_proj.get_decl_kind_string decl
 
 
@@ -1365,9 +1367,37 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | BinaryOperator (_, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
       (match binop_info.boi_kind with
       | `Assign -> 
-          (* print_endline ("Assign binop"); *)
-          let () = handlerVar := Some (string_of_stmt x) in 
-          helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
+          (*print_endline ("Assign binop"); 
+          print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
+          *)
+          let currentHandler = string_of_stmt x in 
+
+          let rec checkIsGlobalVar str strLi : bool  = (* true means it is global *)
+            match strLi with 
+            | [] -> true 
+            | x::xs -> (* x=  ptr, and str = ptr.filed *)
+              if String.compare x str == 0  then false 
+              else checkIsGlobalVar str xs
+          in 
+
+          let rec getRoot str = 
+            let strLi = String.split_on_chars  str ['.'] in 
+            match strLi with
+            | [] -> str 
+            | x :: _ -> x
+          in 
+
+          (*
+          print_endline ("current handler: " ^ currentHandler); 
+          print_endline ("current handler root: " ^ (getRoot currentHandler)); 
+          *)
+
+
+          if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
+            helper current' xs
+          else 
+            (let () = handlerVar := Some (currentHandler) in 
+            helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs))
        
           
       | _ -> 
@@ -1583,7 +1613,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | StringLiteral _ 
   | RecoveryExpr _ 
   | DeclRefExpr _  
-  | DeclStmt (_, [], _) 
   | WhileStmt _ 
   | SwitchStmt _ 
   | ParenExpr _ (* assert(max > min); *)
@@ -1602,6 +1631,16 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     
     let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
     [(TRUE, Emp, 0, fp)]
+
+  | DeclStmt (_, [], del::_) -> 
+    let localVar = (string_of_decl del) in 
+    let () = variablesInScope := !variablesInScope @ [localVar] in 
+    let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
+    [(TRUE, Emp, 0, fp)]
+
+
+      
+
 
   (*
   | BinaryOperator (stmt_info, x::y::rest, expr_info, binop_info) ->
@@ -1784,8 +1823,15 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       | None -> ()
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
+      let argumentNames = List.map (function_decl_info.fdi_parameters) ~f:(fun a -> string_of_decl a) in 
+      let () = variablesInScope := !variablesInScope @ argumentNames in 
 
-      (* print_endline ("\nreasoning "^ funcName ^"\n" ); *)
+
+      (*
+            print_endline ("\nreasoning "^ funcName ^"\n" ); 
+      print_endline (List.fold_left argumentNames ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
+
+      *)
 
       let functionspec = findSpecFrom specifications funcName in 
       let (_, precondition, postcondition, futurecondition) = 
@@ -1804,6 +1850,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
       in 
       let () = currentModule := funcName in 
+      let () = variablesInScope := [] in 
       let (final:programStates) = 
           ((normaliseProgramStates
           (syh_compute_stmt_postcondition 
