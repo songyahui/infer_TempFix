@@ -1029,28 +1029,36 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       | _ -> [] 
     in 
 
-    let (extrapure, es) = match ret with
+    (match ret with
     | CallExpr (stmt_info, stmt_list, ei) ->
-      let arg = List.fold_left stmt_list ~init:[] ~f:(fun acc a -> acc @(optionTermToList (stmt2Term a))) in 
+
+      let freshVar = verifier_getAfreeVar "r" in 
+      let stmt = Clang_ast_t.CompoundStmt (stmt_info, [ret]) in 
+      let () = handlerVar := Some (freshVar) in 
+      let states = helper current [stmt]  in 
+      
+      let returnEff = (Ast_utility.TRUE, Singleton (("RET", [(BVAR freshVar)]), fp1), 0, []) in 
+      concatenateTwoEffectswithFlag states [returnEff]
+
+      (*let arg = List.fold_left stmt_list ~init:[] ~f:(fun acc a -> acc @(optionTermToList (stmt2Term a))) in 
       let evConsume = Singleton ((("CONSUME", arg)), fp1) in 
       let es  = Singleton (("RET", []), fp1) in 
       (Ast_utility.TRUE, Concatenate(evConsume, es))
+      *)
     | _ -> 
-    let retTerm = stmt2Term ret in 
-    let extrapure = 
-      match retTerm with 
-      | Some (Basic (BINT n)) -> Eq(Basic(BRET), Basic(BINT n))
-      | Some (Basic (BVAR str)) -> Eq(Basic(BRET), Basic(BVAR str))
-      | _ -> Ast_utility.TRUE
-    in 
-    let retTerm1 = optionTermToList retTerm in 
-    let es = if List.length (retTerm1 ) == 0 
+      let retTerm = stmt2Term ret in 
+      let extrapure = 
+        match retTerm with 
+        | Some (Basic (BINT n)) -> Eq(Basic(BRET), Basic(BINT n))
+        | Some (Basic (BVAR str)) -> Eq(Basic(BRET), Basic(BVAR str))
+        | _ -> Ast_utility.TRUE
+      in 
+      let retTerm1 = optionTermToList retTerm in 
+      let es = if List.length (retTerm1 ) == 0 
              then Singleton (("RET", []), fp1) 
              else Singleton (("RET", (retTerm1)), fp1) in 
-    (extrapure, es)
-
-    in 
-    [(extrapure, es, 1, fp)]
+      [(extrapure, es, 1, fp)]
+    )
   
   | ReturnStmt (stmt_info, stmt_list) ->
     (*print_endline ("ReturnStmt:" ^ string_of_stmt_list stmt_list " ");*)
