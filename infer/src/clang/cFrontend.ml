@@ -662,7 +662,8 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   (* here the int int are the strat point and the end point *)
   let (error_lists:((pure * es * (int * int) * es) list)) = bugLocalisation error_paths in 
 
-  let () = finalReport := !finalReport ^ ("\n<======[Bidirectional Bug Localisation & Possible Proof Repairs]======>\n\n[Repair Options] ") in 
+  let () = finalReport := !finalReport ^ 
+    ("\n<======[Bidirectional Bug Localization & Possible Proof Repairs]======>\n\n[Repair Options]\n ") in 
 
 
   let rec helper li = 
@@ -741,7 +742,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
         ()
 
   in 
-  let () = finalReport := !finalReport ^ ("[Patches] ") in 
+  let () = finalReport := !finalReport ^ ("[Patches]\n ") in 
 
   let _ = List.map error_lists ~f:(fun a -> aux a) in 
 
@@ -1156,12 +1157,35 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(TRUE, ev, 0, fp)]
 
 
+  | BinaryOperator (_, x::y::_, expr_info, binop_info) ->
+
+    (match binop_info.boi_kind with
+    | `Assign -> 
+      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
+      let (fp', _) = getStmtlocation instr in
+      let varFromY = string_of_stmt y in 
+      if twoStringSetOverlap [varFromY] (!varSet) then 
+        (print_endline ("CONSUME " ^ varFromY ^ " by " ^ string_of_stmt x);
+        let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
+        [(TRUE, ev, 0, fp)])
+      else 
+        [(TRUE, Emp, 0, fp)]
+      
+          
+    | _ -> 
+      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
+      [(TRUE, Emp, 0, fp)]
+  
+        
+      )
+
+
+
   | BreakStmt _ 
   | ForStmt _ (*stmt_info, stmt_list*)
   | LabelStmt _ 
   | GotoStmt _ 
   | UnaryOperator _ (*stmt_info, stmt_list, _, _*)   
-  | BinaryOperator _ 
   | ImplicitCastExpr _ (*stmt_info, stmt_list, _, _, _*) 
   | MemberExpr _
   | NullStmt _

@@ -13,10 +13,6 @@
     Post (ret<0, 𝝐) \/ (ret>=0, swSocket_create(ret))
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
-/*@ swClient_create(arg): 
-    Post (ret<0, 𝝐) \/ (ret>=0, swClient_create(ret))
-@*/
-
 /*@ close(handler): 
     Post (TRUE, close(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/

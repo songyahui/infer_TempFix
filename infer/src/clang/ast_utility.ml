@@ -770,8 +770,7 @@ let rec nullable (eff:es) : bool =
   | Bot              -> false 
   | Emp              -> true 
   | Any              -> false 
-  | Singleton ((str, []), _) -> if String.compare str "RET" == 0 then true else false 
-  | Singleton _          -> false 
+  | Singleton ((str, _), _) -> if String.compare str "RET" == 0 then true else false 
   | NotSingleton str          -> false
   | Concatenate (eff1, eff2) -> nullable eff1 && nullable eff2  
   | Disj (eff1, eff2) -> nullable eff1 || nullable eff2  
@@ -783,8 +782,7 @@ let rec fst (eff:es) : (fstElem list) =
   | Bot                
   | Emp             -> []
   | Any             -> [ Wildcard ]  
-  | Singleton ((str, []), ft) -> if String.compare str "RET" == 0 then [] else [(Event ((str, []), ft))]  
-  | Singleton s   -> [(Event s)] 
+  | Singleton ((str, args), ft) -> if String.compare str "RET" == 0 then [] else [(Event ((str, args), ft))]  
   | NotSingleton str          -> [(NotEvent str)] 
   | Concatenate (eff1, eff2) -> 
     if nullable eff1 then List.append (fst eff1) (fst eff2)
@@ -841,8 +839,10 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     | Wildcard _ -> Bot 
     | Event (event1, _) -> 
       let (str1, args1) = event1 in 
-      if String.compare str1 "RET" == 0 && comapreEventArgs args args1 then Emp 
-      else if comapreEvents event event1 == true then Emp else Bot 
+      
+      if String.compare str1 "CONSUME" == 0 && comapreEventArgs args args1 then Emp 
+      else 
+      if comapreEvents event event1 == true then Emp else Bot 
     | NotEvent event  ->  Bot
     )
   | NotSingleton str -> 
@@ -980,6 +980,13 @@ let modifiyTheassertionCounters () =
   (*if List.length re > 0 then *)
   failedAssertions := !failedAssertions +1 
   (*else ()*)
+
+let rec getFirstPostion es currentposition = 
+  match es with 
+  | Singleton (ins, Some fp) ->  fp
+  | _ -> currentposition
+
+
   
 let rec inclusion' 
   (pathcondition:pure)
@@ -1003,7 +1010,8 @@ else
 
   if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
   else if nullable lhs && (not (nullable rhs)) then 
-  ([(pathcondition, lhs, currentposition ,rhs)], Node (entailent ^ "  [Disprove]", []) )
+    let currentposition = getFirstPostion lhs currentposition in 
+    ([(pathcondition, lhs, currentposition ,rhs)], Node (entailent ^ "  [Disprove]", []) )
 
   else if reoccur lhs rhs ctx then 
     ([], Node (entailent ^ "  [Reoccur]", []) )
