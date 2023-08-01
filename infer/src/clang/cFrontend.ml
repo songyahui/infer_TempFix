@@ -539,8 +539,9 @@ let specialCases es =
 
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
 
-  let () = finalReport := !finalReport ^ (**"synthsisFromSpec " ^*) (string_of_effect ([effect])) in 
-
+  (*
+     let () = finalReport := !finalReport ^ (**"synthsisFromSpec " ^*) (string_of_effect ([effect])) in 
+*)
   (*print_endline ("ENV now:\n" ^ List.fold_left env ~init:"" 
   ~f:(fun acc ((mn, _), _, post, _) -> acc ^ 
   match post with 
@@ -654,16 +655,19 @@ let computeRange intList =
       else (min, max)) 
 
 
-let program_repair (info:((error_info list) * binary_tree * pathList * pathList)) specifications : unit = 
+let program_repair (info:((error_info list) * binary_tree * pathList * pathList)) specifications : (string * string) = 
+  
+  let headMsg = ref "" in 
+  let repairMsg = ref "" in 
   let start = Unix.gettimeofday () in 
   let (error_paths, tree, correctTraces, errorTraces) = info in 
-  if List.length error_paths == 0 then ()
+  if List.length error_paths == 0 then (!headMsg, !repairMsg)
   else 
   (* here the int int are the strat point and the end point *)
   let (error_lists:((pure * es * (int * int) * es) list)) = bugLocalisation error_paths in 
 
-  let () = finalReport := !finalReport ^ 
-    ("\n<======[Bidirectional Bug Localization & Possible Proof Repairs]======>\n\n[Repair Options]\n ") in 
+  let () = headMsg := !headMsg ^ 
+    ("\n<======[Bidirectional Bug Localization & Possible Proof Repairs]======>\n\n[Repair Options]\n") in 
 
 
   let rec helper li = 
@@ -675,7 +679,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   in 
   let msg = helper error_lists in 
 
-  let () = finalReport := !finalReport ^ msg in 
+  let () = headMsg := !headMsg ^ msg in 
 
 
   let onlyErrorPostions = computeAllthePointOnTheErrorPath correctTraces errorTraces in 
@@ -691,8 +695,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   
   let rec aux arg : unit  = 
       let (pathcondition, realspec, (startNum ,endNum),  spec) = arg in 
+        (*
         print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
-
+*)
         
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
@@ -738,17 +743,16 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
          (*^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n\n"*)
         ) in 
 
-        let () = finalReport := !finalReport ^ temp in 
+        let () = repairMsg := !repairMsg ^ temp in 
         ()
 
   in 
-  let () = finalReport := !finalReport ^ ("[Patches]\n ") in 
 
   let _ = List.map error_lists ~f:(fun a -> aux a) in 
 
   let repari_time = (Unix.gettimeofday () -. start) in 
   repairTime := !repairTime +. repari_time; 
-  ()
+  (!headMsg , !repairMsg)
 
  
 
@@ -841,9 +845,16 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let extra_info = 
             "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
             "Pre-condition checking for \'"^calleeName^"\': " in 
-            let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
             (*print_endline (string_of_inclusion_results extra_info info); *)
-            program_repair info env; 
+            let (head, patches) = program_repair info env in 
+            if String.compare patches "" == 0 then 
+            ()
+            else 
+              let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
+              let () = finalReport := !finalReport ^ head in 
+              let () = finalReport := !finalReport ^ ("[Patches]\n") ^ patches ^ "\n" in 
+              ()
+              
       in 
 (* STEP 2: obtain the next state *)
 
@@ -908,9 +919,17 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
           let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
           (*print_endline (string_of_inclusion_results extra_info info); *)
-          let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
           
-          program_repair info env; 
+
+          (let (head, patches) = program_repair info env in 
+          if String.compare patches "" == 0 then 
+          ()
+          else 
+            let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
+            let () = finalReport := !finalReport ^ head in 
+            let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
+            ());
+
 
           full_extension
         )  
@@ -1409,8 +1428,16 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
 
 
-          let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
-          program_repair info specifications;) 
+          (let (head, patches) = program_repair info specifications in 
+          if String.compare patches "" == 0 then 
+          ()
+          else 
+            let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
+            let () = finalReport := !finalReport ^ head in 
+            let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
+            ());
+
+          ) 
         ) 
 
       )
