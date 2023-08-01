@@ -149,6 +149,8 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
   | RecoveryExpr (_, [], _) -> Some (Basic(BINT(0))) 
 
 
+  | ConditionalOperator (_, x::y::_, _) -> stmt2Term y 
+
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
 
 
@@ -690,7 +692,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   let rec existSameRecord recordList start endNum  : bool = 
     match recordList with 
     | [] -> false 
-    | (s',e'):: recordListxs -> if start ==s' && endNum==e' then true else existSameRecord recordListxs start endNum
+    | (s',e'):: recordListxs -> if start ==s' (*&& endNum==e'*) then true else existSameRecord recordListxs start endNum
   in 
   
   let rec aux arg : unit  = 
@@ -743,7 +745,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
          (*^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n\n"*)
         ) in 
 
-        let () = repairMsg := !repairMsg ^ temp in 
+        let () = repairMsg := temp ^ !repairMsg in 
         ()
 
   in 
@@ -1030,8 +1032,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let (extrapure, es) = match ret with
     | CallExpr (stmt_info, stmt_list, ei) ->
       let arg = List.fold_left stmt_list ~init:[] ~f:(fun acc a -> acc @(optionTermToList (stmt2Term a))) in 
-      let es  = Singleton (("RET", arg), fp1) in 
-      (Ast_utility.TRUE, es)
+      let evConsume = Singleton ((("CONSUME", arg)), fp1) in 
+      let es  = Singleton (("RET", []), fp1) in 
+      (Ast_utility.TRUE, Concatenate(evConsume, es))
     | _ -> 
     let retTerm = stmt2Term ret in 
     let extrapure = 
@@ -1114,12 +1117,20 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       | Some (condition, morevar) -> 
 
         (*let ()= varSet := (List.append !varSet morevar) in *)
+
+        (*
+        print_endline (string_of_pure condition);
+        print_endline (string_of_pure (Neg condition));
+*)
         let eff4X = syh_compute_stmt_postcondition env current future  x in
         let eff4Y = syh_compute_stmt_postcondition env current future  y in
-        prefixLoction locX 
-        (List.append 
-        (postfixLoction locZ (enforePure (Neg condition) eff4X))
-        (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
+        let res = prefixLoction locX 
+          (List.append 
+          (postfixLoction locZ (enforePure (Neg condition) eff4X))
+          (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y)))) 
+        in 
+        (*print_endline (string_of_programStates res);*)
+        res
         )
     | [x;y;z] -> 
       let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
@@ -1184,7 +1195,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let (fp', _) = getStmtlocation instr in
       let varFromY = string_of_stmt y in 
       if twoStringSetOverlap [varFromY] (!varSet) then 
-        (print_endline ("CONSUME " ^ varFromY ^ " by " ^ string_of_stmt x);
+        (
+        (*print_endline ("CONSUME " ^ varFromY ^ " by " ^ string_of_stmt x); *)
         let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
         [(TRUE, ev, 0, fp)])
       else 
@@ -1215,6 +1227,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | StringLiteral _ 
   | RecoveryExpr _ 
   | DeclRefExpr _  
+  | CStyleCastExpr _
+  | ConditionalOperator _ 
   | WhileStmt _ 
   | ConstantExpr _ 
   | ParenExpr _ (* assert(max > min); *)
@@ -1251,8 +1265,20 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
 
+  | DeclStmt (_, _, handlers) -> 
 
-  | DeclStmt (_, stmt_list, _) -> 
+    let _ = List.map handlers ~f:(fun del -> 
+      let localVar = (string_of_decl del) in 
+      let () = variablesInScope := !variablesInScope @ [localVar] in 
+      ()
+    ) in 
+    
+    let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
+    [(TRUE, Emp, 0, fp)]
+
+
+
+    (*
     let (fp, fp1) =  (getStmtlocation instr) in 
 
 
@@ -1261,7 +1287,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     let (fp, _) = maybeIntToListInt (fp, fp1) in 
     [(TRUE, ev, 0, fp)]
-
+*)
     
 
 

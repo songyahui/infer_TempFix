@@ -2,11 +2,9 @@
 #include <stdlib.h>
 #include <assert.h>
 enum { SIZE = 5 };
-int main(void)
-{
-    double a[SIZE] = {1, 2, 3, 4, 5};
-    FILE *f1 = fopen("file.txt", "a");
-    assert(f1);
+
+int test (double* a, FILE *f1){
+     assert(f1);
     size_t r1 = fwrite(a, sizeof a[0], SIZE, f1);
     printf("wrote %zu elements out of %d requested\n", r1,  SIZE);
     fclose(f1);
@@ -18,4 +16,11 @@ int main(void)
     printf("read back: ");
     for(size_t i = 0; i < r2; i++)
         printf("%0.2f ", b[i]);
+}
+
+int main(void)
+{
+    double a[SIZE] = {1, 2, 3, 4, 5};
+    FILE *f1 = fopen("file.txt", "a");
+    return test (a, f1);
 }

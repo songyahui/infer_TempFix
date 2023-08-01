@@ -18,8 +18,8 @@
     Future  (TRUE, (!_(handler))^*)  @*/
 
 /*@ fopen(path): 
-    Post (ret<0, 𝝐) \/ (ret>=0, fopen(ret))
-    Future (ret>=0, (!fclose(ret))^* · fclose(ret) · (_)^* )  @*/
+    Post (ret<0, 𝝐) \/ (ret>0, fopen(ret))
+    Future (ret>0, (!fclose(ret))^* · fclose(ret) · (_)^* )  @*/
 
 /*@ fclose(handler): 
     Post (TRUE, fclose(handler)) 

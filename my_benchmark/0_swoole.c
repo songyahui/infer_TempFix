@@ -90,3 +90,5 @@ swString* swoole_file_get_contents(char *filename)
     content->length = readn;
     return content;
 }
+
+
