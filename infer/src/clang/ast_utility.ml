@@ -769,7 +769,8 @@ let rec nullable (eff:es) : bool =
   match eff with 
   | Bot              -> false 
   | Emp              -> true 
-  | Any 
+  | Any              -> false 
+  | Singleton ((str, []), _) -> if String.compare str "RET" == 0 then true else false 
   | Singleton _          -> false 
   | NotSingleton str          -> false
   | Concatenate (eff1, eff2) -> nullable eff1 && nullable eff2  
@@ -782,6 +783,7 @@ let rec fst (eff:es) : (fstElem list) =
   | Bot                
   | Emp             -> []
   | Any             -> [ Wildcard ]  
+  | Singleton ((str, []), ft) -> if String.compare str "RET" == 0 then [] else [(Event ((str, []), ft))]  
   | Singleton s   -> [(Event s)] 
   | NotSingleton str          -> [(NotEvent str)] 
   | Concatenate (eff1, eff2) -> 

@@ -66,8 +66,8 @@ let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms 
     in Some p 
 
 let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option = 
-  (*print_endline ("term kind:" ^ Clang_ast_proj.get_stmt_kind_string instr);
-*)
+  (*print_endline ("term kind:" ^ Clang_ast_proj.get_stmt_kind_string instr);*)
+
   match instr with 
   | ImplicitCastExpr (_, x::_, _, _, _) 
     -> 
@@ -82,9 +82,9 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     stmt2Term x
   
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
-  (match binop_info.boi_kind with
-  | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
-  | `Sub -> stmt2Term_helper "" (stmt2Term x) (stmt2Term y) 
+    (match binop_info.boi_kind with
+    | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
+    | `Sub -> stmt2Term_helper "" (stmt2Term x) (stmt2Term y) 
   | _ -> None 
   )
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
@@ -94,18 +94,18 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     else Some (Basic(BINT (int_of_string(int_str))))
 
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
-  let (sl1, sl2) = stmt_info.si_source_range in 
+    let (sl1, sl2) = stmt_info.si_source_range in 
 
-  (match decl_ref_expr_info.drti_decl_ref with 
-  | None -> None 
-  | Some decl_ref ->
-    (
-    match decl_ref.dr_name with 
-    | None -> None
-    | Some named_decl_info -> Some (Basic(BVAR (named_decl_info.ni_name)))
+    (match decl_ref_expr_info.drti_decl_ref with 
+    | None -> None 
+    | Some decl_ref ->
+      (
+      match decl_ref.dr_name with 
+      | None -> None
+      | Some named_decl_info -> Some (Basic(BVAR (named_decl_info.ni_name)))
       
+      )
     )
-  )
   | NullStmt _ -> Some (Basic(BVAR ("NULL")))
   | MemberExpr (_, arlist, _, member_expr_info)  -> 
     let memArg = member_expr_info.mei_name.ni_name in 
@@ -130,30 +130,26 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     Some (Basic(BVAR(name)))
 
   | UnaryOperator (stmt_info, x::_, expr_info, op_info) ->
-    stmt2Term x 
+    (match op_info.uoi_kind with
+    | `Minus -> 
+      (match stmt2Term x with 
+      | Some (Basic (BINT t)) -> Some (Basic(BINT (0-t)))
+      | _ -> 
+        (*print_endline ("`stmt2Term UnaryOperator2 "); *)
+        stmt2Term x
 
-  | CXXDependentScopeMemberExpr (stmt_info, arlist, expr_info) ->
-    
-    (*
-    let msg = 
-      List.fold_left arlist ~init:"" ~f:(fun acc a -> 
-    acc ^ (
-      match stmt2Term a with
-      | None -> " _ "
-      | Some t -> string_of_terms t ^ ","
-    )) in 
-    print_endline msg; 
-    Some (Basic (BVAR msg)) 
-*)
-None 
+      )
+      
+    | _ -> 
+      (*print_endline ("`stmt2Term UnaryOperator"); *)
+      stmt2Term x
+    )
+   
 
-  | RecoveryExpr (stmt_info, x::_, _) -> stmt2Term x 
-
-  | RecoveryExpr (stmt_info, [], _) -> None
+  | RecoveryExpr (_, [], _) -> Some (Basic(BINT(0))) 
 
 
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
-
 
 
 let rec string_of_decl (dec :Clang_ast_t.decl) : string = 
@@ -237,7 +233,7 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
 
   | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
 
-    "ParenExpr " ^ string_of_source_range  stmt_info.si_source_range
+    "ParenExpr " (*^ string_of_source_range  stmt_info.si_source_range*)
     ^ string_of_stmt_list stmt_list " " 
 
     
@@ -274,82 +270,15 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
     "WhileStmt " ^  string_of_stmt_list ([body]) " " 
 
   | RecoveryExpr (stmt_info, x::_, _) -> "RecoveryExpr " ^ string_of_stmt x
+  | RecoveryExpr (stmt_info, [], _) -> "RecoveryExpr []" 
+
   | BreakStmt _ -> "BreakStmt"
 
 
-  | _ -> "not yet " ^ Clang_ast_proj.get_stmt_kind_string instr;;
+  | _ -> "string_of_stmt not yet " ^ Clang_ast_proj.get_stmt_kind_string instr;;
 
 
 
-
-
-
-
-let rec dealwithBreakStmt (eff:es) (acc:es) : (es * bool) list = 
-  match eff with 
-  | Singleton ((str, _), _) -> 
-    if String.compare str "BreakStmt" == 0 then [(acc, true)]
-    else [(Concatenate (acc, eff), false)]
-  | Bot   
-  | Emp   
-  | NotSingleton _ 
-  | Any -> [(Concatenate (acc, eff), false )]
-  | Concatenate (eff1, eff2) -> 
-    let temp = dealwithBreakStmt eff1 acc in 
-    let rec flatten li =
-      match li with 
-      | [] -> []
-      | x :: xs -> List.append x (flatten xs)
-    in 
-    flatten (List.map temp ~f:(fun (acc1, b1) -> 
-      (match b1 with 
-      | false -> dealwithBreakStmt eff2 acc1
-      | true -> [(acc1, b1)])
-    ))
-    
-  | Disj (eff1, eff2) ->
-    let temp1 = dealwithBreakStmt eff1 acc in 
-    let temp2 = dealwithBreakStmt eff2 acc in 
-    List.append temp1 temp2
-  | Kleene effIn   -> 
-    let temp = dealwithBreakStmt effIn Emp in 
-    List.map temp ~f:(fun (acc1, b1) -> 
-      (Concatenate(acc, Kleene(acc1)), false)
-    )
-
-
-
-let rec dealwithContinuekStmt (eff:es) (acc:es): (es * bool) list =
-  match eff with 
-  | Singleton ((str, _), _) -> 
-    if String.compare str "ContinueStmt" == 0 then [(acc, true)]
-    else [(Concatenate (acc, eff), false)]
-  | Bot   
-  | Emp   
-  | NotSingleton _ 
-  | Any -> [(Concatenate (acc, eff), false )]
-  | Concatenate (eff1, eff2) -> 
-    let temp = dealwithContinuekStmt eff1 acc in 
-    let rec flatten li =
-      match li with 
-      | [] -> []
-      | x :: xs -> List.append x (flatten xs)
-    in 
-    flatten (List.map temp ~f:(fun (acc1, b1) -> 
-      (match b1 with 
-      | false -> dealwithContinuekStmt eff2 acc1
-      | true -> [(acc1, b1)])
-    ))
-    
-  | Disj (eff1, eff2) ->
-    let temp1 = dealwithContinuekStmt eff1 acc in 
-    let temp2 = dealwithContinuekStmt eff2 acc in 
-    List.append temp1 temp2
-  | Kleene effIn   -> 
-    let temp = dealwithContinuekStmt effIn Emp in 
-    List.map temp ~f:(fun (acc1, b1) -> 
-      (Concatenate(acc, Kleene(acc1)), false)
-    )
 
 
 
@@ -479,7 +408,6 @@ let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure o
 
 
 let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option = 
-  (* print_endline (Clang_ast_proj.get_stmt_kind_string instr); *)
 
   match instr with 
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
@@ -611,7 +539,7 @@ let specialCases es =
 
 let rec synthsisFromSpec (effect:(pure * es)) (env:(specification list)) : string option =  
 
-  let () = finalReport := !finalReport ^ ("synthsisFromSpec " ^ string_of_effect ([effect])) in 
+  let () = finalReport := !finalReport ^ (**"synthsisFromSpec " ^*) (string_of_effect ([effect])) in 
 
   (*print_endline ("ENV now:\n" ^ List.fold_left env ~init:"" 
   ~f:(fun acc ((mn, _), _, post, _) -> acc ^ 
@@ -757,13 +685,14 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   let rec existSameRecord recordList start endNum  : bool = 
     match recordList with 
     | [] -> false 
-    | (s',e'):: recordListxs -> if start ==s' || endNum==e' then true else existSameRecord recordListxs start endNum
+    | (s',e'):: recordListxs -> if start ==s' && endNum==e' then true else existSameRecord recordListxs start endNum
   in 
   
   let rec aux arg : unit  = 
       let (pathcondition, realspec, (startNum ,endNum),  spec) = arg in 
-        (*print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
-*)
+        print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
+
+        
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
         let (startNum, endNum) = 
@@ -771,21 +700,13 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           let endNum' = if upperError < endNum then upperError else endNum in 
           (startNum', endNum')
         in 
+        
 
         if existSameRecord !repairRecord startNum endNum then ()
         else 
         let () = repairRecord := (startNum ,endNum) :: (!repairRecord) in 
 
 
-          
-        (*  if List.length dotsareOntheErrorPath == 0 then (startNum, endNum)
-          else List.fold_left dotsareOntheErrorPath ~init:(endNum, startNum) 
-        ~f:(fun (min', max') x -> 
-          if x < min' then (x, max')
-          else if x > max' then (min', x)
-          else (min', max')
-          ) in 
-*)
         (*print_endline ("post:" ^(string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
 *)
         modifiyTheassertionCounters (); 
@@ -799,7 +720,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
         (*let startTimeStamp01 = Unix.gettimeofday() in*)
 
         let temp = 
-        ("@ line " ^ string_of_int startNum ^ " to line " ^  string_of_int endNum ^ 
+        ("@ line " ^ string_of_int startNum ^ (*^ " to line " ^  string_of_int endNum ^ *)
         (match list_of_functionCalls with 
         | None -> 
           let (rr, _) = effect_inclusion [(TRUE, Emp)] [(TRUE, spec)] in 
@@ -811,7 +732,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
         | Some str -> 
           let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
           if String.compare str "" == 0 then " can be deleted." 
-          else  " can be inserted with code " ^  str ^ ".")
+          else  " can be inserted with code " ^  str)
          ^ "\n" 
          (*^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n\n"*)
         ) in 
@@ -835,10 +756,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
   
   
-  (*print_endline ((Clang_ast_proj.get_stmt_kind_string instr));*)
-  
+  (*
+  print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
+  *)
   
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
+    
     (*
     print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
@@ -1036,7 +959,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       )
       
 
-    | BreakStmt _ :: _ -> current'
+    (*| BreakStmt _ :: _ -> current'
+    *)
     | DeclStmt (_, [x], _):: xs  ->
           (
             match x with
@@ -1084,7 +1008,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     in 
 
     let (extrapure, es) = match ret with
-    | CallExpr (stmt_info, _::stmt_list, ei) ->
+    | CallExpr (stmt_info, stmt_list, ei) ->
       let arg = List.fold_left stmt_list ~init:[] ~f:(fun acc a -> acc @(optionTermToList (stmt2Term a))) in 
       let es  = Singleton (("RET", arg), fp1) in 
       (Ast_utility.TRUE, es)
@@ -1097,7 +1021,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       | _ -> Ast_utility.TRUE
     in 
     let retTerm1 = optionTermToList retTerm in 
-    let es = if List.length (retTerm1 ) ==0 then Emp else Singleton (("RET", (retTerm1)), fp1) in 
+    let es = if List.length (retTerm1 ) == 0 
+             then Singleton (("RET", []), fp1) 
+             else Singleton (("RET", (retTerm1)), fp1) in 
     (extrapure, es)
 
     in 
@@ -1230,6 +1156,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(TRUE, ev, 0, fp)]
 
 
+  | BreakStmt _ 
   | ForStmt _ (*stmt_info, stmt_list*)
   | LabelStmt _ 
   | GotoStmt _ 
@@ -1246,6 +1173,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | RecoveryExpr _ 
   | DeclRefExpr _  
   | WhileStmt _ 
+  | ConstantExpr _ 
   | ParenExpr _ (* assert(max > min); *)
   (*| ForStmt _ *)
   | CallExpr _ (* nested calls:  if (swoole_timer_is_available()) {    *)
@@ -1256,10 +1184,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | CXXConstructExpr _ (* va_list args; *)
   | CompoundAssignOperator _  (* retval += sw_snprintf(sw ...*)
   | CXXMemberCallExpr _ (* sw_logger()->put *)
-  | CXXConstructExpr _ (* va_list va_list; *)
   | DoStmt _ ->
-    
-    
     let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
     [(TRUE, Emp, 0, fp)]
 
@@ -1299,7 +1224,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
   | ContinueStmt _
   | BreakStmt _
-  | ParenExpr _
   | ArraySubscriptExpr _
   | UnaryExprOrTypeTraitExpr _
   | CStyleCastExpr _ 
@@ -1371,41 +1295,6 @@ let show_effects_option (eff:effect option): string =
   | Some eff -> string_of_effect eff 
 ;;
 
-
-
-(* 
-
-
-
-      (* 
-      "[Pre  Condition] " ^ show_effects_option precondition ^"\n"^ 
-      "[Post Condition] " ^ string_of_effect postcondition ^"\n"^ 
-      "[Future Condition] " ^ show_effects_option futurecondition ^"\n"^ 
-      "[Inferred Post Effects] " ^ string_of_programStates ( final)  ^"\n"^
-      "[Inferring Time] " ^ string_of_float ((startTimeStamp01 -. startTimeStamp) *.1000000.0)^ " us" ^"\n" ^
-      
-      *)
-              
-^ 
-
-
-        (*Clang_ast_proj.get_decl_kind_string dec *)
-    (*| ObjCInterfaceDecl _ -> "ObjCInterfaceDecl"
-    | ObjCProtocolDecl _ -> "ObjCProtocolDecl"
-    | ObjCCategoryDecl _ -> "ObjCCategoryDecl"
-    | ObjCCategoryImplDecl _ -> "ObjCCategoryImplDecl"
-    | ObjCImplementationDecl _ -> "ObjCImplementationDecl"
-    | CXXMethodDecl _ -> "CXXMethodDecl"
-    | CXXConstructorDecl _ -> "CXXConstructorDecl"
-    | CXXConversionDecl _ -> "CXXConversionDecl"
-    | CXXDestructorDecl _ -> "CXXDestructorDecl"
-    | VarDecl _ -> "VarDecl"
-    | ClassTemplateSpecializationDecl _ -> "ClassTemplateSpecializationDecl"
-    | CXXRecordDecl _ -> "CXXRecordDecl"
-    | RecordDecl _ -> "RecordDecl"
-    | _ -> "not yet" ^ Clang_ast_proj.get_decl_kind_string dec
-    *)
-*)
 
 
 let int_of_optionint intop = 
@@ -1675,7 +1564,7 @@ let msg =
   (
   if String.compare !finalReport "" == 0  then ()
   else   
-    (let () = finalReport := ("In " ^ source_Address ^ ":\n") ^ !finalReport  in 
+    (let () = finalReport := ("\nIn " ^ source_Address ^ ":\n") ^ !finalReport  in 
     outputFinalReport (!finalReport) output_detail)) ; 
 
   (*

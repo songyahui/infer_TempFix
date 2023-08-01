@@ -1,7 +1,6 @@
 
 #define SW_CHANNEL_MIN_MEM (1024*64)
 
-
 /*@ open(path): 
     Post (ret<0, 𝝐) \/ (ret>=0, open(ret))
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
@@ -13,6 +12,10 @@
 /*@ swSocket_create(arg): 
     Post (ret<0, 𝝐) \/ (ret>=0, swSocket_create(ret))
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
+
+/*@ swClient_create(arg): 
+    Post (ret<0, 𝝐) \/ (ret>=0, swClient_create(ret))
+@*/
 
 /*@ close(handler): 
     Post (TRUE, close(handler)) 
@@ -34,8 +37,6 @@
     Post (TRUE, closedir(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/
 
-
-// swClient_create
 
 //NPD
 /* localtime(t): 
