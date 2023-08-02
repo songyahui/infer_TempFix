@@ -26,12 +26,13 @@
     Future  (TRUE, (!_(handler))^*)  @*/
 
 /*@ opendir(path): 
-    Post (ret<0, 𝝐) \/ (ret>=0, opendir(ret))
-    Future (ret>=0, (!closedir(ret))^* · closedir(ret) · (_)^* )  @*/
+    Post (ret<0, 𝝐) \/ (ret>0, opendir(ret))
+    Future (ret>0, (!closedir(ret))^* · closedir(ret) · (_)^* )  @*/
 
 /*@ closedir(handler): 
     Post (TRUE, closedir(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/
+
 
 
 //NPD

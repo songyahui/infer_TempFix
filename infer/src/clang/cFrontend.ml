@@ -114,7 +114,7 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     acc ^ (
       match a with
       | None -> "_"
-      | Some t -> string_of_terms t ^ "_"
+      | Some t -> string_of_terms t ^ "."
     )) in 
     Some (Basic(BVAR(name^memArg)))
 
@@ -189,11 +189,6 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
   match instr with 
   | ReturnStmt (stmt_info, stmt_list) ->
     "ReturnStmt " ^ string_of_stmt_list stmt_list " " 
-
-  (*
-  | MemberExpr (stmt_info, stmt_list, _, member_expr_info) ->
-    "MemberExpr " ^ string_of_stmt_list stmt_list " " 
-    *)
 
   | MemberExpr (_, arlist, _, member_expr_info)  -> 
     let memArg = member_expr_info.mei_name.ni_name in 
@@ -1004,6 +999,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
       syh_compute_stmt_postcondition env current' future statement'
 
+    | WhileStmt (stmt_info, stmt_list)::xs -> 
+      let stmt' = List.append stmt_list xs in 
+      helper current'  stmt'
+
     | x :: xs -> 
       (*print_endline ("===================================");
       print_endline (List.fold_left (li) ~init:"" ~f:(fun acc a -> acc ^ ", " ^ (Clang_ast_proj.get_stmt_kind_string a)));
@@ -1037,7 +1036,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let () = handlerVar := Some (freshVar) in 
       let states = helper current [stmt]  in 
       
-      let returnEff = (Ast_utility.TRUE, Singleton (("RET", [(BVAR freshVar)]), fp1), 0, []) in 
+      let returnEff = (Ast_utility.TRUE, Singleton (("RET", [(BVAR freshVar)]), fp1), 1, []) in 
       concatenateTwoEffectswithFlag states [returnEff]
 
       (*let arg = List.fold_left stmt_list ~init:[] ~f:(fun acc a -> acc @(optionTermToList (stmt2Term a))) in 
@@ -1054,10 +1053,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | _ -> Ast_utility.TRUE
       in 
       let retTerm1 = optionTermToList retTerm in 
-      let es = if List.length (retTerm1 ) == 0 
-             then Singleton (("RET", []), fp1) 
-             else Singleton (("RET", (retTerm1)), fp1) in 
-      [(extrapure, es, 1, fp)]
+
+      let ev = Singleton ((("CONSUME", retTerm1)), fp1) in 
+
+      let es = Singleton (("RET", (retTerm1)), fp1) in 
+      [(extrapure, Concatenate(ev, es), 1, fp)]
     )
   
   | ReturnStmt (stmt_info, stmt_list) ->
@@ -1263,12 +1263,17 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       
   | SwitchStmt (_, _::stmt_list, _) -> 
     let stateSummary = List.map stmt_list ~f:(fun x -> syh_compute_stmt_postcondition env current future x) in 
-    flattenList stateSummary 
+    let res = flattenList stateSummary  in 
+    (*print_endline ("res for switch: \n" ^ string_of_programStates res);*)
+    res
 
   | DefaultStmt (stmt_info, stmt_list) 
   | CaseStmt (stmt_info, stmt_list) -> 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
-    prefixLoction fp (helper current stmt_list)
+    let res = prefixLoction fp (helper current stmt_list) in 
+    (*print_endline ("res for CaseStmt and DefaultStmt: \n" ^ string_of_programStates res);*)
+    res
+
 
 
 
@@ -1300,10 +1305,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
   | ContinueStmt _
-  | BreakStmt _
   | ArraySubscriptExpr _
   | UnaryExprOrTypeTraitExpr _
-  | CStyleCastExpr _ 
 
   | _ -> 
     let (fp, fp1) =  (getStmtlocation instr) in 
