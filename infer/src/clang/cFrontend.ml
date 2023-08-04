@@ -751,6 +751,12 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   repairTime := !repairTime +. repari_time; 
   (!headMsg , !repairMsg)
 
+let constructADeclRefExprStmt stmt_info expr_info (str: string): Clang_ast_t.stmt = 
+  let named_decl_info = {Clang_ast_t.ni_name = str; ni_qual_name = []} in 
+  let decl_ref = {Clang_ast_t.dr_kind =`Var; dr_decl_pointer=0; dr_name = Some named_decl_info; dr_is_hidden=false; dr_qual_type = None } in 
+  let decl_ref_expr_info = {Clang_ast_t.drti_decl_ref= Some decl_ref; drti_found_decl_ref = Some decl_ref}
+
+  in DeclRefExpr (stmt_info, [], expr_info, decl_ref_expr_info)
  
 
 let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
@@ -886,7 +892,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let effectRest = helper (current'') xs in
 
       (*print_endline ("effectRest: " ^ string_of_programStates effectRest);
-*)
+      *)
+
       
 (* STEP 4: check the future spec of the callee *)
 
@@ -913,6 +920,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
           print_endline ("|- RHS: " ^ string_of_effect futurec);
           *)
+          let futurec = match findReturnValueProgramStates effectRest with 
+            | None  -> futurec
+            | Some str -> 
+              print_endline(str);
+              let vb = [(str, BRET)] in 
+              instantiateAugumentSome futurec vb 
+          in 
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
           let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
           (*print_endline (string_of_inclusion_results extra_info info); *)
@@ -1032,18 +1046,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | CallExpr (stmt_info, stmt_list, ei) ->
 
       let freshVar = verifier_getAfreeVar "r" in 
-      let stmt = Clang_ast_t.CompoundStmt (stmt_info, [ret]) in 
-      let () = handlerVar := Some (freshVar) in 
-      let states = helper current [stmt]  in 
-      
-      let returnEff = (Ast_utility.TRUE, Singleton (("RET", [(BVAR freshVar)]), fp1), 1, []) in 
-      concatenateTwoEffectswithFlag states [returnEff]
+      let declRefExprStmt = constructADeclRefExprStmt stmt_info ei freshVar in 
+      let returnStmt = Clang_ast_t.ReturnStmt(stmt_info, [declRefExprStmt]) in  
+      let stmt = Clang_ast_t.CompoundStmt (stmt_info, [ret;returnStmt]) in 
+      syh_compute_stmt_postcondition env current future stmt
 
-      (*let arg = List.fold_left stmt_list ~init:[] ~f:(fun acc a -> acc @(optionTermToList (stmt2Term a))) in 
-      let evConsume = Singleton ((("CONSUME", arg)), fp1) in 
-      let es  = Singleton (("RET", []), fp1) in 
-      (Ast_utility.TRUE, Concatenate(evConsume, es))
-      *)
+      
+      
+      
     | _ -> 
       let retTerm = stmt2Term ret in 
       let extrapure = 
@@ -1054,7 +1064,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       in 
       let retTerm1 = optionTermToList retTerm in 
 
-      let ev = Singleton ((("CONSUME", retTerm1)), fp1) in 
+      let ev = 
+        match future with
+        | None -> Singleton ((("CONSUME", retTerm1)), fp1) 
+        | Some _ -> Emp
+      in 
 
       let es = Singleton (("RET", (retTerm1)), fp1) in 
       [(extrapure, Concatenate(ev, es), 1, fp)]
@@ -1204,7 +1218,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let varFromY = string_of_stmt y in 
       if twoStringSetOverlap [varFromY] (!varSet) then 
         (
-        (*print_endline ("CONSUME " ^ varFromY ^ " by " ^ string_of_stmt x); *)
         let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
         [(TRUE, ev, 0, fp)])
       else 
@@ -1450,6 +1463,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
         | Some postcondition -> 
         (
+        print_string ("PostCondition" ^ string_of_effect postcondition ^ "\n") ;
         let final' = programStates2effectwithfootprintlist final in 
         let info = effectwithfootprintInclusion final' postcondition in 
         let extra_info = 

@@ -178,7 +178,7 @@ let string_of_basic_t v =
   | BVAR name -> name
   | BINT n -> string_of_int n
   | BNULL -> "NULL"
-  | BRET -> "ret"
+  | BRET -> ".ret"
 
 let basic_type2_string v = 
   match v with 
@@ -786,7 +786,8 @@ let rec nullable (eff:es) : bool =
   | Bot              -> false 
   | Emp              -> true 
   | Any              -> false 
-  | Singleton ((str, _), _) -> if String.compare str "RET" == 0 then true else false 
+  | Singleton ((str, _), _) -> 
+    if String.compare str "RET" == 0 then true else false 
   | NotSingleton str          -> false
   | Concatenate (eff1, eff2) -> nullable eff1 && nullable eff2  
   | Disj (eff1, eff2) -> nullable eff1 || nullable eff2  
@@ -1344,6 +1345,34 @@ let instantiateAugument (eff:effect option) (bds:bindings) : effect option =
 
 let instantiateAugumentSome (eff:effect) (bds:bindings) : effect  = 
   List.map eff ~f:(fun (pi, es) -> (instantiateRetPure pi bds, instantiateRetEs es bds)) 
+
+let instantiateProgramStates (eff:programStates) (bds:bindings) : programStates  = 
+  List.map eff ~f:(fun (pi, es, a, b) -> (instantiateRetPure pi bds, instantiateRetEs es bds, a, b)) 
+
+
+
+let rec findReturnValueProgramStates (eff:programStates) : string option =
+  let rec findReturnValueES es : string option =
+    match es with 
+    | Singleton ((str, [((BVAR arg))]), _) -> 
+      if String.compare str "RET" == 0 then Some arg else None 
+    | Singleton _ -> None 
+    | Concatenate (a, b) -> findReturnValueES b 
+    | Bot | Emp | Any | NotArguments _
+    | NotSingleton _ -> None 
+    | Disj (a, b) -> 
+      (match findReturnValueES a with
+      |None -> findReturnValueES b
+      |Some str -> Some str)
+    | Kleene (a) -> findReturnValueES a
+    
+  in 
+  match eff with
+  | [] -> None 
+  | (_, es, _, _):: xs -> 
+    (match findReturnValueES es with 
+    | None -> findReturnValueProgramStates xs 
+    | Some str -> Some str )
 
 
 let enforeceLineNum (fp:int list) (eff:effect option) : effect option = 
