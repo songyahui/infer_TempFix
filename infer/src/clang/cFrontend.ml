@@ -792,7 +792,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], [del]) ::xs 
     | DeclStmt (_, [(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))], [del]) ::xs ->
 
-      let () = handlerVar := Some (string_of_decl del) in 
+      let localVar = (string_of_decl del) in 
+      let () = handlerVar := Some (localVar) in 
+      let () = variablesInScope := !variablesInScope @ [localVar] in 
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
 
     | (CallExpr (stmt_info, stmt_list, ei)) ::xs -> 
@@ -961,10 +963,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | BinaryOperator (_, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
       (match binop_info.boi_kind with
       | `Assign -> 
-          (*print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
-          *)
+          
           let currentHandler = string_of_stmt x in 
-          print_endline ("Assign binop: "^ currentHandler) ; 
 
 
           let rec checkIsGlobalVar str strLi : bool  = (* true means it is global *)
@@ -977,11 +977,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
           
 
+          
           (*
-          print_endline ("current handler: " ^ currentHandler); 
-          print_endline ("current handler root: " ^ (getRoot currentHandler)); 
-          *)
-
+          print_endline ("=====\nCurrent handler root: " ^ (getRoot currentHandler)); 
+          print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
+          print_endline (string_of_bool (checkIsGlobalVar (getRoot currentHandler) !variablesInScope)); 
+*)
 
           if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
             helper current' xs
