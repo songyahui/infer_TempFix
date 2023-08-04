@@ -47,6 +47,13 @@ let init_global_state_capture () =
 
 
 
+let rec getRoot str = 
+  let strLi = String.split_on_chars  str ['.'] in 
+  match strLi with
+  | [] -> str 
+  | x :: _ -> x
+;;
+
 let string_of_source_range ((s1, s2):Clang_ast_t.source_range) :string = 
   match (s1.sl_file, s2.sl_file) with 
   | (Some name, _) 
@@ -201,7 +208,7 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
     )) in name^memArg
 
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
-    "IntegerLiteral " ^ integer_literal_info.ili_value
+    (*"IntegerLiteral " ^*) integer_literal_info.ili_value
 
   | StringLiteral (_, stmt_list, expr_info, str_list) -> 
     let rec straux li = 
@@ -235,7 +242,7 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
 
     
   | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
-  "CStyleCastExpr " ^ string_of_stmt_list stmt_list " " ^ ""
+    string_of_stmt_list stmt_list " " ^ ""
 
 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
@@ -802,7 +809,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           | None -> 
             (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
-            
+
             
             
             (*
@@ -822,15 +829,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
                 instantiateAugument futurec vb)
                 (* spec instantiation *)
               else 
-              ((signiture, formalLi), prec, postc, futurec)
+              (print_string ("CallingFUnction: " ^ calleeName);
+              ((signiture, formalLi), prec, postc, futurec))
             
           )
       in 
 
-      
+
       (*
       let () = print_string ("=========================\n") in 
-      print_string (string_of_event (calleeName, []) ^ ":\n");
       
       
       print_string (string_of_function_sepc (prec, postc, futurec)^"\n"); 
@@ -918,15 +925,18 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           
           (*
           print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
-          print_endline ("|- RHS: " ^ string_of_effect futurec);
+          print_endline ("|- before RHS: " ^ string_of_effect futurec);
           *)
-          let futurec = match findReturnValueProgramStates effectRest with 
+
+          (*let futurec = match findReturnValueProgramStates effectRest with 
             | None  -> futurec
             | Some str -> 
               print_endline(str);
               let vb = [(str, BRET)] in 
               instantiateAugumentSome futurec vb 
-          in 
+          in *)
+
+          (*print_endline ("|- RHS: " ^ string_of_effect futurec);*)
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
           let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
           (*print_endline (string_of_inclusion_results extra_info info); *)
@@ -951,10 +961,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | BinaryOperator (_, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
       (match binop_info.boi_kind with
       | `Assign -> 
-          (*print_endline ("Assign binop"); 
-          print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
+          (*print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
           *)
           let currentHandler = string_of_stmt x in 
+          print_endline ("Assign binop: "^ currentHandler) ; 
+
 
           let rec checkIsGlobalVar str strLi : bool  = (* true means it is global *)
             match strLi with 
@@ -964,12 +975,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               else checkIsGlobalVar str xs
           in 
 
-          let rec getRoot str = 
-            let strLi = String.split_on_chars  str ['.'] in 
-            match strLi with
-            | [] -> str 
-            | x :: _ -> x
-          in 
+          
 
           (*
           print_endline ("current handler: " ^ currentHandler); 
@@ -990,8 +996,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       )
       
 
-    (*| BreakStmt _ :: _ -> current'
-    *)
     | DeclStmt (_, [x], _):: xs  ->
           (
             match x with
@@ -1013,7 +1017,21 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
       syh_compute_stmt_postcondition env current' future statement'
 
-    | DoStmt (stmt_info, stmt_list)::xs  
+    | DoStmt (stmt_info, [x;y])::xs  ->
+      
+      if String.compare (string_of_stmt y) "0" == 0 then helper current' xs
+ 
+      else 
+      
+          (*
+          print_endline ("DoStmt: ");
+          let _ = List.map stmt_list ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+          print_endline ("");
+          *)
+        (let stmt' = List.append [x;y] xs in 
+        helper current'  stmt')
+
+    | DoStmt (stmt_info, stmt_list)::xs 
     | WhileStmt (stmt_info, stmt_list)::xs -> 
       let stmt' = List.append stmt_list xs in 
       helper current'  stmt'
@@ -1049,6 +1067,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let freshVar = verifier_getAfreeVar "r" in 
       let declRefExprStmt = constructADeclRefExprStmt stmt_info ei freshVar in 
       let returnStmt = Clang_ast_t.ReturnStmt(stmt_info, [declRefExprStmt]) in  
+      let () = handlerVar := Some (freshVar) in 
       let stmt = Clang_ast_t.CompoundStmt (stmt_info, [ret;returnStmt]) in 
       syh_compute_stmt_postcondition env current future stmt
 
@@ -1069,7 +1088,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         match future with
         | None -> 
           if List.length retTerm1 == 0 then Emp 
-          else Singleton ((("CONSUME", retTerm1)), fp1) 
+          else 
+            let retTerm1 = List.map retTerm1 ~f:(fun a -> 
+              match a with 
+              | (BVAR str) -> (BVAR (getRoot str)) 
+              | _ -> a 
+              ) in
+            Singleton ((("CONSUME", retTerm1)), fp1) 
         | Some _ -> Emp
       in 
 
@@ -1083,6 +1108,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
 
+  | DefaultStmt (stmt_info, stmt_list) 
+  | CaseStmt (stmt_info, stmt_list) 
   | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
   | CompoundStmt (stmt_info, stmt_list) -> 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
@@ -1219,6 +1246,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       let (fp', _) = getStmtlocation instr in
       let varFromY = string_of_stmt y in 
+      (*print_endline ("BinaryOperator CONSUME: " ^ varFromY);*) 
       if twoStringSetOverlap [varFromY] (!varSet) then 
         (
         let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
@@ -1277,20 +1305,23 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
       
-  | SwitchStmt (_, _::stmt_list, _) -> 
+  | SwitchStmt (_, _::x::_, _) -> 
+
+    let rec decomposeSwitch stmt = 
+      match stmt with 
+      | Clang_ast_t.CompoundStmt (_, li) -> li
+      | _ -> [stmt]
+    in 
+    let stmt_list = decomposeSwitch x in 
+  (*print_string ("==> SwitchStmt: ");
+  let _ = List.map stmt_list ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+  print_endline ("");
+  *)
+
     let stateSummary = List.map stmt_list ~f:(fun x -> syh_compute_stmt_postcondition env current future x) in 
     let res = flattenList stateSummary  in 
-    (*print_endline ("res for switch: \n" ^ string_of_programStates res);*)
+    (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
     res
-
-  | DefaultStmt (stmt_info, stmt_list) 
-  | CaseStmt (stmt_info, stmt_list) -> 
-    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
-    let res = prefixLoction fp (helper current stmt_list) in 
-    (*print_endline ("res for CaseStmt and DefaultStmt: \n" ^ string_of_programStates res);*)
-    res
-
-
 
 
 
@@ -1466,6 +1497,14 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
         | Some postcondition -> 
         (
+        let postcondition = match findReturnValueProgramStates final with 
+          | None  -> postcondition
+          | Some str -> 
+            print_endline(str);
+            let vb = [(str, BRET)] in 
+            instantiateAugumentSome postcondition vb 
+        in 
+  
         print_string ("PostCondition" ^ string_of_effect postcondition ^ "\n") ;
         let final' = programStates2effectwithfootprintlist final in 
         let info = effectwithfootprintInclusion final' postcondition in 

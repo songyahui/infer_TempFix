@@ -9,3 +9,8 @@
     Post (TRUE, free(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/
 
+/*@ swMalloc_alloc(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
+    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* ) \/ (ret=0, (!_(ret))^*) @*/
+
+
