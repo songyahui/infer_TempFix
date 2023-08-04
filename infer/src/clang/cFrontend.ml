@@ -1013,6 +1013,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
       syh_compute_stmt_postcondition env current' future statement'
 
+    | DoStmt (stmt_info, stmt_list)::xs  
     | WhileStmt (stmt_info, stmt_list)::xs -> 
       let stmt' = List.append stmt_list xs in 
       helper current'  stmt'
@@ -1066,7 +1067,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
       let ev = 
         match future with
-        | None -> Singleton ((("CONSUME", retTerm1)), fp1) 
+        | None -> 
+          if List.length retTerm1 == 0 then Emp 
+          else Singleton ((("CONSUME", retTerm1)), fp1) 
         | Some _ -> Emp
       in 
 
