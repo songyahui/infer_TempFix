@@ -482,7 +482,6 @@ let getStmtlocation (instr: Clang_ast_t.stmt) : (int option * int option) =
   | ForStmt (stmt_info, _)
   | SwitchStmt (stmt_info, _, _)
   | CXXOperatorCallExpr (stmt_info, _, _)
-  | MemberExpr (stmt_info, _, _, _)
   | CStyleCastExpr (stmt_info, _, _, _, _)  ->
     let (sl1, sl2) = stmt_info.si_source_range in 
     (sl1.sl_line , sl2.sl_line)
@@ -778,12 +777,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
     
-    
-    (*if (String.compare "swReactor_set" !currentModule == 0) || (String.compare "swReactor_del" !currentModule == 0) then 
-      (print_string ("==> helper: ");
-      let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
-      print_endline (""))
-    else ()); *)
+    (*
+    print_string ("==> helper: ");
+    let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+    print_endline ("");
+    *)
     
     
 
@@ -833,7 +831,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
                 instantiateAugument futurec vb)
                 (* spec instantiation *)
               else 
-              ((*print_string ("CallingFUnction: " ^ calleeName); *)
+              (print_string ("CallingFUnction: " ^ calleeName);
               ((signiture, formalLi), prec, postc, futurec))
             
           )
@@ -977,29 +975,21 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               else checkIsGlobalVar str xs
           in 
 
-          let statesX = syh_compute_stmt_postcondition env current' future x in 
+          
 
+          
           (*
           print_endline ("=====\nCurrent handler root: " ^ (getRoot currentHandler)); 
-          print_endline ("statesX = " ^string_of_programStates statesX); 
-          *)
-          (*print_endline ("concatenateTwoEffectswithFlag = " ^ string_of_programStates (concatenateTwoEffectswithFlag current' statesX)); 
-*)
-          (*
-          
           print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
           print_endline (string_of_bool (checkIsGlobalVar (getRoot currentHandler) !variablesInScope)); 
 *)
 
-          let res = 
-            if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
+          if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
             helper current' xs
-            else 
+          else 
             (let () = handlerVar := Some (currentHandler) in 
             helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs))
-          in 
-          (concatenateTwoEffectswithFlag statesX res)
-          
+       
           
       | _ -> 
         
@@ -1258,17 +1248,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let (fp', _) = getStmtlocation instr in
       let varFromY = string_of_stmt y in 
       (*print_endline ("BinaryOperator CONSUME: " ^ varFromY);*) 
-      let statesX = syh_compute_stmt_postcondition env current future x in 
-
       if twoStringSetOverlap [varFromY] (!varSet) then 
         (
         let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
-        concatenateTwoEffectswithFlag statesX [(TRUE, ev, 0, fp)])
+        [(TRUE, ev, 0, fp)])
       else 
-        concatenateTwoEffectswithFlag statesX [(TRUE, Emp, 0, fp)]
-
-    | `And -> 
-      helper current [x;y]
+        [(TRUE, Emp, 0, fp)]
       
           
     | _ -> 
@@ -1499,6 +1484,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             defultPrecondition
             futurecondition  
             stmt))) in 
+
 
 
           (match final with 
