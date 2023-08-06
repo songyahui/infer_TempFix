@@ -975,7 +975,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               else checkIsGlobalVar str xs
           in 
 
-          
+          let stateX = syh_compute_stmt_postcondition env current' future x in 
 
           
           (*
@@ -984,11 +984,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           print_endline (string_of_bool (checkIsGlobalVar (getRoot currentHandler) !variablesInScope)); 
 *)
 
-          if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
-            helper current' xs
-          else 
-            (let () = handlerVar := Some (currentHandler) in 
-            helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs))
+          let rest = 
+            if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
+              helper current' xs
+            else 
+              (let () = handlerVar := Some (currentHandler) in 
+              helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)) in 
+          concatenateTwoEffectswithFlag stateX rest
        
           
       | _ -> 
@@ -1255,6 +1257,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       else 
         [(TRUE, Emp, 0, fp)]
       
+    | `And -> helper current [x;y]
           
     | _ -> 
       let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
