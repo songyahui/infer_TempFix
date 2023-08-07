@@ -314,9 +314,9 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
 let getFirst (a, _) = a
 
 let conjunctPure (pi1:pure) (pi2:pure): pure = 
-  if entailConstrains pi1 pi2 then pi1 
+  (*if entailConstrains pi1 pi2 then pi1 
         else if entailConstrains pi2 pi1 then pi2
-        else  PureAnd (pi1, pi2)
+        else*)  PureAnd (pi1, pi2)
 
 
 let concatenateTwoEffect (eff1:effect) (eff2:effect) : effect = 
@@ -367,7 +367,6 @@ let concatenateTwoEffectswithoutFlag (effectLi4X: programStates) (effectRest: pr
 
 let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: programStates): programStates = 
   let mixLi = cartesian_product effectLi4X effectRest in 
-  
   (*
   print_endline ("============");
   print_string (string_of_int (List.length effectLi4X) ^ 
@@ -375,15 +374,18 @@ let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: progr
 
   print_string (string_of_int (List.length mixLi) ^ "\n");
   print_endline ("============");
-*)
 
+  print_endline ("concatenateTwoEffectswithFlag 0");
+*)
   let temp = List.map mixLi ~f:(
     fun ((pi1, eff_x, t_x, fp1),  (pi2, eff_y, t_y, fp2)) -> 
       if t_x > 0 then (pi1, eff_x, t_x, fp1)
       else
       (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),  t_y, List.append fp1 fp2)
   ) in 
+
   let ret = normaliseProgramStates temp in 
+
   ret
   
 
@@ -831,7 +833,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
                 instantiateAugument futurec vb)
                 (* spec instantiation *)
               else 
-              (print_string ("CallingFUnction: " ^ calleeName);
+              (print_endline ("CallingFUnction: " ^ calleeName);
+              (match !handlerVar with 
+              | None  -> print_endline ("with no handler = ")
+              | Some str -> 
+                let () = varSet := List.append !varSet [str] in 
+                print_endline ("with handler = " ^ str)); 
               ((signiture, formalLi), prec, postc, futurec))
             
           )
@@ -869,7 +876,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               
       in 
 (* STEP 2: obtain the next state *)
-
       let (postc: effect option) = enforeceLineNum fp postc in 
       let (postc, futurec) = 
         match !handlerVar with 
@@ -924,7 +930,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               *)
               concatenateTwoEffectswithoutFlag (effectRest) (effects2programStates ctxfuture)
           in 
-          
+
           (*
           print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
           print_endline ("|- before RHS: " ^ string_of_effect futurec);
@@ -1250,12 +1256,35 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let (fp', _) = getStmtlocation instr in
       let varFromY = string_of_stmt y in 
       (*print_endline ("BinaryOperator CONSUME: " ^ varFromY);*) 
-      if twoStringSetOverlap [varFromY] (!varSet) then 
-        (
-        let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
-        [(TRUE, ev, 0, fp)])
-      else 
-        [(TRUE, Emp, 0, fp)]
+
+      let (a, b, c, d)  = 
+        if twoStringSetOverlap [varFromY] (!varSet) then 
+          (
+          let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
+          (Ast_utility.TRUE, ev, 0, fp))
+        else 
+          (Ast_utility.TRUE, Emp, 0, fp)
+      in 
+
+
+      (match x with 
+      | MemberExpr (stmt_info, x::_, _, _) -> 
+
+      let var = string_of_stmt x in 
+
+      if String.compare !currentModule "swReactor_del" == 0 then 
+        (print_endline ("var = " ^ var);
+        print_endline ("get root var = " ^ getRoot var);
+        print_endline ("varSet = " ^string_of_varSet (!varSet)))
+      else () ;
+
+        if twoStringSetOverlap [getRoot var] (!varSet) then 
+          let ev = Singleton ((("deref", [(BVAR(var))])), None) in 
+          [(a, Concatenate(ev, b), c, d)]
+        else [(a, b, c, d)] 
+      | _ -> 
+        [(a, b, c, d)])
+
       
     | `And -> helper current [x;y]
           
@@ -1264,7 +1293,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       [(TRUE, Emp, 0, fp)]
   
         
-      )
+    )
 
 
 
@@ -1480,14 +1509,16 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       in 
       let () = currentModule := funcName in 
       let () = variablesInScope := [] in 
-      let (final:programStates) = 
-          ((normaliseProgramStates
-          (syh_compute_stmt_postcondition 
+      let raw_final = (syh_compute_stmt_postcondition 
             specifications 
             defultPrecondition
             futurecondition  
-            stmt))) in 
+            stmt) in 
 
+
+      let (final:programStates) = 
+          ((normaliseProgramStates
+          raw_final)) in 
 
 
           (match final with 
