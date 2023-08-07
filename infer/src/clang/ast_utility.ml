@@ -867,7 +867,11 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     if String.compare ename "_" == 0 then 
       (match f with 
       | Wildcard _ -> Bot 
-      | Event ((_, event), _) -> if basic_type_common ep event == true then Bot else Emp
+      | Event ((str1, event), _) -> 
+        if String.compare str1 "CONSUME" == 0 then 
+          Emp
+        else 
+          if basic_type_common ep event == true then Bot else Emp
       | NotEvent (_, event)  ->  if basic_type_subset ep event   == true then Emp else Bot
       )
 

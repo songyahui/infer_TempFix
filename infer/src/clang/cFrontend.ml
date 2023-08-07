@@ -424,6 +424,13 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     | `LE -> stmt2Pure_helper "<=" (stmt2Term x) (stmt2Term y) 
     | `EQ -> stmt2Pure_helper "=" (stmt2Term x) (stmt2Term y) 
     | `NE -> stmt2Pure_helper "!=" (stmt2Term x) (stmt2Term y) 
+    | `Or | `LOr | `Xor-> 
+      (match ((stmt2Pure x ), (stmt2Pure y )) with 
+      | Some p1, Some p2 -> Some (Ast_utility.PureOr (p1, p2))
+      | Some p1, None -> Some (p1)
+      | None, Some p1 -> Some (p1)
+      | None, None -> None 
+      )
     | _ -> None 
     )
 
@@ -794,7 +801,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], [del]) ::xs 
     | DeclStmt (_, [(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))], [del]) ::xs ->
 
+
       let localVar = (string_of_decl del) in 
+      print_endline ("DeclStmt " ^ localVar); 
+
       let () = handlerVar := Some (localVar) in 
       let () = variablesInScope := !variablesInScope @ [localVar] in 
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
@@ -825,6 +835,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             match spec with
             | None -> (("none", []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
+              print_endline ("CallingFunction: " ^ calleeName);
+              (match !handlerVar, futurec with 
+              | None, _  -> () (*print_endline ("with no handler = ")*)
+              | Some str, Some _ -> 
+                varSet := List.append !varSet [str]
+              | _, _ -> ()
+                (*print_endline ("with handler = " ^ str)*)); 
+
               if List.length acturelli == List.length formalLi then 
                 let vb = var_binding formalLi acturelli in 
                 ((signiture, formalLi), 
@@ -833,13 +851,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
                 instantiateAugument futurec vb)
                 (* spec instantiation *)
               else 
-              (print_endline ("CallingFUnction: " ^ calleeName);
-              (match !handlerVar with 
-              | None  -> print_endline ("with no handler = ")
-              | Some str -> 
-                let () = varSet := List.append !varSet [str] in 
-                print_endline ("with handler = " ^ str)); 
-              ((signiture, formalLi), prec, postc, futurec))
+              (((signiture, formalLi), prec, postc, futurec))
             
           )
       in 
@@ -1006,12 +1018,16 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       
 
     | DeclStmt (_, [x], _):: xs  ->
+
           (
             match x with
             | DeclStmt _ ->  
               helper current' (x::xs)
       
             | _ -> 
+            (*
+            print_endline ("DeclStmt0 " ^  string_of_decl handler ^ " " ^ Clang_ast_proj.get_stmt_kind_string x ); 
+*)
             let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
             let effectRest = helper (concatenateTwoEffectswithFlag current' effectLi4X) xs in 
             concatenateTwoEffectswithFlag effectLi4X effectRest
@@ -1233,15 +1249,26 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     
 
   
+  (*
+  | ConditionalOperator (stmt_info, x::_, _) 
+  | ParenExpr (stmt_info, x::_, _) -> (* assert(max > min); *)
+      print_endline (Clang_ast_proj.get_stmt_kind_string instr  ^ "  " ^ Clang_ast_proj.get_stmt_kind_string x );
+      let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+      prefixLoction fp (syh_compute_stmt_postcondition env current future x)
+*)
 
-  
   | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
       prefixLoction fp (syh_compute_stmt_postcondition env current future x)
 
   | MemberExpr (stmt_info, x::_, _, _) -> 
     let (fp, _) =  getStmtlocation instr in 
-    let ev = Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) in 
+    let varFromX = string_of_stmt x in 
+
+    let ev = if twoStringSetOverlap [varFromX] (!varSet) then 
+      Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
+      else Emp
+    in 
     let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
 
     let fp = match fp with | None -> [] | Some l -> [l] in 
@@ -1252,12 +1279,17 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     (match binop_info.boi_kind with
     | `Assign -> 
+
       let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       let (fp', _) = getStmtlocation instr in
       let varFromY = string_of_stmt y in 
       (*print_endline ("BinaryOperator CONSUME: " ^ varFromY);*) 
 
-      let (a, b, c, d)  = 
+      let stateY = syh_compute_stmt_postcondition env current future y in 
+      let stateX = syh_compute_stmt_postcondition env current future x in 
+
+
+      let res  = 
         if twoStringSetOverlap [varFromY] (!varSet) then 
           (
           let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
@@ -1266,37 +1298,33 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (Ast_utility.TRUE, Emp, 0, fp)
       in 
 
-
-      (match x with 
-      | MemberExpr (stmt_info, x::_, _, _) -> 
-
-      let var = string_of_stmt x in 
-
-      if String.compare !currentModule "swReactor_del" == 0 then 
-        (print_endline ("var = " ^ var);
-        print_endline ("get root var = " ^ getRoot var);
-        print_endline ("varSet = " ^string_of_varSet (!varSet)))
-      else () ;
-
-        if twoStringSetOverlap [getRoot var] (!varSet) then 
-          let ev = Singleton ((("deref", [(BVAR(var))])), None) in 
-          [(a, Concatenate(ev, b), c, d)]
-        else [(a, b, c, d)] 
-      | _ -> 
-        [(a, b, c, d)])
+      concatenateTwoEffectswithFlag stateY (concatenateTwoEffectswithFlag stateX [res])
 
       
-    | `And -> helper current [x;y]
+    | `And -> 
+      helper current [x;y]
           
+
+    | `PtrMemD | `PtrMemI | `Mul | `Div | `Rem | `Add | `Sub | `Shl | `Shr
+    | `Cmp | `LT | `GT | `LE | `GE | `EQ | `NE | `Xor | `Or | `LAnd
+    | `LOr -> 
+      
+      
+      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
+      [(TRUE, Emp, 0, fp)]
+
     | _ -> 
       let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       [(TRUE, Emp, 0, fp)]
+
   
         
     )
 
 
 
+  | ConditionalOperator _
+  | ParenExpr _ (* assert(max > min); *)
   | BreakStmt _ 
   | ForStmt _ (*stmt_info, stmt_list*)
   | LabelStmt _ 
@@ -1313,13 +1341,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | RecoveryExpr _ 
   | DeclRefExpr _  
   | CStyleCastExpr _
-  | ConditionalOperator _ 
   | WhileStmt _ 
   | ConstantExpr _ 
-  | ParenExpr _ (* assert(max > min); *)
   (*| ForStmt _ *)
   | CallExpr _ (* nested calls:  if (swoole_timer_is_available()) {    *)
   | CXXOperatorCallExpr _ 
+  | ArraySubscriptExpr _ 
+  | InitListExpr _ 
   | CXXDeleteExpr _ (* delete g_logger_instance; *)
   (*| CStyleCastExpr _ *) (*  char *buf = (char * ) sw_malloc(n); *)
   | ExprWithCleanups _ (* *value = std::stoi(e);  *)
@@ -1329,6 +1357,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | DoStmt _ ->
     let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
     [(TRUE, Emp, 0, fp)]
+
 
   | DeclStmt (_, [], del::_) -> 
     let localVar = (string_of_decl del) in 
@@ -1359,6 +1388,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
   | DeclStmt (_, _, handlers) -> 
+    print_string ("DeclStmt handlers"); 
 
     let _ = List.map handlers ~f:(fun del -> 
       let localVar = (string_of_decl del) in 
