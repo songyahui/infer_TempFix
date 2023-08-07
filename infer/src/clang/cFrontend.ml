@@ -807,7 +807,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
       let localVar = (string_of_decl del) in 
-      print_endline ("DeclStmt " ^ localVar); 
+      (*print_endline ("DeclStmt " ^ localVar); *)
 
       let () = handlerVar := Some (localVar) in 
       let () = variablesInScope := !variablesInScope @ [localVar] in 
@@ -1136,7 +1136,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
-
+  | UnaryOperator (stmt_info, stmt_list, _, _)
   | DefaultStmt (stmt_info, stmt_list) 
   | CaseStmt (stmt_info, stmt_list) 
   | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
@@ -1333,7 +1333,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | ForStmt _ (*stmt_info, stmt_list*)
   | LabelStmt _ 
   | GotoStmt _ 
-  | UnaryOperator _ (*stmt_info, stmt_list, _, _*)   
   | ImplicitCastExpr _ (*stmt_info, stmt_list, _, _, _*) 
   | MemberExpr _
   | NullStmt _
@@ -1403,7 +1402,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   
     let stateSummary = List.map stmt_list' ~f:(fun x -> helper current x) in 
     let res = flattenList stateSummary  in 
-    print_endline ("Res for switch: \n" ^ string_of_programStates res);
+    (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
     res
 
 
