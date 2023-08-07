@@ -489,6 +489,10 @@ let getStmtlocation (instr: Clang_ast_t.stmt) : (int option * int option) =
   | ExprWithCleanups (stmt_info, _, _, _)
   | CXXDeleteExpr (stmt_info, _, _, _)
   | ForStmt (stmt_info, _)
+  | MemberExpr (stmt_info, _ , _, _) 
+  | BreakStmt (stmt_info, _ )
+  | DefaultStmt (stmt_info, _) 
+  | CaseStmt (stmt_info, _) 
   | SwitchStmt (stmt_info, _, _)
   | CXXOperatorCallExpr (stmt_info, _, _)
   | CStyleCastExpr (stmt_info, _, _, _, _)  ->
@@ -1322,7 +1326,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     )
 
 
-
+  
   | ConditionalOperator _
   | ParenExpr _ (* assert(max > min); *)
   | BreakStmt _ 
@@ -1375,14 +1379,31 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       | _ -> [stmt]
     in 
     let stmt_list = decomposeSwitch x in 
-  (*print_string ("==> SwitchStmt: ");
-  let _ = List.map stmt_list ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
-  print_endline ("");
-  *)
 
-    let stateSummary = List.map stmt_list ~f:(fun x -> syh_compute_stmt_postcondition env current future x) in 
+
+    let rec aux (acc:(Clang_ast_t.stmt list) list) (currentList:Clang_ast_t.stmt list) (li:Clang_ast_t.stmt list) : ((Clang_ast_t.stmt list) list) = 
+      match li with 
+      | [] -> List.append acc [currentList]
+      | (CaseStmt a) :: xs -> aux (List.append acc [currentList]) [(Clang_ast_t.CaseStmt a)] xs 
+      | (DefaultStmt a) :: xs -> aux (List.append acc [currentList]) [(Clang_ast_t.DefaultStmt a)] xs 
+      | a :: xs -> aux acc ((currentList@[a])) xs 
+    in 
+
+    let stmt_list' = aux [] [] stmt_list in 
+
+
+    (*
+    print_string ("==> SwitchStmt: ");
+    let _ = List.map stmt_list' ~f:(fun a-> 
+      let _ = List.map a ~f:(fun b -> print_endline ((Clang_ast_proj.get_stmt_kind_string b)^",")) in 
+      print_string ("\n ")) in 
+    print_endline ("");
+    *)
+
+  
+    let stateSummary = List.map stmt_list' ~f:(fun x -> helper current x) in 
     let res = flattenList stateSummary  in 
-    (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
+    print_endline ("Res for switch: \n" ^ string_of_programStates res);
     res
 
 
