@@ -20,24 +20,3 @@
     Post (TRUE, strcpy(a))  @*/
 
 
-// LXC
-malloc
-sprintf
-lxc_list_init
-
-lxc_string_split -> null 
-construct_path --> deref
-
-do_lxcapi_get_config_path
-strlen
-
-cgroup_to_absolute_path -> null
-
-
-//Flex 
-realloc
-malloc
-calloc
-
-fdopen -> null
-fputs -> deref
