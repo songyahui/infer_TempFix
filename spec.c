@@ -1,36 +1,43 @@
 
 #define SW_CHANNEL_MIN_MEM (1024*64)
 
-// Resourse leak 
-/*@ open(path): 
-    Post (ret<0, 𝝐) \/ (ret>=0, open(ret))
-    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
+/* malloc(path): 
+    Post (TRUE, malloc(ret))
+    Future (TRUE, (!free(ret))^* · free(ret) · (_)^* ) @*/
 
-/*@ socket(domain, type, protocol): 
-    Post (ret<0, 𝝐) \/ (ret>=0, socket(ret))
-    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
+/* free(handler): 
+    Post (TRUE, free(handler)) 
+    Future  (TRUE, (!_(handler))^* · (𝝐 \/ (malloc(handler) · (_)^*)))  @*/
 
-/*@ swSocket_create(arg): 
-    Post (ret<0, 𝝐) \/ (ret>=0, socket(ret))
-    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
+/*@ malloc(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
+    Future (ret=0, (!_(ret))^*) @*/
 
-/*@ close(handler): 
-    Post (TRUE, close(handler)) 
-    Future  (TRUE, (!_(handler))^*)  @*/
+/*@ memset(a, b): 
+    Post (TRUE, memset(a))  @*/
 
-/*@ fopen(path): 
-    Post (ret<0, 𝝐) \/ (ret>0, fopen(ret))
-    Future (ret>0, (!fclose(ret))^* · fclose(ret) · (_)^* )  @*/
+/*@ p11_array_new(a, b): 
+    Post (TRUE, strcpy(a))  @*/
 
-/*@ fclose(handler): 
-    Post (TRUE, fclose(handler)) 
-    Future  (TRUE, (!_(handler))^*)  @*/
 
-/*@ opendir(path): 
-    Post (ret<0, 𝝐) \/ (ret>0, opendir(ret))
-    Future (ret>0, (!closedir(ret))^* · closedir(ret) · (_)^* )  @*/
+// LXC
+malloc
+sprintf
+lxc_list_init
 
-/*@ closedir(handler): 
-    Post (TRUE, closedir(handler)) 
-    Future  (TRUE, (!_(handler))^*)  @*/
+lxc_string_split -> null 
+construct_path --> deref
 
+do_lxcapi_get_config_path
+strlen
+
+cgroup_to_absolute_path -> null
+
+
+//Flex 
+realloc
+malloc
+calloc
+
+fdopen -> null
+fputs -> deref

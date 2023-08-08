@@ -17,8 +17,26 @@ output_detail =  path + "TempFix-out/detail.txt"
 file = open(output_report, 'r')
 csvreader = csv.reader(file)
 content = list(csvreader) 
+
 record_length= len(content)
 title = content[0]
+
+
+def removeDuplicate(col):
+    uniqueRecord = []
+    currentFileName = ""
+    for i in range(1, record_length):
+        if content[i][1] == currentFileName: continue
+        else:
+            uniqueRecord = uniqueRecord + [content[i]]
+            currentFileName = content[i][1]
+    return (uniqueRecord)
+
+
+content = removeDuplicate(content)
+record_length= len(content)
+
+
 
 def sum_up(col):
     sum = 0 

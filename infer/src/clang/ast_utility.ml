@@ -1431,3 +1431,7 @@ let string_of_function_sepc (pre, post, future) : string =
   in pre ^ "\n" ^ post ^ "\n" ^ future ^ "\n"
 
 
+let string_of_foot_print (fp:int list ) : string = 
+  match fp with 
+  | [] -> ""
+  | x :: _-> " @" ^ string_of_int x

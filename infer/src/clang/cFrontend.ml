@@ -154,7 +154,16 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
    
 
   | RecoveryExpr (_, [], _) -> Some (Basic(BINT(0))) 
-
+  | StringLiteral (_, _, _, str_list) -> 
+    
+    let str = 
+      let rec straux li = 
+      match li with 
+      | [] -> ""
+      | x :: xs  -> x  ^ " " ^ straux xs 
+      in  straux str_list
+    in 
+    Some (Basic(BVAR("\"" ^ str ^ "\""))) 
 
   | ConditionalOperator (_, x::y::_, _) -> stmt2Term y 
 
@@ -448,7 +457,7 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
       )
       
     | _ -> 
-      print_endline ("`LNot DeclRefExpr none4"); 
+      (*print_endline ("`LNot DeclRefExpr none4"); *)
       None
     )
   | ParenExpr (_, x::rest, _) -> stmt2Pure x
@@ -840,6 +849,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             | None -> (("none", []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
               print_endline ("CallingFunction: " ^ calleeName);
+              (*
+              print_endline ("formal Arg = " ^ List.fold_left formalLi ~init:"" ~f:(fun acc a -> acc ^ "," ^a));
+              print_endline ("actual Arg = " ^ List.fold_left acturelli ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a));
+*)
               (match !handlerVar, futurec with 
               | None, _  -> () (*print_endline ("with no handler = ")*)
               | Some str, Some _ -> 
@@ -962,7 +975,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
           (*print_endline ("|- RHS: " ^ string_of_effect futurec);*)
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
-          let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^"\': " in 
+          let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
+          ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
           (*print_endline (string_of_inclusion_results extra_info info); *)
           
 
@@ -985,10 +999,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | BinaryOperator (_, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
       (match binop_info.boi_kind with
       | `Assign -> 
+
+
           
           let currentHandler = string_of_stmt x in 
 
-
+          (*
+          print_endline ("BinaryOperator1 " ^  currentHandler ^ " "); 
+*)
           let rec checkIsGlobalVar str strLi : bool  = (* true means it is global *)
             match strLi with 
             | [] -> true 
@@ -1021,14 +1039,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       )
       
 
-    | DeclStmt (_, [x], _):: xs  ->
+    | DeclStmt (_, [x], handler::_):: xs  ->
 
           (
             match x with
             | DeclStmt _ ->  
               helper current' (x::xs)
       
-            | _ -> 
+            | _ ->          
             (*
             print_endline ("DeclStmt0 " ^  string_of_decl handler ^ " " ^ Clang_ast_proj.get_stmt_kind_string x ); 
 *)
@@ -1284,6 +1302,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     (match binop_info.boi_kind with
     | `Assign -> 
 
+    (*
+    print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ " " ^ Clang_ast_proj.get_stmt_kind_string y ); 
+*)
       let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       let (fp', _) = getStmtlocation instr in
       let varFromY = string_of_stmt y in 
