@@ -993,10 +993,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           full_extension
         )  
 
-    | BinaryOperator (_, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
-    | BinaryOperator (_, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
+    | BinaryOperator (stmt_info1, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
+    | BinaryOperator (stmt_info1, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
 
-    | BinaryOperator (_, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
+    | BinaryOperator (stmt_info1, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
+      let (fp, _) = stmt_intfor2FootPrint stmt_info1 in 
+
+    
+      
+
       (match binop_info.boi_kind with
       | `Assign -> 
 
@@ -1004,9 +1009,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           
           let currentHandler = string_of_stmt x in 
 
-          (*
-          print_endline ("BinaryOperator1 " ^  currentHandler ^ " "); 
-*)
+          
           let rec checkIsGlobalVar str strLi : bool  = (* true means it is global *)
             match strLi with 
             | [] -> true 
@@ -1018,7 +1021,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           let stateX = syh_compute_stmt_postcondition env current' future x in 
 
           
-          (*
+         (* 
           print_endline ("=====\nCurrent handler root: " ^ (getRoot currentHandler)); 
           print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
           print_endline (string_of_bool (checkIsGlobalVar (getRoot currentHandler) !variablesInScope)); 
@@ -1032,14 +1035,33 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)) in 
           concatenateTwoEffectswithFlag stateX rest
        
-          
+         
+      | `MulAssign | `DivAssign | `RemAssign | `AddAssign->
+
+        print_endline ("MulAssign ...");
+        helper current' xs 
+      | `SubAssign | `ShlAssign | `ShrAssign | `AndAssign | `XorAssign
+      | `OrAssign ->
+
+        print_endline ("SubAssign ...");
+        helper current' xs 
+      | `EQ ->
+  
+          print_endline ("EQ ...");
+          helper current' xs 
+  
+
+            
       | _ -> 
-        
+        print_endline ("rest ...");
         helper current' xs 
       )
-      
+ 
 
     | DeclStmt (_, [x], handler::_):: xs  ->
+      let localVar = (string_of_decl handler) in 
+      let () = variablesInScope := !variablesInScope @ [localVar] in 
+
 
           (
             match x with
@@ -1296,8 +1318,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let fp = match fp with | None -> [] | Some l -> [l] in 
     [(TRUE, ev, 0, fp)]
 
+  | CallExpr _ -> helper current [instr]
 
-  | BinaryOperator (_, x::y::_, expr_info, binop_info) ->
+  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info) ->
+    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+
+    
 
     (match binop_info.boi_kind with
     | `Assign -> 
@@ -1328,9 +1354,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       
     | `And -> 
       helper current [x;y]
-          
 
-    | `PtrMemD | `PtrMemI | `Mul | `Div | `Rem | `Add | `Sub | `Shl | `Shr
+    | `Add -> 
+      let stateX = syh_compute_stmt_postcondition env current future x in 
+      let stateY = syh_compute_stmt_postcondition env current future y in 
+      concatenateTwoEffectswithFlag stateX stateY
+
+
+    | `PtrMemD | `PtrMemI | `Mul | `Div | `Rem | `Sub | `Shl | `Shr
     | `Cmp | `LT | `GT | `LE | `GE | `EQ | `NE | `Xor | `Or | `LAnd
     | `LOr -> 
       
@@ -1380,7 +1411,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     in 
     let exitsString li str =
       let temp = List.filter li ~f:(fun a -> if String.compare a str == 0 then true else false) in 
-      if List.length temp > 2 then true 
+      if List.length temp > 5 then true 
       else false 
     in 
     if exitsString !currentLable label_name then 
@@ -1415,7 +1446,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | WhileStmt _ 
   | ConstantExpr _ 
   (*| ForStmt _ *)
-  | CallExpr _ (* nested calls:  if (swoole_timer_is_available()) {    *)
   | CXXOperatorCallExpr _ 
   | ArraySubscriptExpr _ 
   | InitListExpr _ 
@@ -1625,6 +1655,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       in 
       let () = currentModule := funcName in 
       let () = currentModuleBody := Some stmt in 
+      let () = currentLable := [] in 
 
       let () = variablesInScope := [] in 
       let raw_final = (syh_compute_stmt_postcondition 
