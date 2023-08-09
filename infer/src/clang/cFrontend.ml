@@ -1347,13 +1347,60 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     )
 
 
-  
+  | GotoStmt (_, _, {Clang_ast_t.gsi_label= label_name; _}) ->
+    let rec find_stmtTillNextLable li acc =
+      match li with
+      | [] -> acc 
+      | Clang_ast_t.LabelStmt _ :: _  -> acc 
+      | x :: xs  -> find_stmtTillNextLable xs (acc@[x])
+    in 
+    let rec findTheLable stmtList = 
+      match stmtList with 
+      | [] -> []
+      | Clang_ast_t.LabelStmt (_, stmt_list, label_name_1)::xs -> 
+
+        if String.compare label_name_1 label_name == 0 then 
+          (
+          let restStmt = find_stmtTillNextLable xs [] in 
+          print_endline ("=============");
+          print_endline ("The stmt for are :"^ label_name);
+          let _ = List.map (stmt_list@ restStmt) ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+          print_endline ("");
+          stmt_list@ restStmt
+          ) 
+        else findTheLable xs 
+      | _::xs -> findTheLable xs 
+    in 
+    let rec findStmt_ListByLable () = 
+      match !currentModuleBody with 
+      | None -> []
+      | Some (Clang_ast_t.CompoundStmt (_, currentModuleStmts)) -> 
+        findTheLable currentModuleStmts
+      | _ -> []
+    in 
+    let exitsString li str =
+      let temp = List.filter li ~f:(fun a -> if String.compare a str == 0 then true else false) in 
+      if List.length temp > 2 then true 
+      else false 
+    in 
+    if exitsString !currentLable label_name then 
+      (let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
+      [(TRUE, Emp, 0, fp)])
+    else 
+      (let () = currentLable := !currentLable @ [label_name] in  
+      let stmt_list = findStmt_ListByLable () in 
+      helper current stmt_list)
+
+  (*
+    | LabelStmt (stmt_info, stmt_list, label_name) ->
+    labelStmt_trans trans_state stmt_info stmt_list label_name
+ *)
+  | ContinueStmt _
   | ConditionalOperator _
   | ParenExpr _ (* assert(max > min); *)
   | BreakStmt _ 
   | ForStmt _ (*stmt_info, stmt_list*)
   | LabelStmt _ 
-  | GotoStmt _ 
   | ImplicitCastExpr _ (*stmt_info, stmt_list, _, _, _*) 
   | MemberExpr _
   | NullStmt _
@@ -1455,8 +1502,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     
 
 
-  | ContinueStmt _
-  | ArraySubscriptExpr _
   | UnaryExprOrTypeTraitExpr _
 
   | _ -> 
@@ -1579,6 +1624,8 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
       in 
       let () = currentModule := funcName in 
+      let () = currentModuleBody := Some stmt in 
+
       let () = variablesInScope := [] in 
       let raw_final = (syh_compute_stmt_postcondition 
             specifications 
@@ -1601,8 +1648,9 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
       match postcondition with 
         | None -> () (* [(Ast_utility.TRUE, Kleene(Any))] *)
-        | Some postcondition -> 
-        (
+        | Some postcondition -> () 
+          (* disabled the post condition checking *)
+        (**
         let postcondition = match findReturnValueProgramStates final with 
           | None  -> postcondition
           | Some str -> 
@@ -1637,7 +1685,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
             ());
 
           ) 
-        ) 
+        *) 
 
       )
     | _ -> () 
