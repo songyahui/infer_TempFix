@@ -836,8 +836,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           | None -> 
             (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
-
-            
             
             (*
             let () = print_string ("=========================\n") in 
@@ -924,7 +922,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
       let current'' = 
         match postc with 
-        | None -> current'  
+        | None -> 
+          if String.compare calleeName "exit" == 0 then 
+          concatenateTwoEffectswithFlag current' [(Ast_utility.TRUE, Emp, 1, fp)]
+          else current'  
         | Some postc -> 
           concatenateTwoEffectswithFlag current' (effects2programStates postc)
       in 
@@ -1378,7 +1379,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     )
 
 
-  | GotoStmt (_, _, {Clang_ast_t.gsi_label= label_name; _}) ->
+  | GotoStmt (stmt_infogoto, _, {Clang_ast_t.gsi_label= label_name; _}) ->
+    let (fpGOTO, _) = stmt_intfor2FootPrint stmt_infogoto in 
+    
     let rec find_stmtTillNextLable li acc =
       match li with
       | [] -> acc 
@@ -1388,17 +1391,22 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let rec findTheLable stmtList = 
       match stmtList with 
       | [] -> []
-      | Clang_ast_t.LabelStmt (_, stmt_list, label_name_1)::xs -> 
-
+      | Clang_ast_t.LabelStmt (stmt_infoLabel, stmt_list, label_name_1)::xs -> 
         if String.compare label_name_1 label_name == 0 then 
-          (
-          let restStmt = find_stmtTillNextLable xs [] in 
-          print_endline ("=============");
-          print_endline ("The stmt for are :"^ label_name);
-          let _ = List.map (stmt_list@ restStmt) ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
-          print_endline ("");
-          stmt_list@ restStmt
-          ) 
+          let (fpLable, _) = stmt_intfor2FootPrint stmt_infoLabel in 
+          match (fpGOTO, fpLable) with 
+          | (a::_, b::_) -> 
+            if a > b then []
+            else 
+            (
+              let restStmt = find_stmtTillNextLable xs [] in 
+              print_endline ("=============");
+              print_endline ("The stmt for are :"^ label_name);
+              let _ = List.map (stmt_list@ restStmt) ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+              print_endline ("");
+              stmt_list@ restStmt
+            ) 
+          | _ -> []
         else findTheLable xs 
       | _::xs -> findTheLable xs 
     in 
@@ -1409,7 +1417,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         findTheLable currentModuleStmts
       | _ -> []
     in 
-    let exitsString li str =
+    (*let exitsString li str =
       let temp = List.filter li ~f:(fun a -> if String.compare a str == 0 then true else false) in 
       if List.length temp > 5 then true 
       else false 
@@ -1418,6 +1426,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       (let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       [(TRUE, Emp, 0, fp)])
     else 
+    *)
       (let () = currentLable := !currentLable @ [label_name] in  
       let stmt_list = findStmt_ListByLable () in 
       helper current stmt_list)
