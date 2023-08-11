@@ -58,7 +58,7 @@
     
 /*@ fclose(handler): 
     Post (handler=-1, fclose(handler)) 
-    Future  (TRUE, (!_(handler))^*  · (𝝐 \/ ((fdopen(handler)\/fopen(handler)) · (_)^*)))  @*/
+      @*/
 
 /*@ lxc_abstract_unix_connect(a): 
     Post (TRUE, lxc_abstract_unix_connect(ret))  @*/

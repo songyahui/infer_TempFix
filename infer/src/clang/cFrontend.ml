@@ -1387,12 +1387,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | GotoStmt (stmt_infogoto, _, {Clang_ast_t.gsi_label= label_name; _}) ->
     let (fpGOTO, _) = stmt_intfor2FootPrint stmt_infogoto in 
     
-    let rec find_stmtTillNextLable li acc =
+    (*let rec find_stmtTillNextLable li acc =
       match li with
       | [] -> acc 
       | Clang_ast_t.LabelStmt _ :: _  -> acc 
       | x :: xs  -> find_stmtTillNextLable xs (acc@[x])
     in 
+    *)
     let rec findTheLable stmtList = 
       match stmtList with 
       | [] -> []
@@ -1404,7 +1405,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             if a > b then []
             else 
             (
-              let restStmt = find_stmtTillNextLable xs [] in 
+              let restStmt = xs (*find_stmtTillNextLable xs []*) in 
               print_endline ("=============");
               print_endline ("The stmt for are :"^ label_name);
               let _ = List.map (stmt_list@ restStmt) ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
@@ -1422,7 +1423,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         findTheLable currentModuleStmts
       | _ -> []
     in 
-    let exitsString li str =
+    (*let exitsString li str =
       let temp = List.filter li ~f:(fun a -> if String.compare a str == 0 then true else false) in 
       if List.length temp > 5 then true 
       else false 
@@ -1431,7 +1432,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       (let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       [(TRUE, Emp, 0, fp)])
     else 
-    
+    *)
       (let () = currentLable := !currentLable @ [label_name] in  
       let stmt_list = findStmt_ListByLable () in 
       helper current stmt_list)
