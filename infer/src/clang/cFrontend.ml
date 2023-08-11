@@ -1422,7 +1422,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         findTheLable currentModuleStmts
       | _ -> []
     in 
-    (*let exitsString li str =
+    let exitsString li str =
       let temp = List.filter li ~f:(fun a -> if String.compare a str == 0 then true else false) in 
       if List.length temp > 5 then true 
       else false 
@@ -1431,7 +1431,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       (let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       [(TRUE, Emp, 0, fp)])
     else 
-    *)
+    
       (let () = currentLable := !currentLable @ [label_name] in  
       let stmt_list = findStmt_ListByLable () in 
       helper current stmt_list)
