@@ -787,6 +787,9 @@ let constructADeclRefExprStmt stmt_info expr_info (str: string): Clang_ast_t.stm
 
   in DeclRefExpr (stmt_info, [], expr_info, decl_ref_expr_info)
  
+let constructBinaryOperatorAssign stmt_info expr_info x y : Clang_ast_t.stmt = 
+  let binary_operator_info = {Clang_ast_t.boi_kind = `EQ}in 
+  BinaryOperator (stmt_info, [x;y], expr_info, binary_operator_info)
 
 let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
 (future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
@@ -1059,9 +1062,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       )
  
 
-    | DeclStmt (_, [x], handler::_):: xs  ->
-      let localVar = (string_of_decl handler) in 
-      let () = variablesInScope := !variablesInScope @ [localVar] in 
+    | DeclStmt (_, [x], handler::handlerRest):: xs  ->
+      let _ = List.map (handler::handlerRest) ~f:(fun del -> 
+        let localVar = (string_of_decl del) in 
+        let () = variablesInScope := !variablesInScope @ [localVar] in 
+        ()
+      ) in 
 
 
           (
@@ -1101,11 +1107,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         (let stmt' = List.append [x;y] xs in 
         helper current'  stmt')
 
+    | LabelStmt (stmt_info, stmt_list, _)::xs
     | DoStmt (stmt_info, stmt_list)::xs 
     | WhileStmt (stmt_info, stmt_list)::xs -> 
       let stmt' = List.append stmt_list xs in 
       helper current'  stmt'
-
     | x :: xs -> 
       (*print_endline ("===================================");
       print_endline (List.fold_left (li) ~init:"" ~f:(fun acc a -> acc ^ ", " ^ (Clang_ast_proj.get_stmt_kind_string a)));
@@ -1177,6 +1183,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
+  | ForStmt (stmt_info, stmt_list)
   | UnaryOperator (stmt_info, stmt_list, _, _)
   | DefaultStmt (stmt_info, stmt_list) 
   | CaseStmt (stmt_info, stmt_list) 
@@ -1216,27 +1223,37 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     let extra = 
     (match stmt_list with 
-    | [x; y] -> 
-      let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
+    | x::ifelseRest -> 
+      (match x with 
+      | BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _) -> 
+        
+        let freshVar = verifier_getAfreeVar "r" in 
+        let declRefExprStmt = constructADeclRefExprStmt call_stmt_info call_ei freshVar in 
+        let stmtBinary = constructBinaryOperatorAssign call_stmt_info call_ei declRefExprStmt y in 
+        let stmtCall = Clang_ast_t.CallExpr (call_stmt_info, call_stmt_list, call_ei) in 
+        let stmtNewIFELSE = Clang_ast_t.IfStmt (stmt_info, (stmtBinary)::ifelseRest, if_stmt_info) in 
+        let () = handlerVar := Some (freshVar) in 
+        helper current ([stmtCall; stmtNewIFELSE])
 
-      let (locY, locZ) = maybeIntToListInt (getStmtlocation y) in 
+      | _ -> 
+      (match ifelseRest with 
+      | [y] -> 
+        let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
 
-      (*print_endline ("locY" ^ List.fold_left locY ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
-  *)
-      (match checkRelavent x with 
-      | None  -> 
-        let eff4X = syh_compute_stmt_postcondition env current future x in
-        let eff4Y = syh_compute_stmt_postcondition env current future y in
-        let final = prefixLoction locX 
-          (List.append 
-          (postfixLoction locZ eff4X) 
-          (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y))) in 
-        (*let () = print_string ("if else [x, y] None: " ^ string_of_programStates final^ "\n") in 
-        *)
-        final
+        let (locY, locZ) = maybeIntToListInt (getStmtlocation y) in 
+
+        (match checkRelavent x with 
+        | None  -> 
+          let eff4X = syh_compute_stmt_postcondition env current future x in
+          let eff4Y = syh_compute_stmt_postcondition env current future y in
+          let final = prefixLoction locX 
+            (List.append 
+            (postfixLoction locZ eff4X) 
+            (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y))) in 
+          final
 
 
-      | Some (condition, morevar) -> 
+        | Some (condition, morevar) -> 
 
         (*let ()= varSet := (List.append !varSet morevar) in *)
 
@@ -1244,64 +1261,52 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         print_endline (string_of_pure condition);
         print_endline (string_of_pure (Neg condition));
 *)
-        let eff4X = syh_compute_stmt_postcondition env current future  x in
-        let eff4Y = syh_compute_stmt_postcondition env current future  y in
-        let res = prefixLoction locX 
-          (List.append 
-          (postfixLoction locZ (enforePure (Neg condition) eff4X))
-          (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y)))) 
-        in 
-        (*print_endline (string_of_programStates res);*)
-        res
+          let eff4X = syh_compute_stmt_postcondition env current future  x in
+          let eff4Y = syh_compute_stmt_postcondition env current future  y in
+          let res = prefixLoction locX 
+            (List.append 
+            (postfixLoction locZ (enforePure (Neg condition) eff4X))
+            (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y)))) 
+          in 
+          res
         )
-    | [x;y;z] -> 
-      let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
+      | [y;z] -> 
+        let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
 
-      let (locY, _) = maybeIntToListInt (getStmtlocation y) in 
-      let (locZ, _) = maybeIntToListInt (getStmtlocation z) in 
+        let (locY, _) = maybeIntToListInt (getStmtlocation y) in 
+        let (locZ, _) = maybeIntToListInt (getStmtlocation z) in 
       (*
       print_endline ("locY" ^ List.fold_left locY ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
       print_endline ("locZ" ^ List.fold_left locZ ~init:"" ~f:(fun acc a -> acc ^ " " ^ string_of_int a)); 
       *)
 
-      (match checkRelavent x with 
-      | None  -> 
-        let eff4X = syh_compute_stmt_postcondition env current future x in
-        let eff4Y = syh_compute_stmt_postcondition env current future y in
-        let eff4Z = syh_compute_stmt_postcondition env current future z in
-        prefixLoction locX 
-        (List.append 
-          ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
-          (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
+        (match checkRelavent x with 
+        | None  -> 
+          let eff4X = syh_compute_stmt_postcondition env current future x in
+          let eff4Y = syh_compute_stmt_postcondition env current future y in
+          let eff4Z = syh_compute_stmt_postcondition env current future z in
+          prefixLoction locX 
+          (List.append 
+            ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
+            (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
 
-      | Some (condition, morevar) -> 
-        (*let ()= varSet := (List.append !varSet morevar) in *)
+        | Some (condition, morevar) -> 
 
-        let eff4X = syh_compute_stmt_postcondition env current future x in
-        let eff4Y = syh_compute_stmt_postcondition env current future y in
-        let eff4Z = syh_compute_stmt_postcondition env current future z in
-        prefixLoction locX (List.append 
-        (prefixLoction locZ (enforePure (Neg condition) (concatenateTwoEffectswithFlag eff4X eff4Z))) 
-        (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
+          let eff4X = syh_compute_stmt_postcondition env current future x in
+          let eff4Y = syh_compute_stmt_postcondition env current future y in
+          let eff4Z = syh_compute_stmt_postcondition env current future z in
+          prefixLoction locX (List.append 
+          (prefixLoction locZ (enforePure (Neg condition) (concatenateTwoEffectswithFlag eff4X eff4Z))) 
+          (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
         )
-
-
-
+      | _ -> assert false 
+      ))
     | _ -> assert false ) in 
     let final = extra in 
-    (*print_string ("IfStmt:" ^ string_of_programStates final^"\n"); *)
     final
     
 
   
-  (*
-  | ConditionalOperator (stmt_info, x::_, _) 
-  | ParenExpr (stmt_info, x::_, _) -> (* assert(max > min); *)
-      print_endline (Clang_ast_proj.get_stmt_kind_string instr  ^ "  " ^ Clang_ast_proj.get_stmt_kind_string x );
-      let (fp, _) = stmt_intfor2FootPrint stmt_info in 
-      prefixLoction fp (syh_compute_stmt_postcondition env current future x)
-*)
-
   | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
       prefixLoction fp (syh_compute_stmt_postcondition env current future x)
@@ -1439,7 +1444,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | ConditionalOperator _
   | ParenExpr _ (* assert(max > min); *)
   | BreakStmt _ 
-  | ForStmt _ (*stmt_info, stmt_list*)
   | LabelStmt _ 
   | ImplicitCastExpr _ (*stmt_info, stmt_list, _, _, _*) 
   | MemberExpr _
@@ -1469,9 +1473,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     [(TRUE, Emp, 0, fp)]
 
 
-  | DeclStmt (_, [], del::_) -> 
-    let localVar = (string_of_decl del) in 
-    let () = variablesInScope := !variablesInScope @ [localVar] in 
+  | DeclStmt (_, [], del::rest) -> 
+    let _ = List.map ( del::rest) ~f:(fun del -> 
+      let localVar = (string_of_decl del) in 
+      let () = variablesInScope := !variablesInScope @ [localVar] in 
+    ()) in 
     let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
     [(TRUE, Emp, 0, fp)]
 
