@@ -287,6 +287,17 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
 
   | BreakStmt _ -> "BreakStmt"
 
+  | ArraySubscriptExpr (_, arlist, _)  -> 
+    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+    (*print_endline (string_of_int (List.length temp)); *)
+    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
+    acc ^ (
+      match a with
+      | None -> "_"
+      | Some t -> string_of_terms t ^ "_"
+    )) in 
+    ("ArraySubscriptExpr " ^ name)
+
 
   | _ -> "string_of_stmt not yet " ^ Clang_ast_proj.get_stmt_kind_string instr;;
 
@@ -848,13 +859,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
             let spec = findSpecFrom env calleeName in 
             match spec with
-            | None -> (("none", []), None, None, None)
+            | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
-              print_endline ("CallingFunction: " ^ calleeName);
               (*
               print_endline ("formal Arg = " ^ List.fold_left formalLi ~init:"" ~f:(fun acc a -> acc ^ "," ^a));
               print_endline ("actual Arg = " ^ List.fold_left acturelli ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a));
-*)
+*)            print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
+
               (match !handlerVar, futurec with 
               | None, _  -> () (*print_endline ("with no handler = ")*)
               | Some str, Some _ -> 
@@ -926,10 +937,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
       let current'' = 
         match postc with 
-        | None -> 
-          if String.compare calleeName "exit" == 0 then 
-          concatenateTwoEffectswithFlag current' [(Ast_utility.TRUE, Emp, 1, fp)]
-          else current'  
+        | None -> current'  
         | Some postc -> 
           concatenateTwoEffectswithFlag current' (effects2programStates postc)
       in 
@@ -938,10 +946,16 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 (* STEP 3: compute the effect for the rest code *)
   (*print_endline ("computing restSpec"  ^ string_of_int(List.length xs));
 *)
-      let effectRest = helper (current'') xs in
 
-      (*print_endline ("effectRest: " ^ string_of_programStates effectRest);
-      *)
+      let effectRest = 
+        if (String.compare calleeName "exit") == 0 || 
+           (String.compare calleeName "flexerror") == 0 || 
+           (String.compare calleeName "flexfatal") == 0 then 
+          (
+          concatenateTwoEffectswithFlag current'' [(Ast_utility.TRUE, Emp, 1, fp)])
+        else helper (current'') xs in
+
+      
 
       
 (* STEP 4: check the future spec of the callee *)
@@ -994,13 +1008,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
             ());
 
-
           full_extension
         )  
+    | BinaryOperator (_, _::(ImplicitCastExpr (_, [(BinaryOperator (stmt_info1, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info))], _, _, _))::_, _, _) :: xs 
+    | BinaryOperator (_, _::(ImplicitCastExpr (_, [BinaryOperator (stmt_info1, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info)], _, _, _))::_, _, _) :: xs 
+    | BinaryOperator (_, _::(ImplicitCastExpr (_, [BinaryOperator (stmt_info1, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info)], _, _, _))::_, _, _) :: xs 
 
     | BinaryOperator (stmt_info1, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
     | BinaryOperator (stmt_info1, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
-
     | BinaryOperator (stmt_info1, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
       let (fp, _) = stmt_intfor2FootPrint stmt_info1 in 
 
@@ -1026,7 +1041,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           let stateX = syh_compute_stmt_postcondition env current' future x in 
 
           
-         (* 
+         (*
           print_endline ("=====\nCurrent handler root: " ^ (getRoot currentHandler)); 
           print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
           print_endline (string_of_bool (checkIsGlobalVar (getRoot currentHandler) !variablesInScope)); 
@@ -1226,8 +1241,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     (match stmt_list with 
     | x::ifelseRest -> 
       (match x with 
-      | BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _) -> 
-        
+      | BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _) 
+      | BinaryOperator (_, BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _)::_ , _, _) -> 
         let freshVar = verifier_getAfreeVar "r" in 
         let declRefExprStmt = constructADeclRefExprStmt call_stmt_info call_ei freshVar in 
         let stmtBinary = constructBinaryOperatorAssign call_stmt_info call_ei declRefExprStmt y in 
@@ -1311,7 +1326,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
       prefixLoction fp (syh_compute_stmt_postcondition env current future x)
-
+  | ArraySubscriptExpr(stmt_info, x::_, _)  
   | MemberExpr (stmt_info, x::_, _, _) -> 
     let (fp, _) =  getStmtlocation instr in 
     let varFromX = string_of_stmt x in 
@@ -1327,13 +1342,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
   | CallExpr _ -> helper current [instr]
 
-  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info) ->
+
+  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
 
     
 
     (match binop_info.boi_kind with
     | `Assign -> 
+
 
     (*
     print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ " " ^ Clang_ast_proj.get_stmt_kind_string y ); 
@@ -1640,7 +1657,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
-      if functionEnd - functionStart > 408 then 
+      if functionEnd - functionStart > 285 then 
         (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
         ())
       else 
@@ -1649,7 +1666,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
       let argumentNames = List.map (function_decl_info.fdi_parameters) ~f:(fun a -> string_of_decl a) in 
-      let () = variablesInScope := !variablesInScope @ argumentNames in 
+      let () = variablesInScope := argumentNames in 
 
 
       (*
@@ -1671,7 +1688,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       
       let (defultPrecondition:programStates) = 
         match precondition with
-        | None -> [(Ast_utility.TRUE, Kleene (Any), 0, [])]
+        | None -> [(Ast_utility.TRUE, Emp (*Kleene (Any)*), 0, [])]
         | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
       in 
       print_endline ("annalysing " ^ funcName);
