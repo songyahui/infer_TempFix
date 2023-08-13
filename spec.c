@@ -8,7 +8,8 @@
     Future (ret=0, (!_(ret))^*) @*/
 
 /*@ regmatch_dup(a,b): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), regmatch_dup(ret)) @*/
+    Post (ret=0, 𝝐) \/ (!(ret=0), regmatch_dup(ret)) 
+    Future (ret=0, (!_(ret))^*) @*/
 
 /*@ malloc(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))

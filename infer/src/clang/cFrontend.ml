@@ -975,8 +975,18 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             match future with
             | None -> effectRest 
             | Some ctxfuture -> 
-              (*print_endline ("+ ctx future spec: " ^ string_of_effect ctxfuture);
-              *)
+
+              let ctxfuture = match findReturnValueProgramStates effectRest with 
+              | None  -> ctxfuture
+              | Some str -> 
+                print_endline(str);
+                let vb = [(str, BRET)] in 
+                instantiateAugumentSome ctxfuture vb 
+              in 
+              (*
+              print_endline ("effectRest: " ^ string_of_programStates effectRest);
+              print_endline ("+ ctx future spec: " ^ string_of_effect ctxfuture);
+*)
               concatenateTwoEffectswithoutFlag (effectRest) (effects2programStates ctxfuture)
           in 
 
@@ -985,12 +995,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           print_endline ("|- before RHS: " ^ string_of_effect futurec);
           *)
 
-          (*let futurec = match findReturnValueProgramStates effectRest with 
-            | None  -> futurec
-            | Some str -> 
-              print_endline(str);
-              let vb = [(str, BRET)] in 
-              instantiateAugumentSome futurec vb 
+          (*
+          
           in *)
 
           (*print_endline ("|- RHS: " ^ string_of_effect futurec);*)
@@ -1109,7 +1115,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       in 
       let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
       syh_compute_stmt_postcondition env current' future statement'
-
+    
     | DoStmt (stmt_info, [x;y])::xs  ->
       
       if String.compare (string_of_stmt y) "0" == 0 then helper current' xs
@@ -1329,17 +1335,22 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       prefixLoction fp (syh_compute_stmt_postcondition env current future x)
   | ArraySubscriptExpr(stmt_info, x::_, _)  
   | MemberExpr (stmt_info, x::_, _, _) -> 
-    let (fp, _) =  getStmtlocation instr in 
-    let varFromX = string_of_stmt x in 
+    (match x with 
+    | ArraySubscriptExpr _ -> 
+      syh_compute_stmt_postcondition env current future x 
+    | _ -> 
+      let (fp, _) =  getStmtlocation instr in 
+      let varFromX = string_of_stmt x in 
 
-    let ev = if twoStringSetOverlap [varFromX] (!varSet) then 
-      Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
-      else Emp
-    in 
-    let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
+      let ev = if twoStringSetOverlap [varFromX] (!varSet) then 
+        Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
+        else Emp
+      in 
+      let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
 
-    let fp = match fp with | None -> [] | Some l -> [l] in 
-    [(TRUE, ev, 0, fp)]
+      let fp = match fp with | None -> [] | Some l -> [l] in 
+      [(TRUE, ev, 0, fp)]
+    )
 
   | CallExpr _ -> helper current [instr]
 
