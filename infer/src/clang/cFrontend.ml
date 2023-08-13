@@ -503,11 +503,12 @@ let getStmtlocation (instr: Clang_ast_t.stmt) : (int option * int option) =
   | DefaultStmt (stmt_info, _) 
   | CaseStmt (stmt_info, _) 
   | SwitchStmt (stmt_info, _, _)
+  | DeclRefExpr (stmt_info, _, _, _)
+  | NullStmt (stmt_info, _)
   | CXXOperatorCallExpr (stmt_info, _, _)
   | CStyleCastExpr (stmt_info, _, _, _, _)  ->
     let (sl1, sl2) = stmt_info.si_source_range in 
     (sl1.sl_line , sl2.sl_line)
-
   | _ -> (None, None) 
 
 let maybeIntToListInt ((s1, s2):(int option * int option )) : (int list * int list)  = 
@@ -1639,6 +1640,10 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
+      if functionEnd - functionStart > 408 then 
+        (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
+        ())
+      else 
       match function_decl_info.fdi_body with 
       | None -> ()
       | Some stmt -> 
@@ -1669,6 +1674,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
         | None -> [(Ast_utility.TRUE, Kleene (Any), 0, [])]
         | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
       in 
+      print_endline ("annalysing " ^ funcName);
       let () = currentModule := funcName in 
       let () = currentModuleBody := Some stmt in 
       let () = currentLable := [] in 

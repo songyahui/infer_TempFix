@@ -18,6 +18,19 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
+
+  infer uses heuristics 
+   it surfacing failed proofs and bug pattern 
+   true bug: there exists a path from the local which leads to the bug, 
+   manifast: for any value of the input, the bug occur, 
+   latent: only program path with input constraints leads to error. 
+   openSSL: memory leak, null pointer derefernece
+
+   {x = 5} while (a > 0) then a = a-1 {0<=x<5}  
+  
+
+
+
 Infer is MIT-licensed.
 
 Note: Enabling Java support may require you to download and install 
