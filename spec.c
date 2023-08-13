@@ -27,5 +27,10 @@
 /*@ strcmp(a, b): 
     Post (TRUE, strcmp(a))  @*/
 
-/*@ fputs(a, b): 
-    Post (TRUE, fputs(b))  @*/
+/*@ p11_array_push(a): 
+    Post (TRUE, p11_array_push(a))  @*/
+
+/*@ p11_array_new(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), p11_array_new(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+

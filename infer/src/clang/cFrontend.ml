@@ -874,15 +874,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               | _, _ -> ()
                 (*print_endline ("with handler = " ^ str)*)); 
 
-              if List.length acturelli == List.length formalLi then 
                 let vb = var_binding formalLi acturelli in 
                 ((signiture, formalLi), 
                 instantiateAugument prec vb, 
                 instantiateAugument postc vb, 
                 instantiateAugument futurec vb)
-                (* spec instantiation *)
-              else 
-              (((signiture, formalLi), prec, postc, futurec))
             
           )
       in 
@@ -950,6 +946,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
       let effectRest = 
         if (String.compare calleeName "exit") == 0 || 
+           (String.compare calleeName "_exit") == 0 ||
            (String.compare calleeName "flexerror") == 0 || 
            (String.compare calleeName "flexfatal") == 0 then 
           (
@@ -1118,17 +1115,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     
     | DoStmt (stmt_info, [x;y])::xs  ->
       
-      if String.compare (string_of_stmt y) "0" == 0 then helper current' xs
- 
-      else 
-      
-          (*
-          print_endline ("DoStmt: ");
-          let _ = List.map stmt_list ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
-          print_endline ("");
-          *)
-        (let stmt' = List.append [x;y] xs in 
-        helper current'  stmt')
+      let stmt' = List.append [x] xs in 
+      helper current'  stmt'
 
     | LabelStmt (stmt_info, stmt_list, _)::xs
     | DoStmt (stmt_info, stmt_list)::xs 
@@ -1388,26 +1376,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       concatenateTwoEffectswithFlag stateY (concatenateTwoEffectswithFlag stateX [res])
 
       
-    | `And -> 
-      helper current [x;y]
 
-    | `Add -> 
+    | _ -> 
       let stateX = syh_compute_stmt_postcondition env current future x in 
       let stateY = syh_compute_stmt_postcondition env current future y in 
       concatenateTwoEffectswithFlag stateX stateY
 
-
-    | `PtrMemD | `PtrMemI | `Mul | `Div | `Rem | `Sub | `Shl | `Shr
-    | `Cmp | `LT | `GT | `LE | `GE | `EQ | `NE | `Xor | `Or | `LAnd
-    | `LOr -> 
-      
-      
-      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
-      [(TRUE, Emp, 0, fp)]
-
-    | _ -> 
-      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
-      [(TRUE, Emp, 0, fp)]
 
   
         
