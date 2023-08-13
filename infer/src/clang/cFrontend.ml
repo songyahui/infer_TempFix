@@ -856,6 +856,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let () = print_string ("=========================\n") in 
             print_string (string_of_event (calleeName, acturelli) ^ ":\n");
             *)
+            print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
+
 
             let spec = findSpecFrom env calleeName in 
             match spec with
@@ -864,8 +866,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               (*
               print_endline ("formal Arg = " ^ List.fold_left formalLi ~init:"" ~f:(fun acc a -> acc ^ "," ^a));
               print_endline ("actual Arg = " ^ List.fold_left acturelli ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a));
-*)            print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
-
+*)            
               (match !handlerVar, futurec with 
               | None, _  -> () (*print_endline ("with no handler = ")*)
               | Some str, Some _ -> 

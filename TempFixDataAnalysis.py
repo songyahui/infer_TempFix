@@ -21,21 +21,28 @@ content = list(csvreader)
 record_length= len(content)
 title = content[0]
 
+#print(record_length)
+
+def existRecord (record, str):
+    for i in range(0, len(record)):
+        if record[i][0] == str : 
+            return True 
+        else: continue
+    return False 
 
 def removeDuplicate(col):
     uniqueRecord = []
-    currentFileName = ""
     for i in range(1, record_length):
-        if content[i][1] == currentFileName: continue
+        if existRecord (uniqueRecord, content[i][0]) == True : continue
         else:
             uniqueRecord = uniqueRecord + [content[i]]
-            currentFileName = content[i][1]
     return (uniqueRecord)
 
 
 content = removeDuplicate(content)
 record_length= len(content)
 
+#print(record_length)
 
 
 def sum_up(col):
