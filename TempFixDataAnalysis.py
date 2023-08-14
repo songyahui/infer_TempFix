@@ -47,19 +47,19 @@ record_length= len(content)
 
 def sum_up(col):
     sum = 0 
-    for i in range(1, record_length):
+    for i in range(0, record_length):
         sum = sum + int(content[i][col])
     return (sum)
 
 def sum_up_float(col):
     sum = 0 
-    for i in range(1, record_length):
+    for i in range(0, record_length):
         sum = sum + float(content[i][col])
     return (sum)
 
 
 
-#print()
+print(content)
 
 loc = sum_up(1)
 loS = content[1][2]

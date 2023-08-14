@@ -375,10 +375,10 @@ let concatenateTwoEffectswithoutFlag (effectLi4X: programStates) (effectRest: pr
   
   let temp = List.map mixLi ~f:(
     fun ((pi1, eff_x, t_x, fp1),  (pi2, eff_y, t_y, fp2)) -> 
-      match findReturnValue pi1 with 
+      (*match findReturnValue pi1 with 
       | Some (Basic (BVAR (retTerm))) -> 
         (conjunctPure pi1 pi2, Concatenate (eff_x, instantiateRetEs eff_y [(retTerm, BRET)]  ),  t_y, List.append fp1 fp2)
-      | _ -> (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),  t_y, List.append fp1 fp2)
+      | _ ->*) (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),  t_y, List.append fp1 fp2)
 
   ) in 
   normaliseProgramStates temp
@@ -976,17 +976,21 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               let ctxfuture = match findReturnValueProgramStates effectRest with 
               | None  -> ctxfuture
               | Some str -> 
-                print_endline(str);
+                (*print_endline(str);*)
                 let vb = [(str, BRET)] in 
                 instantiateAugumentSome ctxfuture vb 
               in 
+              
               (*
               print_endline ("effectRest: " ^ string_of_programStates effectRest);
-              print_endline ("+ ctx future spec: " ^ string_of_effect ctxfuture);
-*)
-              concatenateTwoEffectswithoutFlag (effectRest) (effects2programStates ctxfuture)
+              print_endline ("+ ctx future spec: " ^ string_of_programStates (effects2programStates ctxfuture));
+              *)
+
+              let temp = concatenateTwoEffectswithoutFlag (effectRest) (effects2programStates ctxfuture) in 
+              temp 
           in 
 
+          
           (*
           print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
           print_endline ("|- before RHS: " ^ string_of_effect futurec);
