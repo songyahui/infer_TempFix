@@ -97,7 +97,7 @@ infer/bin/infer run --pulse -- clang -c my_benchmark/1_peek.c
 Benchmarks:
 
 
-../../infer_TempFix/infer/bin/infer run -- make --keep-going 
+../../infer_TempFix/infer/bin/infer run --pulse -- make --keep-going 
 
 x264$ 
 

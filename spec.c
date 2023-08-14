@@ -6,12 +6,19 @@
     Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
     Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* )  @*/
 
+
+
 /*@ free(handler): 
     Post (TRUE, free(handler))   @*/
 
+/*@ p11_index_free(handler): 
+    Post (TRUE, p11_index_free(handler))   @*/
+
+    
+
 /*@ p11_dict_new(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), p11_dict_new(ret))
-    Future (!(ret=0), (_)^* · (free(ret) \/  p11_dict_clear(ret) \/ p11_dict_free(ret) \/ p11_array_free(ret)) · (_)^* )  @*/
+    Future (!(ret=0), (_)^* · (free(ret) \/  p11_dict_clear(ret) \/ p11_dict_free(ret) \/ p11_array_free(ret)\/ p11_index_free(ret)) · (_)^* )  @*/
 
 /*@ load_seq_of_oid_str(a, b): 
     Post (ret=0, 𝝐) \/ (!(ret=0), load_seq_of_oid_str(ret))
@@ -37,10 +44,11 @@
 /*@ p11_dict_free(handler): 
     Post (TRUE, p11_dict_free(handler))  @*/
  
-   
-
 /*@ memdup(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), memdup(ret))
     Future (!(ret=0), (!free(ret))^* · (free(ret)) · (_)^* )  @*/
  
-    
+ 
+/*@ p11_kit_pin_new_for_buffer(a, b, c): 
+    Post (TRUE, CONSUME(a))  @*/
+ 

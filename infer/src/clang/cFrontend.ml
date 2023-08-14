@@ -1848,6 +1848,15 @@ let outputFinalReport str path =
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
 
+  let tenv = Tenv.create () in
+  CType_decl.add_predefined_types tenv ;
+  init_global_state_capture () ;
+  let source_file = translation_unit_context.CFrontend_config.source_file in
+  let integer_type_widths = translation_unit_context.CFrontend_config.integer_type_widths in
+
+ 
+  (*print_endline ("\n======================================================="); *)
+  (*print_endline ("================ Here is Yahui's Code =================");*)
 
   let which_system = if String.compare (String.sub (Sys.getcwd()) 0 5 ) "/home" == 0 then 1 else 0 in 
   let loris1_path = "/home/yahui/future_condition/infer_TempFix/"  in 
@@ -1856,17 +1865,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications (path ^ "spec.c") in 
   let output_report =  path ^ "TempFix-out/report.csv" in 
   let output_detail =  path ^ "TempFix-out/detail.txt" in 
-
-
-
-  let tenv = Tenv.create () in
-  CType_decl.add_predefined_types tenv ;
-  init_global_state_capture () ;
-  let source_file = translation_unit_context.CFrontend_config.source_file in
-  let integer_type_widths = translation_unit_context.CFrontend_config.integer_type_widths in
-
-  (*print_endline ("\n======================================================="); *)
-  (*print_endline ("================ Here is Yahui's Code =================");*)
 
 
   let (source_Address, decl_list, lines_of_code) = retrive_basic_info_from_AST ast in
@@ -1878,28 +1876,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   
   let compution_time = (Unix.gettimeofday () -. start) in 
 
-
-  (* Input program has  *)
-(*
-  let msg = 
-    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-    ^ "[CURRENT REPORT]:"
-    ^ source_Address ^ "\n"
-    ^ string_of_int ( !totol_Lines_of_Code ) ^ " lines of code; " 
-    ^ string_of_int lines_of_spec ^ " lines of specs; for " 
-    ^ string_of_int (List.length user_sepcifications) ^ " protocols. "
-    ^ "Analysis and repair took "^ string_of_float (compution_time)^ " seconds.\n\n"
-    ^ string_of_int !totalAssertions ^ " total assertions, and " 
-    ^ string_of_int !failedAssertions 
-    ^ (if (!failedAssertions) == 1 then " is" else " are") 
-    ^" failed; and " 
-    ^  string_of_int !reapiredFailedAssertions 
-    ^ (if (!reapiredFailedAssertions) == 1 then " is" else " are") 
-    ^ " successfully repaired. \n"  
-    ^ "Totol_execution_time: " ^ string_of_float !totol_execution_time 
-    
-    in    
-*)
 
 let analysisTime = compution_time -. !repairTime in 
 
