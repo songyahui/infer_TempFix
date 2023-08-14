@@ -250,11 +250,19 @@ let rec varFromTerm (t:terms): string list =
 let string_of_varSet (li: string list) : string = 
   (List.fold_left li ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ^ "\n"
 
+
+let rec getRoot str = 
+  let strLi = String.split_on_chars  str ['.'] in 
+  match strLi with
+  | [] -> str 
+  | x :: _ -> x
+;;
+
 let twoStringSetOverlap (sli1) (sli2) = 
   let rec helper str li = 
     match li with 
     | [] -> false 
-    | x :: xs -> if String.compare x str == 0 then true else helper str xs 
+    | x :: xs -> if String.compare (getRoot x) str == 0 ||  String.compare (x) str == 0 then true else helper str xs 
   in 
   let rec aux li = 
     match li with 

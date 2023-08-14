@@ -47,12 +47,6 @@ let init_global_state_capture () =
 
 
 
-let rec getRoot str = 
-  let strLi = String.split_on_chars  str ['.'] in 
-  match strLi with
-  | [] -> str 
-  | x :: _ -> x
-;;
 
 let string_of_source_range ((s1, s2):Clang_ast_t.source_range) :string = 
   match (s1.sl_file, s2.sl_file) with 
@@ -1081,7 +1075,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
             
       | _ -> 
-        print_endline ("rest ...");
+        (*print_endline ("rest ...");*)
         helper current' xs 
       )
  
@@ -1239,18 +1233,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let extra = 
     (match stmt_list with 
     | x::ifelseRest -> 
-      (match x with 
-      | BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _) 
-      | BinaryOperator (_, BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _)::_ , _, _) -> 
-        let freshVar = verifier_getAfreeVar "r" in 
-        let declRefExprStmt = constructADeclRefExprStmt call_stmt_info call_ei freshVar in 
-        let stmtBinary = constructBinaryOperatorAssign call_stmt_info call_ei declRefExprStmt y in 
-        let stmtCall = Clang_ast_t.CallExpr (call_stmt_info, call_stmt_list, call_ei) in 
-        let stmtNewIFELSE = Clang_ast_t.IfStmt (stmt_info, (stmtBinary)::ifelseRest, if_stmt_info) in 
-        let () = handlerVar := Some (freshVar) in 
-        helper current ([stmtCall; stmtNewIFELSE])
-
-      | _ -> 
       (match ifelseRest with 
       | [y] -> 
         let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
@@ -1259,16 +1241,33 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
         (match checkRelavent x with 
         | None  -> 
-          let eff4X = syh_compute_stmt_postcondition env current future x in
-          let eff4Y = syh_compute_stmt_postcondition env current future y in
-          let final = prefixLoction locX 
-            (List.append 
-            (postfixLoction locZ eff4X) 
-            (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y))) in 
-          final
+          (*print_endline (string_of_stmt x ^", it is not Relavent");*)
+          (match x with 
+          | BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _) 
+          | BinaryOperator (_, BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _)::_ , _, _) -> 
+            let freshVar = verifier_getAfreeVar "r" in 
+            let declRefExprStmt = constructADeclRefExprStmt call_stmt_info call_ei freshVar in 
+            let stmtBinary = constructBinaryOperatorAssign call_stmt_info call_ei declRefExprStmt y in 
+            let stmtCall = Clang_ast_t.CallExpr (call_stmt_info, call_stmt_list, call_ei) in 
+            let stmtNewIFELSE = Clang_ast_t.IfStmt (stmt_info, (stmtBinary)::ifelseRest, if_stmt_info) in 
+            let () = handlerVar := Some (freshVar) in 
+            helper current ([stmtCall; stmtNewIFELSE])
+    
+          | _ -> 
+            let eff4X = syh_compute_stmt_postcondition env current future x in
+            let eff4Y = syh_compute_stmt_postcondition env current future y in
+            let final = prefixLoction locX 
+              (List.append 
+              (postfixLoction locZ eff4X) 
+              (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y))) in 
+            final
+          )
 
 
         | Some (condition, morevar) -> 
+          (*
+          print_endline (string_of_stmt x ^", it is not Relavent");
+*)
 
         (*let ()= varSet := (List.append !varSet morevar) in *)
 
@@ -1315,7 +1314,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
         )
       | _ -> assert false 
-      ))
+      )
     | _ -> assert false ) in 
     let final = extra in 
     final
@@ -1415,7 +1414,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             (
               let restStmt = xs (*find_stmtTillNextLable xs []*) in 
               print_endline ("=============");
-              print_endline ("The stmt for are :"^ label_name);
+              print_endline ("The stmt for label :"^ label_name);
               let _ = List.map (stmt_list@ restStmt) ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
               print_endline ("");
               stmt_list@ restStmt
@@ -1647,7 +1646,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
-      if functionEnd - functionStart > 285 then 
+      if functionEnd - functionStart > 215 then 
         (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
         ())
       else 

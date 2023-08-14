@@ -59,7 +59,7 @@ def sum_up_float(col):
 
 
 
-print(content)
+#print(content)
 
 loc = sum_up(1)
 loS = content[1][2]
