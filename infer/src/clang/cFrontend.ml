@@ -1102,6 +1102,18 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             concatenateTwoEffectswithFlag effectLi4X effectRest
           )
 
+    | (IfStmt (stmt_info, [x;(CompoundStmt(y_info, y_list))], if_stmt_info)) :: xsifelse -> 
+      if List.length y_list > 3 then 
+        let elseBranch = Clang_ast_t.CompoundStmt (stmt_info, []) in 
+        let statement' = Clang_ast_t.IfStmt (stmt_info, [x;(CompoundStmt(y_info, y_list));elseBranch], if_stmt_info) in 
+        helper current' (statement'::xsifelse)
+      else 
+        let effectLi4X = syh_compute_stmt_postcondition env current' future (IfStmt (stmt_info, [x;(CompoundStmt(y_info, y_list))], if_stmt_info)) in 
+        let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
+        let effectRest = helper new_history xsifelse in 
+        concatenateTwoEffectswithFlag effectLi4X effectRest
+
+
     | (IfStmt (stmt_info, [x;y;z], if_stmt_info)) :: xsifelse -> 
       let addTail (a:Clang_ast_t.stmt) = 
         match a with
@@ -1118,6 +1130,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     | LabelStmt (stmt_info, stmt_list, _)::xs
     | DoStmt (stmt_info, stmt_list)::xs 
+    | ForStmt (stmt_info, stmt_list)::xs
     | WhileStmt (stmt_info, stmt_list)::xs -> 
       let stmt' = List.append stmt_list xs in 
       helper current'  stmt'
@@ -1192,7 +1205,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
-  | ForStmt (stmt_info, stmt_list)
   | UnaryOperator (stmt_info, stmt_list, _, _)
   | DefaultStmt (stmt_info, stmt_list) 
   | CaseStmt (stmt_info, stmt_list) 
@@ -1296,6 +1308,18 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
         (match checkRelavent x with 
         | None  -> 
+          (match x with 
+          | BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _) 
+          | BinaryOperator (_, BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _)::_ , _, _) -> 
+            let freshVar = verifier_getAfreeVar "r" in 
+            let declRefExprStmt = constructADeclRefExprStmt call_stmt_info call_ei freshVar in 
+            let stmtBinary = constructBinaryOperatorAssign call_stmt_info call_ei declRefExprStmt y in 
+            let stmtCall = Clang_ast_t.CallExpr (call_stmt_info, call_stmt_list, call_ei) in 
+            let stmtNewIFELSE = Clang_ast_t.IfStmt (stmt_info, (stmtBinary)::ifelseRest, if_stmt_info) in 
+            let () = handlerVar := Some (freshVar) in 
+            helper current ([stmtCall; stmtNewIFELSE])
+    
+          | _ -> 
           let eff4X = syh_compute_stmt_postcondition env current future x in
           let eff4Y = syh_compute_stmt_postcondition env current future y in
           let eff4Z = syh_compute_stmt_postcondition env current future z in
@@ -1303,6 +1327,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           (List.append 
             ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
             (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
+          )
 
         | Some (condition, morevar) -> 
 
@@ -1646,7 +1671,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
-      if functionEnd - functionStart > 215 then 
+      if functionEnd - functionStart > 100 then 
         (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
         ())
       else 

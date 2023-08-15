@@ -655,27 +655,32 @@ let rec existPi pi li =
     )
 
 let rec normalPure (pi : pure) : pure =
-  match pi with
-  | PureAnd (p1, p2) ->
-    let p1 = normalPure p1 in
-    let p2 = normalPure p2 in
-    (match (p1, p2) with
-    | TRUE, _ -> p2
-    | _, TRUE -> p1
-    | FALSE, _ -> FALSE
-    | _, FALSE -> FALSE
-    | _, _ -> PureAnd (p1, p2))
-  | PureOr (p1, p2) ->
-    let p1 = normalPure p1 in
-    let p2 = normalPure p2 in
-    (match (p1, p2) with
-    | TRUE, _ -> TRUE
-    | _, TRUE -> TRUE
-    | FALSE, _ -> p2
-    | _, FALSE -> p1
-    | _, _ -> PureOr (p1, p2))
-  | Neg p1 -> Neg (normalPure p1)
-  | _ -> pi
+  let rec helper pi =
+    match pi with
+    | PureAnd (p1, p2) ->
+      let p1 = normalPure p1 in
+      let p2 = normalPure p2 in
+      (match (p1, p2) with
+      | TRUE, _ -> p2
+      | _, TRUE -> p1
+      | FALSE, _ -> FALSE
+      | _, FALSE -> FALSE
+      | _, _ -> PureAnd (p1, p2))
+    | PureOr (p1, p2) ->
+      let p1 = normalPure p1 in
+      let p2 = normalPure p2 in
+      (match (p1, p2) with
+      | TRUE, _ -> TRUE
+      | _, TRUE -> TRUE
+      | FALSE, _ -> p2
+      | _, FALSE -> p1
+      | _, _ -> PureOr (p1, p2))
+    | Neg p1 -> Neg (normalPure p1)
+    | _ -> pi
+  in 
+  if entailConstrains pi FALSE then FALSE 
+  else
+    helper pi
     
 (*
 let rec normalPure (pi:pure):pure = 
