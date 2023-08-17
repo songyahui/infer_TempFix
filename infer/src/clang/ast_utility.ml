@@ -850,10 +850,10 @@ let rec comapreEventArgs arg1 arg2 =
   let compareBasic_type_custimise (bt1:basic_type) (bt2:basic_type) : bool = 
     match (bt1, bt2) with 
     | ((BVAR s1), (BVAR s2)) -> 
-      print_endline ("s1 =" ^ s1 ^ ", s2 =" ^ s2 ^"."); 
+      (*print_endline ("s1 =" ^ s1 ^ ", s2 =" ^ s2 ^"."); 
       print_endline ("getRoot s1 =" ^ (getRoot s1) ^ ", s2 =" ^ s2^"."); 
       print_endline (string_of_int (String.compare (getRoot s1) s2));
-
+*)
       if String.compare (getRoot s1) s2 == 0 then true else false  
     | (BINT n1, BINT n2) -> n1 == n2 
     | (BNULL, BNULL)
@@ -875,10 +875,8 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     | Wildcard _ -> Bot 
     | Event (event1, _) -> 
       let (str1, args1) = event1 in 
-      print_endline (string_of_event event1 ^ " |- " ^ string_of_event event); 
-      if String.compare str1 "CONSUME" == 0 && comapreEventArgs args args1 then 
-        (print_endline ("true");
-        Emp) 
+      (*print_endline (string_of_event event1 ^ " |- " ^ string_of_event event); *)
+      if String.compare str1 "CONSUME" == 0 && comapreEventArgs args args1 then (Emp) 
       else 
         if comapreEvents event event1 == true then Emp else Bot 
     | NotEvent event  ->  Bot
@@ -1048,7 +1046,7 @@ else
   let lhs = normalise_es lhs in 
   let rhs = normalise_es rhs in  
   let entailent = showEntailemnt lhs rhs in 
-  print_endline (entailent);
+  (*print_endline (entailent); *)
 
   if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
   else if nullable lhs && (not (nullable rhs)) then 

@@ -222,7 +222,7 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
 
 
   | UnaryOperator (stmt_info, stmt_list, expr_info, unary_operator_info) ->
-    "UnaryOperator " ^ string_of_stmt_list stmt_list " " ^ ""
+    (*"UnaryOperator " ^*) string_of_stmt_list stmt_list " " ^ ""
   
   | ImplicitCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
     (*"ImplicitCastExpr " ^*) string_of_stmt_list stmt_list " " 
@@ -797,6 +797,50 @@ let constructBinaryOperatorAssign stmt_info expr_info x y : Clang_ast_t.stmt =
   let binary_operator_info = {Clang_ast_t.boi_kind = `EQ}in 
   BinaryOperator (stmt_info, [x;y], expr_info, binary_operator_info)
 
+
+let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrList: Clang_ast_t.stmt list) : bool = 
+  let rec helper (stmt:Clang_ast_t.stmt) = 
+    match stmt with 
+    | Clang_ast_t.BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)-> 
+      helper x || helper y 
+    | ReturnStmt (stmt_info, stmt_list)   
+    | UnaryOperator (stmt_info, stmt_list, _, _)
+    | DefaultStmt (stmt_info, stmt_list) 
+    | CaseStmt (stmt_info, stmt_list) 
+    | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
+    | CompoundStmt (stmt_info, stmt_list) ->  
+        peekTheEffectOfStmtsAndItHasEffects env stmt_list
+
+    | ImplicitCastExpr (stmt_info, x::_, _, _, _) 
+    | ArraySubscriptExpr(stmt_info, x::_, _)  
+    | MemberExpr (stmt_info, x::_, _, _) -> helper x
+    | (CallExpr (stmt_info, stmt_list, ei)) -> 
+      (match stmt_list with 
+      | [] -> false  
+      | x::rest -> 
+          (match extractEventFromFUnctionCall x rest with 
+          | None -> false 
+          | Some (calleeName, acturelli) -> 
+            (match findSpecFrom env calleeName with
+            | Some ((_, _), _, _, Some _) ->  true 
+            | _ -> false   )
+            (*let spec = findSpecFrom env calleeName in 
+            match spec with
+            | None -> false 
+            | Some ((_, _), _, _, Some _) ->  true 
+            *)
+          )
+ 
+      )
+    | _ -> false 
+
+  in 
+  match instrList with 
+  | [] -> false 
+  | x ::xs -> if helper x then true else peekTheEffectOfStmtsAndItHasEffects env xs 
+    
+
+
 let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
 (future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
 
@@ -811,10 +855,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
     
     
+    
     (*
     print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
-    *)
+    print_endline ("==> helper: ");
+*)
     
 
     
@@ -999,24 +1045,29 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           print_endline ("effectRest: " ^ string_of_programStates effectRest);
           *)
 
-          print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
+          (*print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
           print_endline ("|- before RHS: " ^ string_of_effect futurec);
-
+*)
           (*print_endline ("|- RHS: " ^ string_of_effect futurec);*)
-          let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
-          let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
+          let lhsEffect = (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) in 
+          if (List.length lhsEffect) > 50 then ()
+          else 
+            (
+            print_endline ("checking futurecondition ... " ^ string_of_int (List.length lhsEffect) ^ "|-" ^ string_of_int (List.length futurec));
+            let info = effectwithfootprintInclusion lhsEffect futurec in 
+            let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
           ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
           (*print_endline (string_of_inclusion_results extra_info info); *)
           
 
-          (let (head, patches) = program_repair info env in 
-          if String.compare patches "" == 0 then 
-          ()
-          else 
-            let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
-            let () = finalReport := !finalReport ^ head in 
-            let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
-            ());
+            let (head, patches) = program_repair info env in 
+            if String.compare patches "" == 0 then 
+            ()
+            else 
+              let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
+              let () = finalReport := !finalReport ^ head in 
+              let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
+              ());
 
           full_extension
         )  
@@ -1051,7 +1102,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           let stateX = syh_compute_stmt_postcondition env current' future x in 
 
           
-         (*
+         
+          (*
           print_endline ("=====\nCurrent handler root: " ^ (getRoot currentHandler)); 
           print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
           print_endline (string_of_bool (checkIsGlobalVar (getRoot currentHandler) !variablesInScope)); 
@@ -1110,8 +1162,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             concatenateTwoEffectswithFlag effectLi4X effectRest
           )
 
+    
     | (IfStmt (stmt_info, [x;(CompoundStmt(y_info, y_list))], if_stmt_info)) :: xsifelse -> 
-      if List.length y_list > 3 then 
+      if peekTheEffectOfStmtsAndItHasEffects env y_list then 
         let elseBranch = Clang_ast_t.CompoundStmt (stmt_info, []) in 
         let statement' = Clang_ast_t.IfStmt (stmt_info, [x;(CompoundStmt(y_info, y_list));elseBranch], if_stmt_info) in 
         helper current' (statement'::xsifelse)
@@ -1521,6 +1574,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | CStyleCastExpr _
   | WhileStmt _ 
   | ConstantExpr _ 
+  | UnaryExprOrTypeTraitExpr _ 
   | CXXOperatorCallExpr _ 
   | ArraySubscriptExpr _ 
   | InitListExpr _ 
@@ -1583,7 +1637,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
   | DeclStmt (_, _, handlers) -> 
-    print_string ("DeclStmt handlers"); 
 
     let _ = List.map handlers ~f:(fun del -> 
       let localVar = (string_of_decl del) in 
@@ -1700,7 +1753,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
-      if functionEnd - functionStart > 170 then 
+      if functionEnd - functionStart > 203 then 
         (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
         ())
       else 
@@ -1741,7 +1794,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let () = currentModuleBody := Some stmt in 
       let () = currentLable := [] in 
 
-      let () = variablesInScope := [] in 
       let raw_final = (syh_compute_stmt_postcondition 
             specifications 
             defultPrecondition

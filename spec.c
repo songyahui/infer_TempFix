@@ -3,13 +3,19 @@
 
 /*@ malloc(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* )  @*/
+    Future (ret=0, (!_(ret))^*) @*/
 
-/*@ free(handler): 
-    Post (TRUE, free(handler)) 
-    Future  (TRUE, (!_(handler))^*)  @*/
+/*@ realloc(a, b): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), realloc(ret))
+    Future (ret=0, (!_(ret))^*) @*/
 
-/* WavpackOpenFileInputEx64(a, b, c, d): 
-    Post (TRUE, CONSUME(b))   */
+/*@ memset(a, b): 
+    Post (TRUE, memset(a))  @*/
+
+/*@ strcpy(a, b): 
+    Post (TRUE, strcpy(a))  @*/
+
+/*@ memcpy(a, b): 
+    Post (TRUE, memcpy(a))  @*/
 
 
