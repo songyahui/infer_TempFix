@@ -802,18 +802,21 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
   
   
-  (*
-  print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
-  *)
   
+  (*print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
+  
+  
+  print_endline ("program state is " ^ string_of_programStates current);
+*)
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
     
-    (*
-    print_string ("==> helper: ");
-    let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
-    print_endline ("");
-    *)
     
+    (*print_string ("==> helper: ");
+    let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+    
+    
+    print_endline ("program state in helper " ^ string_of_programStates current);
+*)
     
 
     match li with
@@ -942,9 +945,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         if (String.compare calleeName "exit") == 0 || 
            (String.compare calleeName "_exit") == 0 ||
            (String.compare calleeName "flexerror") == 0 || 
-           (String.compare calleeName "flexfatal") == 0 then 
-          (
-          concatenateTwoEffectswithFlag current'' [(Ast_utility.TRUE, Emp, 1, fp)])
+           (String.compare calleeName "flexfatal") == 0 ||
+           (String.compare calleeName "recutl_fatal") == 0
+           then 
+          ([(Ast_utility.TRUE, Emp, 1, fp)])
         else helper (current'') xs in
 
       
@@ -1215,8 +1219,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
-    (*print_endline ("IfElse:" ^ string_of_programStates current ^ "\n");
-    *)
+    (*print_endline ("IfElse:" ^ string_of_programStates current ^ "\n"); *)
+    
 
 
     let checkRelavent (conditional:  Clang_ast_t.stmt) : (((pure * (string list)) option))  = 
@@ -1264,8 +1268,16 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let stmtNewIFELSE = Clang_ast_t.IfStmt (stmt_info, (stmtBinary)::ifelseRest, if_stmt_info) in 
             let () = handlerVar := Some (freshVar) in 
             helper current ([stmtCall; stmtNewIFELSE])
+          
+          (*
+            | BinaryOperator (bp_a, ParenExpr (_, (BinaryOperator (a, b1::CallExpr(ca, cb, cc) ::br, c, d))::_, _)::bp_b , bp_c, bp_d) -> 
+            let declRefExprStmt = constructADeclRefExprStmt bp_a bp_c (string_of_stmt b1) in 
+            let instr' = Clang_ast_t.IfStmt (stmt_info, (Clang_ast_t.BinaryOperator (bp_a, (declRefExprStmt)::bp_b , bp_c, bp_d))::ifelseRest, if_stmt_info) in 
+            helper current ([(BinaryOperator (a, b1::CallExpr(ca, cb, cc) ::br, c, d)); instr'])
+*)
     
           | _ -> 
+
             let eff4X = syh_compute_stmt_postcondition env current future x in
             let eff4Y = syh_compute_stmt_postcondition env current future y in
             let final = prefixLoction locX 
@@ -1318,7 +1330,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let stmtNewIFELSE = Clang_ast_t.IfStmt (stmt_info, (stmtBinary)::ifelseRest, if_stmt_info) in 
             let () = handlerVar := Some (freshVar) in 
             helper current ([stmtCall; stmtNewIFELSE])
-    
           | _ -> 
           let eff4X = syh_compute_stmt_postcondition env current future x in
           let eff4Y = syh_compute_stmt_postcondition env current future y in
@@ -1342,6 +1353,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       )
     | _ -> assert false ) in 
     let final = extra in 
+
     final
     
 
@@ -1671,7 +1683,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
-      if functionEnd - functionStart > 100 then 
+      if functionEnd - functionStart > 170 then 
         (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
         ())
       else 
@@ -1725,7 +1737,9 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
           (match final with 
           | [TRUE, Emp, _, _] -> ()
-          | _ -> print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
+          | _ -> 
+              print_endline (source_Address);
+              print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
                print_string (string_of_programStates final ^ "\n")) ;
 
 
