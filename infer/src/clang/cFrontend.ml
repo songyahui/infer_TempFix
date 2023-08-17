@@ -1897,6 +1897,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
  
   (*print_endline ("\n======================================================="); *)
   (*print_endline ("================ Here is Yahui's Code =================");*)
+  let start = Unix.gettimeofday () in 
 
   let which_system = if String.compare (String.sub (Sys.getcwd()) 0 5 ) "/home" == 0 then 1 else 0 in 
   let loris1_path = "/home/yahui/future_condition/infer_TempFix/"  in 
@@ -1909,7 +1910,6 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
   let (source_Address, decl_list, lines_of_code) = retrive_basic_info_from_AST ast in
   
-  let start = Unix.gettimeofday () in 
 
   let reasoning_Res = List.map decl_list  
     ~f:(fun dec -> reason_about_declaration dec user_sepcifications source_Address) in 
