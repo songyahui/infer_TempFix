@@ -946,7 +946,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
            (String.compare calleeName "_exit") == 0 ||
            (String.compare calleeName "flexerror") == 0 || 
            (String.compare calleeName "flexfatal") == 0 ||
-           (String.compare calleeName "recutl_fatal") == 0
+           (String.compare calleeName "recutl_fatal") == 0 
+           (*|| (String.compare calleeName "error") == 0 *)
            then 
           ([(Ast_utility.TRUE, Emp, 1, fp)])
         else helper (current'') xs in
