@@ -10,10 +10,6 @@
     Post (ret<0, 𝝐) \/ (ret>=0, socket(ret))
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
-/*@ swSocket_create(arg): 
-    Post (ret<0, 𝝐) \/ (ret>=0, socket(ret))
-    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
-
 /*@ close(handler): 
     Post (TRUE, close(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/
@@ -34,51 +30,45 @@
     Post (TRUE, closedir(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/
 
+// NPD
+
+/*@ realloc(a,b): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), realloc(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+
+/*@ regmatch_dup(a,b): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), regmatch_dup(ret)) 
+    Future (ret=0, (!_(ret))^*) @*/
+
+/*@ malloc(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+
+/*@ calloc(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), calloc(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+
+/*@ fdopen(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), fdopen(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+
+
+/*@ strcmp(a, b): 
+    Post (TRUE, strcmp(a))  @*/
+
+/*@ fputs(a, b): 
+    Post (TRUE, fputs(b))  @*/
+
+
 // Memory bugs 
 /*@ malloc(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* ) \/ (ret=0, (!_(ret))^*) @*/
+    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* )  @*/
 
 /*@ free(handler): 
     Post (TRUE, free(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/
 
-/*@ swMalloc_alloc(path): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* ) \/ (ret=0, (!_(ret))^*) @*/
-
-
-// NPD
-/*@ localtime(t): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-
-/*@ swReactor_get(t): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-// --------------------
-/*@ malloc(path): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (ret=0, (!_(ret))^*) @*/
-
-/*@ swMalloc_alloc(path): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (ret=0, (!_(ret))^*) @*/
-// --------------------
-/*@ swoole_get_property(a, b): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-// --------------------
-/*@ swServer_connection_verify(a, b): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-
-/*@ swServer_connection_get(a, b): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-// --------------------
-/*@ swServer_get_worker(a, b): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-
-/*@ swWorker_free(handler): 
-    Post (TRUE, free(handler))  @*/
-
-/*@ kill(handler, b): 
-    Post (TRUE, free(handler))  @*/
-
-
+/*@ regmatch_dup(a, b): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), regmatch_dup(ret))
+    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* )  @*/
