@@ -69,6 +69,9 @@ let (currentModuleBody: (Clang_ast_t.stmt) option  ref) = ref None
 let (currentLable: (string list)  ref) = ref []
 
 let (variablesInScope: (string list) ref) = ref [] 
+let (parametersInScope: (string list) ref) = ref [] 
+
+
 let (varSet: (string list) ref) = ref [] 
 let (handlerVar: string option ref) = ref None 
 
@@ -847,11 +850,11 @@ let rec comapreEventArgs arg1 arg2 =
   let compareBasic_type_custimise (bt1:basic_type) (bt2:basic_type) : bool = 
     match (bt1, bt2) with 
     | ((BVAR s1), (BVAR s2)) -> 
-      let l1 = String.length s1 in 
-      let l2 = String.length s2 in 
-      if l1 >= l2 then 
-        if String.compare (String.sub s1 0 l2) s2 == 0 then true else false 
-      else false 
+      print_endline ("s1 =" ^ s1 ^ ", s2 =" ^ s2 ^"."); 
+      print_endline ("getRoot s1 =" ^ (getRoot s1) ^ ", s2 =" ^ s2^"."); 
+      print_endline (string_of_int (String.compare (getRoot s1) s2));
+
+      if String.compare (getRoot s1) s2 == 0 then true else false  
     | (BINT n1, BINT n2) -> n1 == n2 
     | (BNULL, BNULL)
     | (BRET, BRET) -> true 
@@ -872,10 +875,12 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     | Wildcard _ -> Bot 
     | Event (event1, _) -> 
       let (str1, args1) = event1 in 
-      
-      if String.compare str1 "CONSUME" == 0 && comapreEventArgs args args1 then Emp 
+      print_endline (string_of_event event1 ^ " |- " ^ string_of_event event); 
+      if String.compare str1 "CONSUME" == 0 && comapreEventArgs args args1 then 
+        (print_endline ("true");
+        Emp) 
       else 
-      if comapreEvents event event1 == true then Emp else Bot 
+        if comapreEvents event event1 == true then Emp else Bot 
     | NotEvent event  ->  Bot
     )
   | NotSingleton str -> 
@@ -1043,7 +1048,7 @@ else
   let lhs = normalise_es lhs in 
   let rhs = normalise_es rhs in  
   let entailent = showEntailemnt lhs rhs in 
-  (* print_endline (entailent); *)
+  print_endline (entailent);
 
   if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
   else if nullable lhs && (not (nullable rhs)) then 
@@ -1451,3 +1456,43 @@ let string_of_foot_print (fp:int list ) : string =
   match fp with 
   | [] -> ""
   | x :: _-> " @" ^ string_of_int x
+
+
+
+let existRetTerm_basic_t v =
+  match v with
+  | BRET -> true 
+  | _ -> false 
+let rec existRetTerm t = 
+  match t with
+  | Basic v -> existRetTerm_basic_t v 
+  | Plus (t1, t2) 
+  | Minus (t1, t2) -> existRetTerm t1 ||  existRetTerm t2
+
+
+let rec existRetPure pi = 
+  match pi with
+    TRUE -> false 
+  | FALSE -> false
+  | Gt (t1, t2) 
+  | Lt (t1, t2) 
+  | GtEq (t1, t2) 
+  | LtEq (t1, t2) 
+  | Eq (t1, t2) -> existRetTerm t1 ||  existRetTerm t2
+  | PureOr (p1, p2) 
+  | PureAnd (p1, p2) -> existRetPure p1 ||  existRetPure p2
+  | Neg p -> existRetPure p
+
+
+
+let existRetEff (eff: effect option) : bool = 
+  let aux (pi, es) = if existRetPure pi then true else false (*existRetEs es *)
+  in 
+  let rec helper li  = 
+    match li with 
+    | [] -> false 
+    | (pi, es) :: xs  -> if aux (pi, es) then true else helper xs
+  in 
+  match eff with 
+  | None -> false 
+  | Some effIn -> helper effIn

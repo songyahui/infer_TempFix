@@ -811,12 +811,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
     
     
-    (*print_string ("==> helper: ");
+    (*
+    print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+    *)
     
-    
-    print_endline ("program state in helper " ^ string_of_programStates current);
-*)
+
     
 
     match li with
@@ -853,13 +853,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let () = print_string ("=========================\n") in 
             print_string (string_of_event (calleeName, acturelli) ^ ":\n");
             *)
-            print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
 
             let spec = findSpecFrom env calleeName in 
             match spec with
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
+              print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
+
               (*
               print_endline ("formal Arg = " ^ List.fold_left formalLi ~init:"" ~f:(fun acc a -> acc ^ "," ^a));
               print_endline ("actual Arg = " ^ List.fold_left acturelli ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a));
@@ -915,7 +916,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let (postc: effect option) = enforeceLineNum fp postc in 
       let (postc, futurec) = 
         match !handlerVar with 
-        | None -> (postc, futurec)
+        | None -> 
+          if existRetEff postc || existRetEff futurec 
+          then (None, None)
+          else (postc, futurec)
         | Some handler ->  
           (instantiateAugument postc [(handler, BRET)], 
            instantiateAugument futurec [(handler, BRET)])
@@ -981,7 +985,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               in 
               
               (*
-              print_endline ("effectRest: " ^ string_of_programStates effectRest);
               print_endline ("+ ctx future spec: " ^ string_of_programStates (effects2programStates ctxfuture));
               *)
 
@@ -989,15 +992,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               temp 
           in 
 
-          
           (*
-          print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
-          print_endline ("|- before RHS: " ^ string_of_effect futurec);
+          print_string ("==> rest stmt: ");
+          let _ = List.map xs ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+
+          print_endline ("effectRest: " ^ string_of_programStates effectRest);
           *)
 
-          (*
-          
-          in *)
+          print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
+          print_endline ("|- before RHS: " ^ string_of_effect futurec);
 
           (*print_endline ("|- RHS: " ^ string_of_effect futurec);*)
           let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) futurec in 
@@ -1136,6 +1139,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | LabelStmt (stmt_info, stmt_list, _)::xs
     | DoStmt (stmt_info, stmt_list)::xs 
     | ForStmt (stmt_info, stmt_list)::xs
+    | CompoundStmt (stmt_info, stmt_list)::xs
     | WhileStmt (stmt_info, stmt_list)::xs -> 
       let stmt' = List.append stmt_list xs in 
       helper current'  stmt'
@@ -1201,8 +1205,20 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | Some _ -> Emp
       in 
 
+      let rec consumeAlltheParameters li = 
+        match li with 
+        | [] -> Emp 
+        | [x] -> Singleton (("CONSUME", [(BVAR x)]), fp1)
+        | x ::xs -> 
+          Concatenate (Singleton (("CONSUME", [(BVAR x)]), fp1), 
+                       consumeAlltheParameters xs)
+      in 
+
       let es = Singleton (("RET", (retTerm1)), fp1) in 
-      [(extrapure, Concatenate(ev, es), 1, fp)]
+      if List.length !parametersInScope == 0 then 
+        [(extrapure, Concatenate(ev, es), 1, fp)]
+      else 
+        [(extrapure, Concatenate((consumeAlltheParameters !parametersInScope),Concatenate(ev, es)), 1, fp)]
     )
   
   | ReturnStmt (stmt_info, stmt_list) ->
@@ -1393,6 +1409,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | `Assign -> 
 
 
+    
     (*
     print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ " " ^ Clang_ast_proj.get_stmt_kind_string y ); 
 *)
@@ -1504,7 +1521,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | CStyleCastExpr _
   | WhileStmt _ 
   | ConstantExpr _ 
-  (*| ForStmt _ *)
   | CXXOperatorCallExpr _ 
   | ArraySubscriptExpr _ 
   | InitListExpr _ 
@@ -1694,7 +1710,9 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let funcName = named_decl_info.ni_name in 
       let argumentNames = List.map (function_decl_info.fdi_parameters) ~f:(fun a -> string_of_decl a) in 
       let () = variablesInScope := argumentNames in 
-
+      let () = parametersInScope := argumentNames in 
+      
+      print_endline ("Arguments are " ^ List.fold_left argumentNames ~init:"" ~f:(fun acc a -> acc ^ "," ^ a));
 
       (*
             print_endline ("\nreasoning "^ funcName ^"\n" ); 
