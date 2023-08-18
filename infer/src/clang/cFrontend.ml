@@ -808,6 +808,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
     | DefaultStmt (stmt_info, stmt_list) 
     | CaseStmt (stmt_info, stmt_list) 
     | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
+    | IfStmt (stmt_info, stmt_list, _)
     | CompoundStmt (stmt_info, stmt_list) ->  
         peekTheEffectOfStmtsAndItHasEffects env stmt_list
 
@@ -1103,6 +1104,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
           
          
+          
           (*
           print_endline ("=====\nCurrent handler root: " ^ (getRoot currentHandler)); 
           print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
@@ -1163,16 +1165,18 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           )
 
     
-    | (IfStmt (stmt_info, [x;(CompoundStmt(y_info, y_list))], if_stmt_info)) :: xsifelse -> 
-      if peekTheEffectOfStmtsAndItHasEffects env y_list then 
+    | (IfStmt (stmt_info, [x;y], if_stmt_info)) :: xsifelse -> 
+      if peekTheEffectOfStmtsAndItHasEffects env [y] then 
+        (
         let elseBranch = Clang_ast_t.CompoundStmt (stmt_info, []) in 
-        let statement' = Clang_ast_t.IfStmt (stmt_info, [x;(CompoundStmt(y_info, y_list));elseBranch], if_stmt_info) in 
-        helper current' (statement'::xsifelse)
+        let statement' = Clang_ast_t.IfStmt (stmt_info, [x;y;elseBranch], if_stmt_info) in 
+        helper current' (statement'::xsifelse))
       else 
-        let effectLi4X = syh_compute_stmt_postcondition env current' future (IfStmt (stmt_info, [x;(CompoundStmt(y_info, y_list))], if_stmt_info)) in 
+        (
+        let effectLi4X = syh_compute_stmt_postcondition env current' future (IfStmt (stmt_info, [x;y], if_stmt_info)) in 
         let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
         let effectRest = helper new_history xsifelse in 
-        concatenateTwoEffectswithFlag effectLi4X effectRest
+        concatenateTwoEffectswithFlag effectLi4X effectRest)
 
 
     | (IfStmt (stmt_info, [x;y;z], if_stmt_info)) :: xsifelse -> 
