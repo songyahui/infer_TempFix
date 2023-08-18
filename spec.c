@@ -1,116 +1,78 @@
 
 #define SW_CHANNEL_MIN_MEM (1024*64)
 
-// NPD 
-/*@ malloc(path): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (ret=0, (!_(ret))^*) @*/
-
-/*@ lxc_string_split(path): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), lxc_string_split(ret))
-    Future (ret=0, (!_(ret))^*) @*/
-
-/*@ lxcapi_get_config_path(path): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), lxcapi_get_config_path(ret))
-    Future (ret=0, (!_(ret))^*) @*/
-
-/*@ cgroup_to_absolute_path(path): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), cgroup_to_absolute_path(ret))
-    Future (ret=0, (!_(ret))^*) @*/
-
-/*@ strlen(a): 
-    Post (TRUE, strlen(a))  @*/
-
-/*@ construct_path(a, b): 
-    Post (TRUE, construct_path(a))  @*/
-
-/*@ sprintf(a, b, c): 
-    Post (TRUE, sprintf(a))  @*/
-
-/*@ lxc_list_init(a): 
-    Post (TRUE, lxc_list_init(a))  @*/
-
-
-// Resourse leak, ignoring the future conditions for fclose and close
+// Resourse leak 
 /*@ open(path): 
     Post (ret<0, 𝝐) \/ (ret>=0, open(ret))
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
 /*@ socket(domain, type, protocol): 
     Post (ret<0, 𝝐) \/ (ret>=0, socket(ret))
-    Future (ret>=0, (!_(ret))^* · close(ret) · (_)^* )  @*/
+    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
+
+/*@ swSocket_create(arg): 
+    Post (ret<0, 𝝐) \/ (ret>=0, socket(ret))
+    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
 /*@ close(handler): 
-    Post (handler=-1, close(handler)) 
-  @*/
-
-/*@ fdopen(a,b): 
-    Post (ret<0, 𝝐) \/ (ret>0, fdopen(ret))
-    Future (ret>0, (!fclose(ret))^* · (fdclose(ret) \/ fclose(ret)) · (_)^* )  @*/
-    
-/*@ fdclose(handler): 
-    Post (TRUE, fdclose(handler)) 
+    Post (TRUE, close(handler)) 
     Future  (TRUE, (!_(handler))^*)  @*/
 
 /*@ fopen(path): 
-    Post (TRUE, fdopen(ret))
+    Post (TRUE, fopen(ret)) 
     Future (ret>0, (!fclose(ret))^* · fclose(ret) · (_)^* )  @*/
-    
+
 /*@ fclose(handler): 
-    Post (handler=-1, fclose(handler)) 
-      @*/
+    Post (TRUE, fclose(handler)) 
+    Future  (TRUE, (!_(handler))^* · (𝝐 \/ (fopen(handler) · (_)^*)))  @*/
 
-/*@ lxc_abstract_unix_connect(a): 
-    Post (TRUE, lxc_abstract_unix_connect(ret))  @*/
+/*@ opendir(path): 
+    Post (ret<0, 𝝐) \/ (ret>0, opendir(ret))
+    Future (ret>0, (!closedir(ret))^* · closedir(ret) · (_)^* )  @*/
 
-// Memory Leak
+/*@ closedir(handler): 
+    Post (TRUE, closedir(handler)) 
+    Future  (TRUE, (!_(handler))^*)  @*/
 
+
+
+
+// Memory bugs 
 /*@ malloc(path): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* )  @*/
-
-
-/*@ ls_recv_str(a, b): 
-    Post (b=0, 𝝐) \/ (!(b=0), malloc(b))
-    Future (!(b=0), (!free(b))^* · free(b) · (_)^* )  @*/
-
-
-/*@ lxc_get_netdev_by_idx(a, b, c): 
-    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* )  @*/
-
-
-
-/*@ genlmsg_alloc(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
     Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* )  @*/
 
 /*@ free(handler): 
     Post (TRUE, free(handler))   @*/
 
-/*@ lxc_container_free(handler): 
-    Post (TRUE, free(handler))   @*/
+/*@ WavpackCloseFile(a): 
+    Post (TRUE, CONSUME(a))   @*/
 
-
-/*@ lxc_free_handler(handler): 
-    Post (TRUE, free(handler))   @*/
-
-/*@ free_cgroup_settings(handler): 
-    Post (TRUE, free(handler))   @*/
-
-/*@ free_groupnames(handler): 
-    Post (TRUE, free(handler))   @*/
+/*@ WavpackOpenFileInputEx64(a, b, c, d, e, f): 
+    Post (TRUE, CONSUME(c))   @*/
+    
+/*@ init_words(a): 
+    Post (TRUE, CONSUME(a))   @*/
 
 
 
+// NPD
 
-/*@ lxc_list_add(a, b): 
-    Post (TRUE, CONSUME(b))   @*/
+/*@ malloc(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
+    Future (ret=0, (!_(ret))^*) @*/
 
-/*@ bdev_put(handler): 
-    Post (TRUE, CONSUME(handler))   @*/
+/*@ realloc(a, b): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), realloc(ret))
+    Future (ret=0, (!_(ret))^*) @*/
 
+/*@ memset(a, b): 
+    Post (TRUE, memset(a))  @*/
 
-/*@ lxc_list_add_tail(a, b): 
-    Post (TRUE, CONSUME(b))   @*/
+/*@ strcpy(a, b): 
+    Post (TRUE, strcpy(a))  @*/
+
+/*@ memcpy(a, b): 
+    Post (TRUE, memcpy(a))  @*/
+
 
