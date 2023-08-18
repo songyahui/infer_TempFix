@@ -854,7 +854,7 @@ let rec comapreEventArgs arg1 arg2 =
       print_endline ("getRoot s1 =" ^ (getRoot s1) ^ ", s2 =" ^ s2^"."); 
       print_endline (string_of_int (String.compare (getRoot s1) s2));
 *)
-      if String.compare (getRoot s1) s2 == 0 then true else false  
+      if (String.compare (getRoot s1) s2 == 0 || String.compare s1 s2 == 0 ) then true else false  
     | (BINT n1, BINT n2) -> n1 == n2 
     | (BNULL, BNULL)
     | (BRET, BRET) -> true 
@@ -876,9 +876,12 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     | Event (event1, _) -> 
       let (str1, args1) = event1 in 
       (*print_endline (string_of_event event1 ^ " |- " ^ string_of_event event); *)
-      if String.compare str1 "CONSUME" == 0 && comapreEventArgs args args1 then (Emp) 
+      if (String.compare str1 "CONSUME" == 0 || String.compare str1 str ==0)  && comapreEventArgs args args1 
+      then (Emp)  else Bot
+      (*if String.compare str1 "CONSUME" == 0 && comapreEventArgs args args1 then (Emp) 
       else 
         if comapreEvents event event1 == true then Emp else Bot 
+        *)
     | NotEvent event  ->  Bot
     )
   | NotSingleton str -> 
