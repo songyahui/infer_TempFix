@@ -7,7 +7,7 @@
     Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
 
 /*@ grub_util_fopen(a, b): 
-    Post (ret<0, 𝝐) \/ (ret>=0, open(ret))
+    Post (ret<0, 𝝐) \/ (ret>0, open(ret))
     Future (ret>0, (!fclose(ret))^* · fclose(ret) · (_)^* )  @*/
 
 /*@ socket(domain, type, protocol): 
