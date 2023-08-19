@@ -466,7 +466,10 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
       None
     )
   | ParenExpr (_, x::rest, _) -> stmt2Pure x
-
+  | MemberExpr _ -> 
+    (match stmt2Term instr with 
+    | Some t -> Some (Gt (t, Basic(BINT 0))) 
+    | None  -> None )
   | DeclRefExpr _ -> 
     (match stmt2Term instr with 
     | Some t -> Some (Neg(Eq(t, Basic(BINT 0))))
