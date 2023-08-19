@@ -1765,7 +1765,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
-      if functionEnd - functionStart > 190 then 
+      if functionEnd - functionStart > 230 then 
         (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
         ())
       else 

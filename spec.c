@@ -3,7 +3,7 @@
 
 /*@ malloc(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* ) \/ (ret=0, (!_(ret))^*) @*/
+    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* )  @*/
 
 /*@ free(handler): 
     Post (TRUE, free(handler)) 
