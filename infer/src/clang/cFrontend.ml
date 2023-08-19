@@ -971,8 +971,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           then (None, None)
           else (postc, futurec)
         | Some handler ->  
-          (instantiateAugument postc [(handler, BRET)], 
-           instantiateAugument futurec [(handler, BRET)])
+          (
+          match futurec with 
+          | None -> ()
+          | Some f ->  print_endline ("|- futurec_raw " ^ string_of_effect f)
+          );
+
+          (instantiateReturn postc handler, 
+          instantiateReturn futurec handler)
       in 
 
       let () = handlerVar := None in 
@@ -1030,8 +1036,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               | None  -> ctxfuture
               | Some str -> 
                 (*print_endline(str);*)
-                let vb = [(str, BRET)] in 
-                instantiateAugumentSome ctxfuture vb 
+                instantiateRetSome ctxfuture str 
               in 
               
               (*
@@ -1041,7 +1046,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               let temp = concatenateTwoEffectswithoutFlag (effectRest) (effects2programStates ctxfuture) in 
               temp 
           in 
-
+          print_endline ("|- futurec " ^ string_of_effect futurec);
           (*
           print_string ("==> rest stmt: ");
           let _ = List.map xs ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
@@ -1050,7 +1055,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           *)
 
           (*print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
-          print_endline ("|- before RHS: " ^ string_of_effect futurec);
+          
 *)
           (*print_endline ("|- RHS: " ^ string_of_effect futurec);*)
           let lhsEffect = (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) in 
