@@ -1304,8 +1304,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       [(TRUE, ev, 0, fp)]
       
     | _ -> 
-      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
-      [(TRUE, Emp, 0, fp)]
+      let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+      prefixLoction fp (helper current [x])
     )
 
   | DefaultStmt (stmt_info, stmt_list) 
