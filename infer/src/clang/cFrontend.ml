@@ -1052,15 +1052,14 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           print_endline ("effectRest: " ^ string_of_programStates effectRest);
           *)
 
-          (*print_endline (" = restSpecLHS: " ^ string_of_programStates restSpecLHS);
-          
-*)
-          (*print_endline ("|- RHS: " ^ string_of_effect futurec);*)
           let lhsEffect = (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) in 
           if (List.length lhsEffect) > 50 then ()
           else 
             (
             print_endline ("checking futurecondition ... " ^ string_of_int (List.length lhsEffect) ^ "|-" ^ string_of_int (List.length futurec));
+
+            print_endline (" = LHS: " ^ string_of_programStates (normaliseProgramStates restSpecLHS));
+            print_endline ("|- RHS: " ^ string_of_effect futurec);
             let info = effectwithfootprintInclusion lhsEffect futurec in 
             let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
           ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
