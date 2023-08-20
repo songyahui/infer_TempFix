@@ -1,87 +1,68 @@
 
 #define SW_CHANNEL_MIN_MEM (1024*64)
 
-// Resourse leak 
 
-/*@ rpl_open(path): 
-    Post (ret<0, 𝝐) \/ (ret>=0, open(ret))
-    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
-
-
-/*@ socket(domain, type, protocol): 
-    Post (ret<0, 𝝐) \/ (ret>=0, socket(ret))
-    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
-
-/*@ swSocket_create(arg): 
-    Post (ret<0, 𝝐) \/ (ret>=0, swSocket_create(ret))
-    Future (ret>=0, (!close(ret))^* · close(ret) · (_)^* )  @*/
-
-/*@ close(handler): 
-    Post (TRUE, close(handler)) 
-    Future  (TRUE, (!_(handler))^*)  @*/
-
-/*@ fopen(path): 
-    Post (ret<0, 𝝐) \/ (ret>0, fopen(ret))
-    Future (ret>0, (!fclose(ret))^* · fclose(ret) · (_)^* )  @*/
-
-/*@ fclose(handler): 
-    Post (TRUE, fclose(handler)) 
-    Future  (TRUE, (!_(handler))^*)  @*/
-
-/*@ opendir(path): 
-    Post (ret<0, 𝝐) \/ (ret>0, opendir(ret))
-    Future (ret>0, (!closedir(ret))^* · closedir(ret) · (_)^* )  @*/
-
-/*@ closedir(handler): 
-    Post (TRUE, closedir(handler)) 
-    Future  (TRUE, (!_(handler))^*)  @*/
-
-
-//NPD
-
-
-/*@ get_name_action(t): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-
-
-/*@ call_chunkfun(t): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-
-/*@ strchr(a, b): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-
-/*@ format_find(a, b): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-
-/*@ gettermname(): 
-    Future  (ret=0, (!_(ret))^*)  @*/
-
-/*@ put_string(a, b): 
-    Post  (TRUE, put_string(b))  @*/
-    
-/*@ strlen(a): 
-    Post  (TRUE, strlen(a))  @*/
-
-
-/*@ strdup(a): 
-    Post  (TRUE, strdup(a))  @*/
-
-// Memory bugs 
+// NPD
 
 /*@ malloc(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
-    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^* )  @*/
+    Future (ret=0, (!_(ret))^*) @*/
 
-/*@ free(handler): 
-    Post (TRUE, free(handler)) 
-  @*/
 
-/*@ ping_set_data(a, b, c, d): 
-    Post (b=0, 𝝐) \/ (!(b=0), malloc(b))
-    Future (!(b=0), (!free(b))^* · free(b) · (_)^* )  @*/
+/*@ grub_util_make_temporary_file(): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), grub_util_make_temporary_file(ret))
+    Future (ret=0, (!_(ret))^*) @*/
 
-/*@ env_opt_start_info(): 
-    Post (b=0, 𝝐) \/ (!(b=0), malloc(b))
-    Future (!(b=0), (!free(b))^* · free(b) · (_)^* )  @*/
 
-  
+/*@ grub_device_open(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), grub_device_open(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+
+/*@ grub_efiemu_mm_obtain_request(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), grub_efiemu_mm_obtain_request(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+ 
+
+/*@ grub_procfs_rewind(a): 
+    Post (a=0, 𝝐) \/ (!(a=0), grub_procfs_rewind(ret))
+    Future (a=0, (!_(a))^*) @*/
+ 
+
+/*@ failure_start(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), failure_start(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+ 
+/*@ grub_util_fd_opendir(path): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), grub_util_fd_opendir(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+ 
+
+/*@ realloc(a, b): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), realloc(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+
+/*@ memset(a, b): 
+    Post (TRUE, memset(a))  @*/
+
+/*@ strcpy(a, b): 
+    Post (TRUE, strcpy(a))  @*/
+
+/*@ memcpy(a, b): 
+    Post (TRUE, memcpy(a))  @*/
+
+/*@ grub_gpt_read(a): 
+    Post (TRUE, grub_gpt_read(a))  @*/
+
+/*@ failure_append_vtext(a, b, c): 
+    Post (TRUE, failure_append_vtext(a))  @*/
+
+/*@ grub_util_fd_readdir(a): 
+    Post (TRUE, grub_util_fd_readdir(a))  @*/
+
+/*@ fprintf(a, b, c): 
+    Post (TRUE, fprintf(a))  @*/
+
+/*@ grub_memcpy(a, b, c): 
+    Post (TRUE, grub_memcpy(b))  @*/
+
+
