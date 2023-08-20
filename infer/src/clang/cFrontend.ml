@@ -1061,6 +1061,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             print_endline (" = LHS: " ^ string_of_programStates (normaliseProgramStates restSpecLHS));
             print_endline ("|- RHS: " ^ string_of_effect futurec);
             let info = effectwithfootprintInclusion lhsEffect futurec in 
+            let (error_paths, _, _, _) = info in 
+            print_endline (string_of_int (List.length error_paths));
             let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
           ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
           (*print_endline (string_of_inclusion_results extra_info info); *)
