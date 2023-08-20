@@ -136,13 +136,11 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
       (match stmt2Term x with 
       | Some (Basic (BINT t)) -> Some (Basic(BINT (0-t)))
       | _ -> 
-        (*print_endline ("`stmt2Term UnaryOperator2 "); *)
         stmt2Term x
 
       )
       
     | _ -> 
-      (*print_endline ("`stmt2Term UnaryOperator"); *)
       stmt2Term x
     )
    
@@ -1291,7 +1289,25 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     [(Ast_utility.TRUE, Emp, 1, fp)]
   
-  | UnaryOperator (stmt_info, stmt_list, _, _)
+
+  | UnaryOperator (stmt_info, x::_, expr_info, op_info)->
+    (match op_info.uoi_kind with
+    | `Deref -> 
+      let (fp, _) =  getStmtlocation instr in 
+      let varFromX = string_of_stmt x in 
+
+      let ev = if twoStringSetOverlap [varFromX] (!varSet) then 
+        Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
+        else Emp
+      in 
+      let fp = match fp with | None -> [] | Some l -> [l] in 
+      [(TRUE, ev, 0, fp)]
+      
+    | _ -> 
+      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
+      [(TRUE, Emp, 0, fp)]
+    )
+
   | DefaultStmt (stmt_info, stmt_list) 
   | CaseStmt (stmt_info, stmt_list) 
   | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
