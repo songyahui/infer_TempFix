@@ -12,6 +12,10 @@
     Post (ret=0, 𝝐) \/ (!(ret=0), grub_util_fopen(ret))
     Future (ret=0, (!_(ret))^*) @*/
 
+/*@ get_header_from_pointer(a, b, c): 
+    Post (c=0, 𝝐) \/ (!(c=0), get_header_from_pointer(c))
+    Future (c=0, (!_(c))^*) @*/
+
 
 /*@ grub_util_make_temporary_file(): 
     Post (ret=0, 𝝐) \/ (!(ret=0), grub_util_make_temporary_file(ret))
