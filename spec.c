@@ -8,6 +8,10 @@
     Post (ret=0, 𝝐) \/ (!(ret=0), malloc(ret))
     Future (ret=0, (!_(ret))^*) @*/
 
+/*@ yyalloc(a, b): 
+    Post (ret=0, 𝝐) \/ (!(ret=0), yyalloc(ret))
+    Future (ret=0, (!_(ret))^*) @*/
+
 /*@ grub_util_fopen(path): 
     Post (ret=0, 𝝐) \/ (!(ret=0), grub_util_fopen(ret))
     Future (ret=0, (!_(ret))^*) @*/
