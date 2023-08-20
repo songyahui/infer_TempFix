@@ -886,13 +886,13 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     )
     (*grub_gpt_read(dev.disk) event |- !_(dev)   ep  *)
   | NotSingleton str -> 
-    print_endline ("current event = " ^ string_of_event str);
+    (*print_endline ("current event = " ^ string_of_event str);*)
     let (ename, ep) = str in 
     if String.compare ename "_" == 0 then 
       (match f with 
       | Wildcard _ -> Bot 
       | Event ((str1, event), _) -> 
-        print_endline ("fst event = " ^ string_of_event (str1, event));
+        (*print_endline ("fst event = " ^ string_of_event (str1, event));*)
         if String.compare str1 "CONSUME" == 0 then 
           Emp
         else 

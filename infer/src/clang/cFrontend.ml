@@ -903,6 +903,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             *)
 
 
+
             let spec = findSpecFrom env calleeName in 
             match spec with
             | None -> ((calleeName, []), None, None, None)
@@ -1044,8 +1045,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               let temp = concatenateTwoEffectswithoutFlag (effectRest) (effects2programStates ctxfuture) in 
               temp 
           in 
-          print_endline ("|- futurec " ^ string_of_effect futurec);
           (*
+          print_endline ("|- futurec " ^ string_of_effect futurec);
+
           print_string ("==> rest stmt: ");
           let _ = List.map xs ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
 
@@ -1058,11 +1060,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             (
             print_endline ("checking futurecondition ... " ^ string_of_int (List.length lhsEffect) ^ "|-" ^ string_of_int (List.length futurec));
 
-            print_endline (" = LHS: " ^ string_of_programStates (normaliseProgramStates restSpecLHS));
-            print_endline ("|- RHS: " ^ string_of_effect futurec);
+            (*print_endline (" = LHS: " ^ string_of_programStates (normaliseProgramStates restSpecLHS));
+            print_endline ("|- RHS: " ^ string_of_effect futurec);*)
             let info = effectwithfootprintInclusion lhsEffect futurec in 
-            let (error_paths, _, _, _) = info in 
+            (*let (error_paths, _, _, _) = info in 
             print_endline (string_of_int (List.length error_paths));
+            *)
             let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
           ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
           (*print_endline (string_of_inclusion_results extra_info info); *)
@@ -1087,6 +1090,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     | BinaryOperator (stmt_info1, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
     | BinaryOperator (stmt_info1, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info) :: xs ->
       let (fp, _) = stmt_intfor2FootPrint stmt_info1 in 
+
 
     
       
@@ -1116,7 +1120,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           print_endline ("=====\nCurrent handler root: " ^ (getRoot currentHandler)); 
           print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
           print_endline (string_of_bool (checkIsGlobalVar (getRoot currentHandler) !variablesInScope)); 
+
+          
 *)
+          print_endline ("BinaryOperator1 " ^  string_of_stmt x ); 
 
           let rest = 
             if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
@@ -1492,9 +1499,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
     
-    (*
+    
     print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ " " ^ Clang_ast_proj.get_stmt_kind_string y ); 
-*)
+
       let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       let (fp', _) = getStmtlocation instr in
       let varFromY = string_of_stmt y in 
