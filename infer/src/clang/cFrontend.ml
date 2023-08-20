@@ -1305,7 +1305,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       
     | _ -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
-      prefixLoction fp (helper current [x])
+      prefixLoction fp (syh_compute_stmt_postcondition env current future x)
     )
 
   | DefaultStmt (stmt_info, stmt_list) 
