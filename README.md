@@ -135,3 +135,8 @@ https://linuxhint.com/compile-install-snort-from-source-code-ubuntu/
 
 
 Turn on the infer analyze_and_report: "analyze_and_report"
+
+1. reason for not finding all the TP, shown in infer. 
+
+API-Misuse Detection Driven by Fine-Grained API-Constraint
+Knowledge Graph
