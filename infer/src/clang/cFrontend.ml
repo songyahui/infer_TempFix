@@ -1123,7 +1123,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
           
 *)
-          print_endline ("BinaryOperator1 " ^  string_of_stmt x ); 
 
           let rest = 
             if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
@@ -1500,8 +1499,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
     
     
+    (*
     print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ " " ^ Clang_ast_proj.get_stmt_kind_string y ); 
-
+*)
       let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       let (fp', _) = getStmtlocation instr in
       let varFromY = string_of_stmt y in 
