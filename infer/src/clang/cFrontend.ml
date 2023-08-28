@@ -882,7 +882,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let () = variablesInScope := !variablesInScope @ [localVar] in 
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
 
-    | (CallExpr (stmt_info, stmt_list, ei)) ::xs -> 
+    | (CallExpr (stmt_info, stmt_list, ei)) ::xs 
+    | CStyleCastExpr(_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _) ::xs 
+    | ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _)::xs -> 
       (*print_endline ("I am here call");*)
       
 (* STEP 0: retrive the spec of the callee *)
@@ -1008,7 +1010,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
            (String.compare calleeName "recutl_fatal") == 0 
            (*|| (String.compare calleeName "error") == 0 *)
            then 
-          ([(Ast_utility.TRUE, Emp, 1, fp)])
+           let fp1 = match fp with | [] -> None | x::_ -> Some x in 
+           let es = Singleton (("RET", []), fp1) in 
+          ([(Ast_utility.TRUE, es, 1, fp)])
         else helper (current'') xs in
 
       
@@ -1205,6 +1209,43 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       
       let stmt' = List.append [x] xs in 
       helper current'  stmt'
+
+    | SwitchStmt (_, _::x::_, _)::xs -> 
+
+      let rec decomposeSwitch stmt = 
+        match stmt with 
+        | Clang_ast_t.CompoundStmt (_, li) -> li
+        | _ -> [stmt]
+      in 
+      let stmt_list = decomposeSwitch x in 
+
+
+      let rec aux (acc:(Clang_ast_t.stmt list) list) (currentList:Clang_ast_t.stmt list) (li:Clang_ast_t.stmt list) : ((Clang_ast_t.stmt list) list) = 
+        match li with 
+        | [] -> List.append acc [currentList]
+        | (CaseStmt a) :: xs -> aux (List.append acc [currentList]) [(Clang_ast_t.CaseStmt a)] xs 
+        | (DefaultStmt a) :: xs -> aux (List.append acc [currentList]) [(Clang_ast_t.DefaultStmt a)] xs 
+        | a :: xs -> aux acc ((currentList@[a])) xs 
+      in 
+
+      let stmt_list' = aux [] [] stmt_list in 
+
+
+      (*
+      print_string ("==> SwitchStmt: ");
+      let _ = List.map stmt_list' ~f:(fun a-> 
+        let _ = List.map a ~f:(fun b -> print_endline ((Clang_ast_proj.get_stmt_kind_string b)^",")) in 
+        print_string ("\n ")) in 
+      print_endline ("");
+      *)
+
+    
+      let stateSummary = List.map stmt_list' ~f:(fun x -> helper current (x@xs)) in 
+      let res = flattenList stateSummary  in 
+      (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
+      res
+
+
 
     | LabelStmt (stmt_info, stmt_list, _)::xs
     | DoStmt (stmt_info, stmt_list)::xs 
@@ -1635,41 +1676,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
       
-  | SwitchStmt (_, _::x::_, _) -> 
-
-    let rec decomposeSwitch stmt = 
-      match stmt with 
-      | Clang_ast_t.CompoundStmt (_, li) -> li
-      | _ -> [stmt]
-    in 
-    let stmt_list = decomposeSwitch x in 
-
-
-    let rec aux (acc:(Clang_ast_t.stmt list) list) (currentList:Clang_ast_t.stmt list) (li:Clang_ast_t.stmt list) : ((Clang_ast_t.stmt list) list) = 
-      match li with 
-      | [] -> List.append acc [currentList]
-      | (CaseStmt a) :: xs -> aux (List.append acc [currentList]) [(Clang_ast_t.CaseStmt a)] xs 
-      | (DefaultStmt a) :: xs -> aux (List.append acc [currentList]) [(Clang_ast_t.DefaultStmt a)] xs 
-      | a :: xs -> aux acc ((currentList@[a])) xs 
-    in 
-
-    let stmt_list' = aux [] [] stmt_list in 
-
-
-    (*
-    print_string ("==> SwitchStmt: ");
-    let _ = List.map stmt_list' ~f:(fun a-> 
-      let _ = List.map a ~f:(fun b -> print_endline ((Clang_ast_proj.get_stmt_kind_string b)^",")) in 
-      print_string ("\n ")) in 
-    print_endline ("");
-    *)
-
-  
-    let stateSummary = List.map stmt_list' ~f:(fun x -> helper current x) in 
-    let res = flattenList stateSummary  in 
-    (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
-    res
-
 
 
   | DeclStmt (_, _, handlers) -> 
