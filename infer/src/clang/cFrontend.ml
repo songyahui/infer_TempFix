@@ -972,14 +972,17 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           then (None, None)
           else (postc, futurec)
         | Some handler ->  
-          (
+          if twoStringSetOverlap [getRoot handler] (!parametersInScope) then  
+            (instantiateReturn postc handler, None)
+          else
+          ((
           match futurec with 
           | None -> ()
           | Some f ->  print_endline ("|- futurec_raw " ^ string_of_effect f)
           );
 
           (instantiateReturn postc handler, 
-          instantiateReturn futurec handler)
+          instantiateReturn futurec handler))
       in 
 
       let () = handlerVar := None in 
@@ -1003,6 +1006,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 *)
 
       let effectRest = 
+        let fp1 = match fp with | [] -> None | x::_ -> Some x in 
         if (String.compare calleeName "exit") == 0 || 
            (String.compare calleeName "_exit") == 0 ||
            (String.compare calleeName "flexerror") == 0 || 
@@ -1010,7 +1014,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
            (String.compare calleeName "recutl_fatal") == 0 
            (*|| (String.compare calleeName "error") == 0 *)
            then 
-           let fp1 = match fp with | [] -> None | x::_ -> Some x in 
            let es = Singleton (("RET", []), fp1) in 
           ([(Ast_utility.TRUE, es, 1, fp)])
         else helper (current'') xs in
@@ -1335,7 +1338,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | ReturnStmt (stmt_info, stmt_list) ->
     (*print_endline ("ReturnStmt:" ^ string_of_stmt_list stmt_list " ");*)
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
-    [(Ast_utility.TRUE, Emp, 1, fp)]
+    let fp1 = match fp with | [] -> None | x::_ -> Some x in 
+    let es = Singleton (("RET", []), fp1) in 
+    [(Ast_utility.TRUE, es, 1, fp)]
   
 
   | UnaryOperator (stmt_info, x::_, expr_info, op_info)->
