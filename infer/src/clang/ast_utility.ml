@@ -821,6 +821,13 @@ let rec nullable (eff:es) : bool =
   | Kleene effIn      -> true
   | _ -> false 
 
+let rec forallNullable (eff:effect): bool = 
+  match eff with 
+  | [] -> true 
+  | (_, es) :: xs  -> 
+    if nullable es then true
+    else false 
+
 let rec fst (eff:es) : (fstElem list) = 
   match eff with 
   | Bot                
@@ -1183,7 +1190,7 @@ let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) :
   let validPairs = List.map mixLi 
     ~f:(fun ((p1, a, b), (p2, c)) -> 
       let pathcondition = 
-        if entailConstrains p1 p2 then TRUE else 
+        if entailConstrains p1 p2 then p2 else 
         PureAnd(p1, p2) in 
     ((pathcondition, a, b), (p2, c))) in 
     
@@ -1318,7 +1325,7 @@ let rec findRetFromBindingsRet (bt:bindings) : string option =
 let instantiateAugument_Basic_type (bt:basic_type) (bds:bindings):  basic_type = 
   match bt with 
   | BVAR str -> 
-    (match findRetFromBindings bds str with
+    (match findRetFromBindings bds (getRoot str) with
     | None -> bt
     | Some term ->  term 
     )
@@ -1604,7 +1611,7 @@ let rec string_of_es_prime (eff:es) : string =
   | Emp              -> "𝝐"
   | Any -> "_" 
   | Singleton (str, l)  -> 
-    string_of_event_prime str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)
+    string_of_event_prime str (*^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)*)
   (* | NotArguments (x::_) -> -> "!_" ^ string_of_basic_t x  
   currently NotArguments is represented using NotSingleton _
   *)
@@ -1663,3 +1670,19 @@ let rec seperateDisjunctives (info:((error_info list) * binary_tree * pathList *
       let es1_s = seperateDisjunctivesES es1 in 
       List.map es1_s ~f:(fun es -> ([(pi, es, d, es2)], a, b, c)) 
       @ seperateDisjunctives (xs, a, b, c)
+
+
+let extraConstraints moduleName eff = false 
+  (*
+  let rec underscoreES es = 
+    match es with 
+    | 
+  let rec underscoreEffect eff = 
+    match eff with 
+    | [] -> false 
+    | (_, es):: xs -> 
+    if underscoreES es then true else underscoreEffect xs 
+  in 
+  (String.compare "_" (String.sub moduleName 0 1) == 0) || 
+  underscoreEffect eff
+  *)

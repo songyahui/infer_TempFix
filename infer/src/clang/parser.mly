@@ -31,10 +31,16 @@
 %type <(Ast_utility.terms)> term
 %%
 
+variable: 
+| str = VAR {str}
+| UNDERLINE str = VAR {("_"^str)}
+| UNDERLINE UNDERLINE str = VAR {("__"^str)}
+
+
 basic_type : 
 | i = INTE{      BINT ( i)
     }
-| v = VAR {BVAR v} 
+| v = variable {BVAR v} 
 | NULL {BNULL}
 | RETURN {BRET}
 
@@ -162,13 +168,13 @@ optionalPrecondition:
 
 formalparm:
 | {[]}
-| str = VAR {[str]}
+| str = variable {[str]}
 | str = VAR COMMA rest=formalparm {str:: rest}
 
 
 specification: 
 | EOF {(("", []), None, None, None)}
-| LSPEC str = VAR LPAR argument=formalparm RPAR COLON 
+| LSPEC str = variable LPAR argument=formalparm RPAR COLON 
 a = optionalPrecondition 
 RSPEC {
   let (e1, e2, e3) = a in 

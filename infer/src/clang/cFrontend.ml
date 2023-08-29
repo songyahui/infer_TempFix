@@ -540,11 +540,12 @@ F ｜- {current} instr {postconsition }
 *)
 
 
-let rec findSpecFrom (specs:specification list) (fName: string): specification option = 
+let rec findSpecFrom (specs:specification list) (fName: string): (specification option * specification list) = 
   match specs with 
-  | [] -> None
-  | ((str, li), a, b, c):: rest -> if String.compare str fName == 0 then Some ((str, li), a, b, c) else 
-  findSpecFrom rest fName
+  | [] -> (None, [])
+  | ((str, li), a, b, c):: rest -> if String.compare str fName == 0 then (Some ((str, li), a, b, c), rest) else 
+  let (spec, rest) = findSpecFrom rest fName in 
+  (spec, ((str, li), a, b, c)::rest)
   ;;
 
 
@@ -824,7 +825,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
           | None -> false 
           | Some (calleeName, acturelli) -> 
             (match findSpecFrom env calleeName with
-            | Some ((_, _), _, _, Some _) ->  true 
+            | (Some ((_, _), _, _, Some _), _) ->  true 
             | _ -> false   )
             (*let spec = findSpecFrom env calleeName in 
             match spec with
@@ -906,7 +907,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
 
-            let spec = findSpecFrom env calleeName in 
+            let (spec, _) = findSpecFrom env calleeName in 
             match spec with
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
@@ -1099,50 +1100,16 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
                     let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
                     (* print_endline (string_of_specification newSpec); *)
                     (match findSpecFrom !propogatedSpecs !currentModule with 
-                    | None -> propogatedSpecs := !propogatedSpecs @ [newSpec]
-                    | Some _ -> ())
+                    | (Some (a, b,  c, None), rest) -> propogatedSpecs := rest @ [(a, b,  c, Some ([pi, es2]))]
+                    | (None, _) -> propogatedSpecs := !propogatedSpecs @ [newSpec]
+                    | _ -> ()
+                    )
                 ) in 
                 ()
               )
             ) in 
             ()
 
-            (*match findReturnValueProgramStates lhsEffect with 
-            | None  -> (* If there is no return value, then we proceed to repair the future condition *)
-              let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
-              ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
-              (*print_endline (string_of_inclusion_results extra_info info); *)
-              
-    
-                let (head, patches) = program_repair info env in 
-                if String.compare patches "" == 0 then 
-                ()
-                else 
-                  let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
-                  let () = finalReport := !finalReport ^ head in 
-                  let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
-                  ()
-  
-            | Some str -> 
-              print_endline ("return " ^ str);
-              let (error_paths, _, _, _) = info in 
-              match error_paths with  
-              | [] -> ()
-              | _ -> 
-
-                List.iter error_paths ~f:(fun (pi,_, _, es2) -> 
-                  print_endline (!currentModule ^ " should have some future condition ");
-                  let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
-                  let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
-                  let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
-                  (* print_endline (string_of_specification newSpec); *)
-                  (match findSpecFrom !propogatedSpecs !currentModule with 
-                  | None -> propogatedSpecs := !propogatedSpecs @ [newSpec]
-                  | Some _ -> ())
-                )
-                  
-
-            *)
             
             );
 
@@ -1711,6 +1678,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | FloatingLiteral _ 
   | IntegerLiteral _ 
   | StringLiteral _ 
+  | CompoundLiteralExpr _
   | RecoveryExpr _ 
   | DeclRefExpr _  
   | CStyleCastExpr _
@@ -1877,7 +1845,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
       *)
 
-      let functionspec = findSpecFrom specifications funcName in 
+      let (functionspec, _) = findSpecFrom specifications funcName in 
       let (_, precondition, postcondition, futurecondition) = 
         match functionspec with
         | None -> ((funcName, []), None, None, None)
@@ -1913,9 +1881,22 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
           (match final with 
           | [TRUE, Emp, _, _] -> ()
           | _ -> 
+              let postcondition = (programStates2effects final) in 
+              let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
+              (match findSpecFrom !propogatedSpecs !currentModule with 
+              | (Some (a, b,  None, c), rest) -> 
+                if forallNullable postcondition || extraConstraints !currentModule postcondition then ()
+                else 
+                  propogatedSpecs := rest @ [(a, b, Some postcondition, c)]
+              | (None, _) -> 
+                if forallNullable postcondition || extraConstraints !currentModule postcondition then ()
+                else propogatedSpecs := !propogatedSpecs @ [newSpec]
+              | _ -> ()
+              );
+
               print_endline (source_Address);
               print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
-               print_string (string_of_programStates final ^ "\n")) ;
+              print_string (string_of_programStates final ^ "\n")) ;
 
 
 
@@ -2091,7 +2072,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   let loris1_path = "/home/yahui/future_condition/infer_TempFix/"  in 
   let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/" in 
   let path = if which_system == 1  then loris1_path else mac_path  in 
+  let start1 = Unix.gettimeofday () in 
   let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications (path ^ "spec.c") in 
+  repairTime := !repairTime +. (Unix.gettimeofday () -. start1); 
   let output_report =  path ^ "TempFix-out/report.csv" in 
   let output_detail =  path ^ "TempFix-out/detail.txt" in 
 
@@ -2106,7 +2089,9 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   let updatedSpec = List.fold_left (user_sepcifications@(!propogatedSpecs)) ~init:"" ~f:(fun acc a -> acc ^ "\n" ^ (string_of_specification a) ) in 
 
   (*print_endline (updatedSpec);*)
+  let start2 = Unix.gettimeofday () in 
   deleteAndWrite (updatedSpec ^ "\n") (path ^ "spec.c") ; 
+  repairTime := !repairTime +. (Unix.gettimeofday () -. start2); 
 
   
   let compution_time = (Unix.gettimeofday () -. start) in 
