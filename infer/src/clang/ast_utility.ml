@@ -1439,10 +1439,7 @@ let instantiateRetSome (eff:effect) (bds:string) : effect  =
 let instantiateProgramStates (eff:programStates) (bds:bindings) : programStates  = 
   List.map eff ~f:(fun (pi, es, a, b) -> (instantiateAugumentPure pi bds, instantiateAugumentEs es bds, a, b)) 
 
-
-
-let rec findReturnValueProgramStates (eff:programStates) : string option =
-  let rec findReturnValueES es : string option =
+let rec findReturnValueES es : string option =
     match es with 
     | Singleton ((str, [((BVAR arg))]), _) -> 
       if String.compare str "RET" == 0 then Some arg else None 
@@ -1455,8 +1452,9 @@ let rec findReturnValueProgramStates (eff:programStates) : string option =
       |None -> findReturnValueES b
       |Some str -> Some str)
     | Kleene (a) -> findReturnValueES a
-    
-  in 
+
+let rec findReturnValueProgramStates (eff:programStates) : string option =
+ 
   match eff with
   | [] -> None 
   | (_, es, _, _):: xs -> 
@@ -1650,4 +1648,18 @@ let string_of_specification (((name, args),  pre, post, future):specification)  
     ^ helper 2 future 
     ^  "@*/\n"
 
+let rec seperateDisjunctivesES (es:es) : es list =
+  match es with 
+  | Disj(es1, es2) -> List.append (seperateDisjunctivesES es1) (seperateDisjunctivesES es2)
+  | _ -> [es]
 
+
+let rec seperateDisjunctives (info:((error_info list) * binary_tree * pathList * pathList)): ((error_info list) * binary_tree * pathList * pathList) list = 
+  match  info with 
+  | (error_paths, a, b, c) -> 
+    match error_paths with 
+    | [] -> [] 
+    | (pi, es1, d, es2) :: xs -> 
+      let es1_s = seperateDisjunctivesES es1 in 
+      List.map es1_s ~f:(fun es -> ([(pi, es, d, es2)], a, b, c)) 
+      @ seperateDisjunctives (xs, a, b, c)

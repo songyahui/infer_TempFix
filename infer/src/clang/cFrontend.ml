@@ -1070,8 +1070,44 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             print_endline (" = LHS: " ^ string_of_programStates lhsEffect);
             print_endline ("|- RHS: " ^ string_of_effect futurec);
             let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist lhsEffect) futurec in 
+            let infos = seperateDisjunctives info in 
+            let  _ = List.iter infos ~f:(fun singleInfo ->
+              let (error_paths, _, _, _) = info in 
+              (match error_paths with 
+              | [] -> ()
+              | _ ->  
+                let  _ = List.iter error_paths ~f:(fun (pi,es1, _, es2) -> 
+                  match findReturnValueES es1 with 
+                  | None -> (* If there is no return value, then we proceed to repair the future condition *)
+                    let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
+                    ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
+                    (*print_endline (string_of_inclusion_results extra_info info); *)
+                    
+          
+                      let (head, patches) = program_repair singleInfo env in 
+                      if String.compare patches "" == 0 then 
+                      ()
+                      else 
+                        let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
+                        let () = finalReport := !finalReport ^ head in 
+                        let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
+                        ()
+                  | Some str -> 
+                    print_endline (!currentModule ^ " should have some future condition ");
+                    let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
+                    let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
+                    let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
+                    (* print_endline (string_of_specification newSpec); *)
+                    (match findSpecFrom !propogatedSpecs !currentModule with 
+                    | None -> propogatedSpecs := !propogatedSpecs @ [newSpec]
+                    | Some _ -> ())
+                ) in 
+                ()
+              )
+            ) in 
+            ()
 
-            (match findReturnValueProgramStates lhsEffect with 
+            (*match findReturnValueProgramStates lhsEffect with 
             | None  -> (* If there is no return value, then we proceed to repair the future condition *)
               let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
               ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
@@ -1092,19 +1128,21 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               let (error_paths, _, _, _) = info in 
               match error_paths with  
               | [] -> ()
-              | [(pi, _, _, es2)] -> 
-                print_endline (!currentModule ^ " should have some future condition ");
-                let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
-                let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
-                let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
-                (* print_endline (string_of_specification newSpec); *)
-                (match findSpecFrom !propogatedSpecs !currentModule with 
-                | None -> propogatedSpecs := !propogatedSpecs @ [newSpec]
-                | Some _ -> ())
+              | _ -> 
+
+                List.iter error_paths ~f:(fun (pi,_, _, es2) -> 
+                  print_endline (!currentModule ^ " should have some future condition ");
+                  let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
+                  let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
+                  let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
+                  (* print_endline (string_of_specification newSpec); *)
+                  (match findSpecFrom !propogatedSpecs !currentModule with 
+                  | None -> propogatedSpecs := !propogatedSpecs @ [newSpec]
+                  | Some _ -> ())
+                )
                   
 
-              | _ -> raise (Failure "more error_paths!")
-            )
+            *)
             
             );
 
