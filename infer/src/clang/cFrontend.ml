@@ -1067,8 +1067,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             (
             print_endline ("checking futurecondition ... " ^ string_of_int (List.length lhsEffect) ^ "|-" ^ string_of_int (List.length futurec));
 
-            (*print_endline (" = LHS: " ^ string_of_programStates (normaliseProgramStates restSpecLHS));
-            print_endline ("|- RHS: " ^ string_of_effect futurec);*)
+            print_endline (" = LHS: " ^ string_of_programStates (normaliseProgramStates restSpecLHS));
+            print_endline ("|- RHS: " ^ string_of_effect futurec);
             let info = effectwithfootprintInclusion lhsEffect futurec in 
             (*let (error_paths, _, _, _) = info in 
             print_endline (string_of_int (List.length error_paths));
@@ -1315,10 +1315,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               | (BVAR str) -> (BVAR (getRoot str)) 
               | _ -> a 
               ) in
-            Singleton ((("CONSUME", retTerm1)), fp1) 
+            Singleton ((("RET", retTerm1)), fp1) 
         | Some _ -> Emp
       in 
 
+      (*
       let rec consumeAlltheParameters li = 
         match li with 
         | [] -> Emp 
@@ -1326,13 +1327,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | x ::xs -> 
           Concatenate (Singleton (("CONSUME", [(BVAR x)]), fp1), 
                        consumeAlltheParameters xs)
-      in 
+      in *)
 
       let es = Singleton (("RET", (retTerm1)), fp1) in 
       if List.length !parametersInScope == 0 then 
         [(extrapure, Concatenate(ev, es), 1, fp)]
       else 
-        [(extrapure, Concatenate((consumeAlltheParameters !parametersInScope),Concatenate(ev, es)), 1, fp)]
+        [(extrapure, Concatenate((*consumeAlltheParameters !parametersInScope *) Emp,Concatenate(ev, es)), 1, fp)]
     )
   
   | ReturnStmt (stmt_info, stmt_list) ->
@@ -1708,9 +1709,6 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 *)
     
 
-
-  | UnaryExprOrTypeTraitExpr _
-
   | _ -> 
     let (fp, fp1) =  (getStmtlocation instr) in 
     let (fp', _) = maybeIntToListInt (fp, fp1) in 
@@ -2000,6 +1998,20 @@ let outputFinalReport str path =
     raise e                      (* 以出错的形式退出: 文件已关闭,但通道没有写入东西 *)
   ;; 
 
+let deleteAndWrite (str:string) path = 
+
+  let oc = open_out path in 
+
+  try 
+    Printf.fprintf oc "#define SW_CHANNEL_MIN_MEM (1024*64)\n";
+    Printf.fprintf oc "%s" str;
+    close_out oc;
+    ()
+
+  with e ->                      (* 一些不可预见的异常发生 *)
+    close_out_noerr oc;           (* 紧急关闭 *)
+    raise e                      (* 以出错的形式退出: 文件已关闭,但通道没有写入东西 *)
+  ;; 
 
 
 
@@ -2030,6 +2042,12 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
   let reasoning_Res = List.map decl_list  
     ~f:(fun dec -> reason_about_declaration dec user_sepcifications source_Address) in 
+
+  let updatedSpec = List.fold_left user_sepcifications ~init:"" ~f:(fun acc a -> acc ^ "\n" ^ (string_of_specification a) ) in 
+
+  print_endline (updatedSpec);
+  deleteAndWrite (updatedSpec) (path ^ "spec.c") ; 
+
   
   let compution_time = (Unix.gettimeofday () -. start) in 
 

@@ -186,6 +186,10 @@ let string_of_basic_t v =
   | BNULL -> "NULL"
   | BRET -> ".ret"
 
+
+
+  
+
 let basic_type2_string v = 
   match v with 
   | BVAR name -> [name]
@@ -606,7 +610,7 @@ let rec string_of_effect (eff:effect) : string =
   | [] -> ""
   | [(pi, es)] ->  "(" ^ string_of_pure pi ^ " /\\ " ^ string_of_es es ^ ")"
   | (pi, es) :: xs ->  "(" ^ string_of_pure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
-
+  
 let rec string_of_programStates (eff:programStates) : string = 
   match eff with 
   | [] -> ""
@@ -1553,3 +1557,93 @@ let existRetEff (eff: effect option) : bool =
   match eff with 
   | None -> false 
   | Some effIn -> helper effIn
+
+let string_of_basic_t_prime v = 
+  match v with 
+  | BVAR name -> name
+  | BINT n -> string_of_int n
+  | BNULL -> "NULL"
+  | BRET -> "ret"
+
+let rec string_of_terms_prime (t:terms):string = 
+  match t with
+  | Basic v -> string_of_basic_t_prime v 
+  | Plus (t1, t2) -> (string_of_terms_prime t1) ^ ("+") ^ (string_of_terms_prime t2)
+  | Minus (t1, t2) -> (string_of_terms_prime t1) ^ ("-") ^ (string_of_terms_prime t2)
+
+let rec string_of_pure_prime (p:pure):string =   
+  match p with
+    TRUE -> "TRUE"
+  | FALSE -> "FALSE"
+  | Gt (t1, t2) -> "("^(string_of_terms_prime t1) ^ ">" ^ (string_of_terms_prime t2)^")"
+  | Lt (t1, t2) -> "("^(string_of_terms_prime t1) ^ "<" ^ (string_of_terms_prime t2)^")"
+  | GtEq (t1, t2) -> "("^(string_of_terms_prime t1) ^ ">=" ^ (string_of_terms_prime t2)^")"
+  | LtEq (t1, t2) -> "("^(string_of_terms_prime t1) ^ "<=" ^ (string_of_terms_prime t2)^")"
+  | Eq (t1, t2) -> "("^(string_of_terms_prime t1) ^ "=" ^ (string_of_terms_prime t2)^")"
+  | PureOr (p1, p2) -> "("^string_of_pure_prime p1 ^ "\\/" ^ string_of_pure_prime p2^")"
+  | PureAnd (p1, p2) -> "("^string_of_pure_prime p1 ^ "/\\" ^ string_of_pure_prime p2^")"
+  | Neg (Eq (t1, t2)) -> "!("^(string_of_terms_prime t1) ^ "=" ^ (string_of_terms_prime t2)^")"
+  | Neg p -> "!(" ^ string_of_pure_prime p^")"
+
+let string_of_event_prime (str, li) = 
+  let temp = 
+    match li with 
+    | [] -> ""
+    | [x] ->  string_of_basic_t_prime x 
+    | x::xs->
+      List.fold_left xs 
+      ~init:(string_of_basic_t_prime x) 
+      ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t_prime a )
+  in 
+  str ^ "("^temp^")"
+let rec string_of_es_prime (eff:es) : string = 
+  match eff with 
+  | Bot              -> "⏊"
+  | Emp              -> "𝝐"
+  | Any -> "_" 
+  | Singleton (str, l)  -> 
+    string_of_event_prime str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)
+  (* | NotArguments (x::_) -> -> "!_" ^ string_of_basic_t x  
+  currently NotArguments is represented using NotSingleton _
+  *)
+  | NotSingleton str          -> "!" ^ string_of_event_prime str 
+  | Concatenate (eff1, eff2) ->
+      string_of_es_prime eff1 ^ " · " ^ string_of_es_prime eff2 
+  | Disj (eff1, eff2) ->
+      "(" ^ string_of_es_prime eff1 ^ " \\/ " ^ string_of_es_prime eff2 ^ ")"
+  | Kleene effIn          ->
+      "(" ^ string_of_es_prime effIn ^ ")^*"
+
+  | _ -> "string_of_es error"
+
+let rec string_of_effect_prime (eff:effect) : string = 
+  match eff with 
+  | [] -> ""
+  | [(pi, es)] ->  "(" ^ string_of_pure_prime pi ^ ", " ^ string_of_es_prime es ^ ")"
+  | (pi, es) :: xs ->  "(" ^ string_of_pure_prime pi ^ ", " ^ string_of_es_prime es ^ ") \\/ " ^ string_of_effect_prime xs
+
+  
+let string_of_specification (((name, args),  pre, post, future):specification)  : string 
+  = 
+    let helper number eff = 
+      match eff with
+      | None -> ""
+      | Some eff -> 
+        "    "^ (if number == 0 then "Pre "
+        else if number == 1 then "Post "
+        else "Future ")
+        ^ string_of_effect_prime eff
+    in 
+    let rec print_arg li  = 
+      match li with 
+      | [] -> ""
+      | [x] -> x
+      | x :: xs  -> x ^ ", " ^ print_arg xs 
+    in 
+    "/*@ "^  name ^ "("^ print_arg args ^"):\n"  
+    ^ (helper 0 pre) 
+    ^ helper 1 post 
+    ^ helper 2 future 
+    ^  "@*/\n"
+
+
