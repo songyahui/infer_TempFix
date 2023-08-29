@@ -146,9 +146,9 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
    
 
   | RecoveryExpr (_, [], _) -> Some (Basic(BINT(0))) 
-  | StringLiteral (_, _, _, str_list) -> 
+  | StringLiteral (_, _, _, str_list) -> None 
     
-    let str = 
+    (*let str = 
       let rec straux li = 
       match li with 
       | [] -> ""
@@ -156,6 +156,7 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
       in  straux str_list
     in 
     Some (Basic(BVAR("\"" ^ str ^ "\""))) 
+    *)
 
   | ConditionalOperator (_, x::y::_, _) -> stmt2Term y 
 
@@ -968,15 +969,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       in 
 (* STEP 2: obtain the next state *)
       let (postc: effect option) = enforeceLineNum fp postc in 
-      let (postc, futurec) = 
+      let (postc, futurec, currentHandler) = 
         match !handlerVar with 
         | None -> 
           if existRetEff postc || existRetEff futurec 
-          then (None, None)
-          else (postc, futurec)
+          then (None, None, "")
+          else (postc, futurec, "")
         | Some handler ->  
           if twoStringSetOverlap [getRoot handler] (!parametersInScope) then  
-            (instantiateReturn postc handler, None)
+            (instantiateReturn postc handler, None, handler)
           else
           ((
           match futurec with 
@@ -985,7 +986,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           );
 
           (instantiateReturn postc handler, 
-          instantiateReturn futurec handler))
+          instantiateReturn futurec handler, 
+          handler
+          ))
       in 
 
       let () = handlerVar := None in 
@@ -1096,15 +1099,33 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
                         let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
                         ()
                   | Some str -> 
-                    print_endline (!currentModule ^ " should have some future condition ");
-                    let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
-                    let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
-                    let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
-                    (* print_endline (string_of_specification newSpec); *)
-                    (match findSpecFrom !propogatedSpecs !currentModule with 
-                    | (Some (a, b,  c, None), rest) -> propogatedSpecs := rest @ [(a, b,  c, Some ([pi, es2]))]
-                    | (None, _) -> propogatedSpecs := !propogatedSpecs @ [newSpec]
-                    | _ -> ()
+                    if String.compare (getRoot str) (getRoot currentHandler) == 0 then 
+
+                      (print_endline (!currentModule ^ " should have some future condition ");
+                      let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
+                      let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
+                      let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
+                      (* print_endline (string_of_specification newSpec); *)
+                      (match findSpecFrom !propogatedSpecs !currentModule with 
+                      | (Some (a, b,  c, None), rest) -> propogatedSpecs := rest @ [(a, b,  c, Some ([pi, es2]))]
+                      | (None, _) -> propogatedSpecs := !propogatedSpecs @ [newSpec]
+                      | _ -> ()
+                      ))
+                    else (
+                      let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
+                      ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
+                      (*print_endline (string_of_inclusion_results extra_info info); *)
+                      
+            
+                        let (head, patches) = program_repair singleInfo env in 
+                        if String.compare patches "" == 0 then 
+                        ()
+                        else 
+                          let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
+                          let () = finalReport := !finalReport ^ head in 
+                          let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
+                          ()
+  
                     )
                 ) in 
                 ()
@@ -1340,7 +1361,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           else 
             let retTerm1 = List.map retTerm1 ~f:(fun a -> 
               match a with 
-              | (BVAR str) -> (BVAR (getRoot str)) 
+              | (BVAR str) -> 
+                (BVAR (getRoot str)) 
               | _ -> a 
               ) in
             Singleton ((("RET", retTerm1)), fp1) 

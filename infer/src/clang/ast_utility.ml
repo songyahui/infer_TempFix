@@ -1072,7 +1072,7 @@ else
   if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
   else if nullable lhs && (not (nullable rhs)) then 
     let currentposition = getFirstPostion lhs currentposition in 
-    ([(pathcondition, lhs, currentposition ,rhs)], Node (entailent ^ "  [Disprove]", []) )
+    ([(pathcondition, lhs, currentposition ,rhs)], Node (entailent ^ "  [Nullable Disprove]", []) )
 
   else if reoccur lhs rhs ctx then 
     ([], Node (entailent ^ "  [Reoccur]", []) )
