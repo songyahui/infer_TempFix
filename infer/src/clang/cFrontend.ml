@@ -543,9 +543,11 @@ F ｜- {current} instr {postconsition }
 let rec findSpecFrom (specs:specification list) (fName: string): (specification option * specification list) = 
   match specs with 
   | [] -> (None, [])
-  | ((str, li), a, b, c):: rest -> if String.compare str fName == 0 then (Some ((str, li), a, b, c), rest) else 
-  let (spec, rest) = findSpecFrom rest fName in 
-  (spec, ((str, li), a, b, c)::rest)
+  | ((str, li), a, b, c):: rest -> 
+    if String.compare str fName == 0 then (Some ((str, li), a, b, c), rest) 
+    else 
+      let (spec, rest) = findSpecFrom rest fName in 
+      (spec, ((str, li), a, b, c)::rest)
   ;;
 
 
@@ -1882,14 +1884,15 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
           | [TRUE, Emp, _, _] -> ()
           | _ -> 
               let postcondition = (programStates2effects final) in 
+              let postcondition = eliminateAllTheRetturn postcondition in 
               let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
               (match findSpecFrom !propogatedSpecs !currentModule with 
               | (Some (a, b,  None, c), rest) -> 
-                if forallNullable postcondition || extraConstraints !currentModule postcondition then ()
+                if forallNullable postcondition then ()
                 else 
                   propogatedSpecs := rest @ [(a, b, Some postcondition, c)]
               | (None, _) -> 
-                if forallNullable postcondition || extraConstraints !currentModule postcondition then ()
+                if forallNullable postcondition then ()
                 else propogatedSpecs := !propogatedSpecs @ [newSpec]
               | _ -> ()
               );

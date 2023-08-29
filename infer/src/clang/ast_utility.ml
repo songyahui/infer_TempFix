@@ -1649,10 +1649,14 @@ let string_of_specification (((name, args),  pre, post, future):specification)  
       | [x] -> x
       | x :: xs  -> x ^ ", " ^ print_arg xs 
     in 
+    let pre_str = (helper 0 pre)  in 
+    let post_str = helper 1 post  in 
+    let future_str = helper 2 future  in 
     "/*@ "^  name ^ "("^ print_arg args ^"):\n"  
-    ^ (helper 0 pre) 
-    ^ helper 1 post 
-    ^ helper 2 future 
+    ^ pre_str
+    ^ (if String.compare future_str "" == 0 
+      then post_str else (if String.compare post_str "" == 0 then "" else post_str ^ "\n"))
+    ^ future_str
     ^  "@*/\n"
 
 let rec seperateDisjunctivesES (es:es) : es list =
@@ -1672,17 +1676,27 @@ let rec seperateDisjunctives (info:((error_info list) * binary_tree * pathList *
       @ seperateDisjunctives (xs, a, b, c)
 
 
-let extraConstraints moduleName eff = false 
-  (*
-  let rec underscoreES es = 
-    match es with 
-    | 
-  let rec underscoreEffect eff = 
-    match eff with 
-    | [] -> false 
-    | (_, es):: xs -> 
-    if underscoreES es then true else underscoreEffect xs 
-  in 
-  (String.compare "_" (String.sub moduleName 0 1) == 0) || 
-  underscoreEffect eff
-  *)
+let rec eliminateAllTheRetturnPure pi =
+  match pi with 
+  | Gt (Basic(BRET), _) 
+  | Lt (Basic(BRET), _) 
+  | GtEq (Basic(BRET), _) 
+  | LtEq (Basic(BRET), _) 
+  | Eq (Basic(BRET), _) 
+  | Gt (_,Basic(BRET)) 
+  | Lt (_,Basic(BRET)) 
+  | GtEq (_,Basic(BRET)) 
+  | LtEq (_,Basic(BRET)) 
+  | Eq (_, Basic(BRET)) -> TRUE
+    
+  | PureAnd (pi1,pi2) -> PureAnd (eliminateAllTheRetturnPure pi1, eliminateAllTheRetturnPure pi2)
+  | Neg piN -> Neg (eliminateAllTheRetturnPure piN)
+  | PureOr (pi1,pi2) -> PureOr (eliminateAllTheRetturnPure pi1, eliminateAllTheRetturnPure pi2)
+  | _ -> pi
+
+
+
+let rec eliminateAllTheRetturn eff : effect = 
+  match eff with 
+  | [] ->  []
+  | (pi, es):: xs -> (eliminateAllTheRetturnPure pi, es) :: eliminateAllTheRetturn xs
