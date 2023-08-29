@@ -64,6 +64,7 @@ type effectwithfootprint = (pure * es * int list)
 
 (* Global States *)
 let (dynamicSpec: (specification list) ref) = ref [] 
+let (propogatedSpecs: (specification list) ref) = ref [] 
 let (currentModule: string ref) = ref ""
 let (currentModuleBody: (Clang_ast_t.stmt) option  ref) = ref None
 let (currentLable: (string list)  ref) = ref []
@@ -683,6 +684,9 @@ let rec normalPure (pi : pure) : pure =
       | _, FALSE -> p1
       | _, _ -> PureOr (p1, p2))
     | Neg p1 -> Neg (normalPure p1)
+    | Eq (t1, t2) -> 
+      if String.compare (string_of_terms t1) (string_of_terms t2) == 0 
+      then TRUE else pi
     | _ -> pi
   in 
   if entailConstrains pi FALSE then FALSE 

@@ -1061,31 +1061,52 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
           print_endline ("effectRest: " ^ string_of_programStates effectRest);
           *)
 
-          let lhsEffect = (programStates2effectwithfootprintlist (normaliseProgramStates restSpecLHS)) in 
+          let lhsEffect = ((normaliseProgramStates restSpecLHS)) in 
           if (List.length lhsEffect) > 50 then ()
           else 
             (
             print_endline ("checking futurecondition ... " ^ string_of_int (List.length lhsEffect) ^ "|-" ^ string_of_int (List.length futurec));
 
-            print_endline (" = LHS: " ^ string_of_programStates (normaliseProgramStates restSpecLHS));
+            print_endline (" = LHS: " ^ string_of_programStates lhsEffect);
             print_endline ("|- RHS: " ^ string_of_effect futurec);
-            let info = effectwithfootprintInclusion lhsEffect futurec in 
-            (*let (error_paths, _, _, _) = info in 
-            print_endline (string_of_int (List.length error_paths));
-            *)
-            let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
-          ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
-          (*print_endline (string_of_inclusion_results extra_info info); *)
-          
+            let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist lhsEffect) futurec in 
 
-            let (head, patches) = program_repair info env in 
-            if String.compare patches "" == 0 then 
-            ()
-            else 
-              let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
-              let () = finalReport := !finalReport ^ head in 
-              let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
-              ());
+            (match findReturnValueProgramStates lhsEffect with 
+            | None  -> (* If there is no return value, then we proceed to repair the future condition *)
+              let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
+              ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
+              (*print_endline (string_of_inclusion_results extra_info info); *)
+              
+    
+                let (head, patches) = program_repair info env in 
+                if String.compare patches "" == 0 then 
+                ()
+                else 
+                  let () = finalReport := !finalReport ^ (string_of_inclusion_results extra_info info) in 
+                  let () = finalReport := !finalReport ^ head in 
+                  let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
+                  ()
+  
+            | Some str -> 
+              print_endline ("return " ^ str);
+              let (error_paths, _, _, _) = info in 
+              match error_paths with  
+              | [] -> ()
+              | [(pi, _, _, es2)] -> 
+                print_endline (!currentModule ^ " should have some future condition ");
+                let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
+                let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
+                let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
+                (* print_endline (string_of_specification newSpec); *)
+                (match findSpecFrom !propogatedSpecs !currentModule with 
+                | None -> propogatedSpecs := !propogatedSpecs @ [newSpec]
+                | Some _ -> ())
+                  
+
+              | _ -> raise (Failure "more error_paths!")
+            )
+            
+            );
 
           full_extension
         )  
@@ -1826,7 +1847,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
           -> (sign, precondition, postcondition, futurecondition)
       in 
 
-      let () = dynamicSpec := [] in 
+      let () = dynamicSpec := [] in       
       let () = varSet := [] in 
       
       let (defultPrecondition:programStates) = 
@@ -1922,7 +1943,7 @@ let retriveComments (source:string) : (string list) =
   let partitions = Str.split (Str.regexp "/\*@") source in 
   (* print_endline (string_of_int (List.length partitions)); *)
   match partitions with 
-  | [] -> assert false 
+  | [] -> [](*assert false*) 
   | _ :: rest -> (*  SYH: Note that specification can't start from line 1 *)
   let partitionEnd = List.map rest ~f:(fun a -> Str.split (Str.regexp "@\*/")  a) in 
   let rec helper (li: string list list): string list = 
@@ -2039,14 +2060,15 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
   let (source_Address, decl_list, lines_of_code) = retrive_basic_info_from_AST ast in
   
+  let () = propogatedSpecs := [] in 
 
   let reasoning_Res = List.map decl_list  
     ~f:(fun dec -> reason_about_declaration dec user_sepcifications source_Address) in 
 
-  let updatedSpec = List.fold_left user_sepcifications ~init:"" ~f:(fun acc a -> acc ^ "\n" ^ (string_of_specification a) ) in 
+  let updatedSpec = List.fold_left (user_sepcifications@(!propogatedSpecs)) ~init:"" ~f:(fun acc a -> acc ^ "\n" ^ (string_of_specification a) ) in 
 
-  print_endline (updatedSpec);
-  deleteAndWrite (updatedSpec) (path ^ "spec.c") ; 
+  (*print_endline (updatedSpec);*)
+  deleteAndWrite (updatedSpec ^ "\n") (path ^ "spec.c") ; 
 
   
   let compution_time = (Unix.gettimeofday () -. start) in 
