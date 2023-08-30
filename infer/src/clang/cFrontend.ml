@@ -1017,44 +1017,40 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   (*print_endline ("computing restSpec"  ^ string_of_int(List.length xs));
 *)
 
+      let effectRest = 
+        let fp1 = match fp with | [] -> None | x::_ -> Some x in 
+        if (String.compare calleeName "exit") == 0 || 
+           (String.compare calleeName "_exit") == 0 ||
+           (String.compare calleeName "flexerror") == 0 || 
+           (String.compare calleeName "flexfatal") == 0 ||
+           (String.compare calleeName "recutl_fatal") == 0 
+           (*|| (String.compare calleeName "error") == 0 *)
+           then 
+           let es = Singleton (("RET", []), fp1) in 
+          ([(Ast_utility.TRUE, es, 1, fp)])
+        else helper (current'') xs in
+
+      
+
+      
 (* STEP 4: check the future spec of the callee *)
 
+      let full_extension = 
+        (match postc with 
+        | None ->  effectRest 
+        | Some postc -> 
+          concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
+        ) in 
 
       (match futurec with 
-      | None -> 
-        (match postc with 
-        | None ->  [(TRUE, Emp, 0, fp)] 
-        | Some postc -> (effects2programStates postc)
-        )
+      | None -> full_extension
       | Some futurec -> 
-        let effectRest = 
-          let fp1 = match fp with | [] -> None | x::_ -> Some x in 
-          if (String.compare calleeName "exit") == 0 || 
-            (String.compare calleeName "_exit") == 0 ||
-            (String.compare calleeName "flexerror") == 0 || 
-            (String.compare calleeName "flexfatal") == 0 ||
-            (String.compare calleeName "recutl_fatal") == 0 
-            (*|| (String.compare calleeName "error") == 0 *)
-            then 
-            let es = Singleton (("RET", []), fp1) in 
-            ([(Ast_utility.TRUE, es, 1, fp)])
-          else helper (current'') xs in
-        (*
-        let full_extension () = 
-          (match postc with 
-          | None ->  effectRest 
-          | Some postc -> 
-            concatenateTwoEffectswithFlag (effects2programStates postc) effectRest
-          ) 
-        in 
-        *)
-
           let restSpecLHS = 
             match future with
             | None -> effectRest 
             | Some ctxfuture -> 
 
-              let ctxfuture = match findReturnValueProgramStates (effectRest) with 
+              let ctxfuture = match findReturnValueProgramStates effectRest with 
               | None  -> ctxfuture
               | Some str -> 
                 (*print_endline(str);*)
@@ -1145,10 +1141,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
             
             );
-            (match postc with 
-            | None ->  [(TRUE, Emp, 0, fp)] 
-            | Some postc -> (effects2programStates postc)
-            )
+
+          full_extension
         )  
     | BinaryOperator (_, _::(ImplicitCastExpr (_, [(BinaryOperator (stmt_info1, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info))], _, _, _))::_, _, _) :: xs 
     | BinaryOperator (_, _::(ImplicitCastExpr (_, [BinaryOperator (stmt_info1, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info)], _, _, _))::_, _, _) :: xs 
@@ -1925,7 +1919,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
           | _ -> 
               let postcondition = (programStates2effects final) in 
               let postcondition = eliminateAllTheRetturn postcondition in 
-              if List.length postcondition == 0 || List.length postcondition > 5 then ()
+              if List.length postcondition == 0 then ()
               else 
               let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
               (match findSpecFrom !propogatedSpecs !currentModule with 
@@ -1941,7 +1935,6 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
               print_endline (source_Address);
               print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
               print_string (string_of_programStates final ^ "\n")) ;
-              
 
 
 
