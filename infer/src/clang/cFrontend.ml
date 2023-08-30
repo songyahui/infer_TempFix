@@ -1351,8 +1351,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
       
       
+    | ParenExpr _ -> 
+      [(TRUE, Singleton ((("RET", [BNULL])), fp1) , 1, fp)]
       
     | _ -> 
+      
+      (*print_endline ("returning... " ^ string_of_stmt ret ^ " which is " ^ Clang_ast_proj.get_stmt_kind_string ret ^ string_of_foot_print fp);*)
       let retTerm = stmt2Term ret in 
       let extrapure = 
         match retTerm with 
@@ -1442,9 +1446,10 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | Some condition -> 
           
           
+          (*
           print_endline (string_of_pure condition);
           print_endline (string_of_pure (Neg condition));
-          
+          *)
           
 
           let (varFromPure: string list) = varFromPure condition in 
@@ -1920,19 +1925,39 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
           | [TRUE, Emp, _, _] -> ()
           | _ -> 
               let postcondition = (programStates2effects final) in 
+
+
+              (if returningNULL postcondition 
+              then (
+                let (doNotUseFuture:effect) = [(Eq(Basic(BRET), Basic(BINT(0))), Kleene(NotArguments([(BRET)])))] in 
+                let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some doNotUseFuture) in 
+                (match findSpecFrom !propogatedSpecs !currentModule with 
+                | (Some (a, b, c, None), rest) -> propogatedSpecs := rest @ [(a, b, c, Some doNotUseFuture)]
+                | (Some (a, b, c, Some existingFuture), rest) -> propogatedSpecs := rest @ [(a, b, c, Some (existingFuture@doNotUseFuture))]
+                | (None, _) -> propogatedSpecs := !propogatedSpecs @ [newSpec]
+                | _ -> ()
+                )
+
+              )
+
+              else ());
+
+
               let postcondition = eliminateAllTheRetturn postcondition in 
-              if List.length postcondition == 0 then ()
+              (if List.length postcondition == 0 then ()
               else 
-              let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
-              (match findSpecFrom !propogatedSpecs !currentModule with 
-              | (Some (a, b,  None, c), rest) -> 
-                if forallNullable postcondition then ()
-                else propogatedSpecs := rest @ [(a, b, Some postcondition, c)]
-              | (None, _) -> 
-                if forallNullable postcondition then ()
-                else propogatedSpecs := !propogatedSpecs @ [newSpec]
-              | _ -> ()
+                let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
+                (match findSpecFrom !propogatedSpecs !currentModule with 
+                | (Some (a, b,  None, c), rest) -> 
+                  if forallNullable postcondition then ()
+                  else propogatedSpecs := rest @ [(a, b, Some postcondition, c)]
+                | (None, _) -> 
+                  if forallNullable postcondition then ()
+                  else propogatedSpecs := !propogatedSpecs @ [newSpec]
+                | _ -> ()
+                )
               );
+
 
               print_endline (source_Address);
               print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );

@@ -1740,3 +1740,22 @@ let rec eliminateAllTheRetturn eff : effect =
     match (pi', es') with 
     | (TRUE, Emp) -> eliminateAllTheRetturn xs
     | _ -> (pi', es') :: eliminateAllTheRetturn xs
+
+let rec returningNULLES es : bool = 
+  match es with 
+  | Singleton ((_, [((BNULL))]), _) -> true 
+  | Singleton _ -> false 
+  | Concatenate (a, b) -> returningNULLES b 
+  | Bot | Emp | Any | NotArguments _
+  | NotSingleton _ -> false 
+  | Disj (a, b) -> 
+    (match returningNULLES a with
+    |false -> returningNULLES b
+    |true -> true)
+  | Kleene (a) -> returningNULLES a
+
+
+let rec returningNULL eff : bool = 
+  match eff with 
+  | [] -> false  
+  | (_, es) :: xs -> if returningNULLES es then true else returningNULL xs 
