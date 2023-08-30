@@ -1708,7 +1708,7 @@ let rec eliminateAllTheRetturnES eff : es  =
     )
   | Singleton ((str, argList), _) -> 
     if String.compare str "RET" == 0 then Emp 
-    else if twoStringSetOverlap (List.map argList ~f:(fun a -> string_of_basic_t a)) (!parametersInScope) then eff
+    else if twoStringSetOverlap (List.map argList ~f:(fun a ->getRoot ( string_of_basic_t a))) (!parametersInScope) then eff
     else Emp
     
   | Concatenate (es1, es2) -> 
