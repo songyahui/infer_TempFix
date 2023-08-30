@@ -433,7 +433,7 @@ let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure o
 
 
 let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option = 
-
+  print_string ("stmt2Pure" ^ Clang_ast_proj.get_stmt_kind_string instr );
   match instr with 
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
     (match binop_info.boi_kind with
@@ -467,7 +467,7 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
       )
       
     | _ -> 
-      (*print_endline ("`LNot DeclRefExpr none4"); *)
+      print_endline ("`LNot DeclRefExpr none4"); 
       None
     )
   | ParenExpr (_, x::rest, _) -> stmt2Pure x
@@ -1436,13 +1436,13 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         print_string (string_of_varSet (!varSet));
         *)
         match stmt2Pure conditional with 
-        | None -> (*print_string ("None; \n");*) None 
+        | None -> print_string (Clang_ast_proj.get_stmt_kind_string conditional ^"None; \n"); None 
         | Some condition -> 
           
-          (*
+          
           print_endline (string_of_pure condition);
           print_endline (string_of_pure (Neg condition));
-          *)
+          
           
 
           let (varFromPure: string list) = varFromPure condition in 
