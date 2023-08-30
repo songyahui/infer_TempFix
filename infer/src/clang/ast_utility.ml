@@ -1706,8 +1706,11 @@ let rec eliminateAllTheRetturnES eff : es  =
     | (Disj (es11, es12), es3) -> Disj (es11, Disj (es12, es3))
     | _ -> (Disj (es1, es2))
     )
-  | Singleton ((str, _), _) -> 
-    if String.compare str "RET" == 0 then Emp else eff 
+  | Singleton ((str, argList), _) -> 
+    if String.compare str "RET" == 0 then Emp 
+    else if twoStringSetOverlap (List.map argList ~f:(fun a -> string_of_basic_t a)) (!parametersInScope) then eff
+    else Emp
+    
   | Concatenate (es1, es2) -> 
     let es1 = eliminateAllTheRetturnES es1 in 
     let es2 = eliminateAllTheRetturnES es2 in 
