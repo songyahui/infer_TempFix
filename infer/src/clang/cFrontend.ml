@@ -433,7 +433,7 @@ let stmt2Pure_helper (op: string) (t1: terms option) (t2: terms option) : pure o
 
 
 let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option = 
-  print_string ("stmt2Pure" ^ Clang_ast_proj.get_stmt_kind_string instr );
+  (*print_string ("stmt2Pure" ^ Clang_ast_proj.get_stmt_kind_string instr );*)
   match instr with 
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
     (match binop_info.boi_kind with
@@ -458,7 +458,7 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     (match op_info.uoi_kind with
     | `Not -> 
       (match stmt2Pure x with 
-      | None -> print_endline ("`Not none"); None 
+      | None -> (*print_endline ("`Not none");*) None 
       | Some p -> Some (Neg p))
     | `LNot -> 
       (match stmt2Term x with 
@@ -1438,7 +1438,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         print_string (string_of_varSet (!varSet));
         *)
         match stmt2Pure conditional with 
-        | None -> print_string (Clang_ast_proj.get_stmt_kind_string conditional ^"None; \n"); None 
+        | None -> (*print_string (Clang_ast_proj.get_stmt_kind_string conditional ^"None; \n");*) None 
         | Some condition -> 
           
           
