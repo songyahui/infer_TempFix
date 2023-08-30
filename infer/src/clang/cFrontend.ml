@@ -458,16 +458,18 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     (match op_info.uoi_kind with
     | `Not -> 
       (match stmt2Pure x with 
-      | None -> None 
+      | None -> print_endline ("`Not none"); None 
       | Some p -> Some (Neg p))
     | `LNot -> 
       (match stmt2Term x with 
-      | None -> None 
+      | None -> 
+        (match stmt2Pure x with 
+        | None -> None 
+        | Some p -> Some (Neg p))
       | Some t -> Some (Eq(t, Basic(BINT 0)))
       )
       
     | _ -> 
-      print_endline ("`LNot DeclRefExpr none4"); 
       None
     )
   | ParenExpr (_, x::rest, _) -> stmt2Pure x
