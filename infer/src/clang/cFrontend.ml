@@ -86,8 +86,8 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     (match binop_info.boi_kind with
     | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
     | `Sub -> stmt2Term_helper "" (stmt2Term x) (stmt2Term y) 
-  | _ -> None 
-  )
+    | _ -> None 
+    )
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
     let int_str = integer_literal_info.ili_value in 
 
@@ -126,7 +126,13 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     acc ^ (
       match a with
       | None -> "_"
-      | Some t -> string_of_terms t ^ "_"
+      | Some t -> 
+        let str = string_of_terms t in 
+        let strLi = String.split_on_chars  str ['-'] in 
+        (match strLi with
+        | [] -> str 
+        | x :: _ -> x)
+        ^ "_"
     )) in 
     Some (Basic(BVAR(name)))
 
@@ -1582,6 +1588,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       [(TRUE, ev, 0, fp)]
     )
 
+  | ForStmt _ 
   | CallExpr _ -> helper current [instr]
 
 
@@ -1702,6 +1709,11 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   | FloatingLiteral _ 
   | IntegerLiteral _ 
   | StringLiteral _ 
+  | GCCAsmStmt _ 
+  | OffsetOfExpr _ 
+  | VAArgExpr _ 
+  | StmtExpr _ 
+  | BinaryConditionalOperator _
   | CompoundLiteralExpr _
   | RecoveryExpr _ 
   | DeclRefExpr _  
@@ -1907,12 +1919,13 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
           | _ -> 
               let postcondition = (programStates2effects final) in 
               let postcondition = eliminateAllTheRetturn postcondition in 
+              if List.length postcondition == 0 then ()
+              else 
               let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
               (match findSpecFrom !propogatedSpecs !currentModule with 
               | (Some (a, b,  None, c), rest) -> 
                 if forallNullable postcondition then ()
-                else 
-                  propogatedSpecs := rest @ [(a, b, Some postcondition, c)]
+                else propogatedSpecs := rest @ [(a, b, Some postcondition, c)]
               | (None, _) -> 
                 if forallNullable postcondition then ()
                 else propogatedSpecs := !propogatedSpecs @ [newSpec]

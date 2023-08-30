@@ -1694,9 +1694,46 @@ let rec eliminateAllTheRetturnPure pi =
   | PureOr (pi1,pi2) -> PureOr (eliminateAllTheRetturnPure pi1, eliminateAllTheRetturnPure pi2)
   | _ -> pi
 
+let rec eliminateAllTheRetturnES eff : es  = 
+  match eff with
+  | Disj(es1, es2) -> 
+    let es1 = eliminateAllTheRetturnES es1 in 
+    let es2 = eliminateAllTheRetturnES es2 in 
+    (match (es1, es2) with 
+    | (Emp, Emp) -> Emp
+    | (Bot, es) -> eliminateAllTheRetturnES es 
+    | (es, Bot) -> eliminateAllTheRetturnES es 
+    | (Disj (es11, es12), es3) -> Disj (es11, Disj (es12, es3))
+    | _ -> (Disj (es1, es2))
+    )
+  | Singleton ((str, _), _) -> 
+    if String.compare str "RET" == 0 then Emp else eff 
+  | Concatenate (es1, es2) -> 
+    let es1 = eliminateAllTheRetturnES es1 in 
+    let es2 = eliminateAllTheRetturnES es2 in 
+    (match (es1, es2) with 
+    | (Emp, _) -> eliminateAllTheRetturnES es2
+    | (_, Emp) -> eliminateAllTheRetturnES es1
+    | (Bot, _) -> Bot
+    | (_, Bot) -> Bot
+    | (Disj (es11, es12), es3) -> Disj(Concatenate (es11,es3),  Concatenate (es12, es3))
+    | (Concatenate (es11, es12), es3) -> (Concatenate (es11, Concatenate (es12, es3)))
+    | _ -> (Concatenate (es1, es2))
+    )
+  | Kleene effIn -> 
+    let effIn' = eliminateAllTheRetturnES effIn in 
+    (match effIn' with 
+    | Emp -> Emp 
+    | _ ->  
+    Kleene (effIn'))
+  | _ -> eff 
 
 
 let rec eliminateAllTheRetturn eff : effect = 
   match eff with 
   | [] ->  []
-  | (pi, es):: xs -> (eliminateAllTheRetturnPure pi, es) :: eliminateAllTheRetturn xs
+  | (pi, es):: xs -> 
+    let (pi', es') = (eliminateAllTheRetturnPure pi, eliminateAllTheRetturnES es) in 
+    match (pi', es') with 
+    | (TRUE, Emp) -> eliminateAllTheRetturn xs
+    | _ -> (pi', es') :: eliminateAllTheRetturn xs
