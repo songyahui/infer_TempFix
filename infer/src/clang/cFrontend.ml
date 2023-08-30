@@ -1919,7 +1919,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
           | _ -> 
               let postcondition = (programStates2effects final) in 
               let postcondition = eliminateAllTheRetturn postcondition in 
-              if List.length postcondition == 0 then ()
+              if List.length postcondition == 0 || List.length postcondition > 5 then ()
               else 
               let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
               (match findSpecFrom !propogatedSpecs !currentModule with 
@@ -1935,6 +1935,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
               print_endline (source_Address);
               print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
               print_string (string_of_programStates final ^ "\n")) ;
+              
 
 
 
