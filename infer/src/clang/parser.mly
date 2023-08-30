@@ -33,8 +33,9 @@
 
 variable: 
 | str = VAR {str}
-| UNDERLINE str = VAR {("_"^str)}
-| UNDERLINE UNDERLINE str = VAR {("__"^str)}
+| RETURN {("ret")}
+| UNDERLINE str = variable {("_"^str)}
+
 
 
 basic_type : 
@@ -166,10 +167,17 @@ optionalPrecondition:
   (None, e2, e3)}
 
 
+formalparmRest:
+| {None}
+| COMMA rest=formalparm {Some rest}
+
 formalparm:
 | {[]}
-| str = variable {[str]}
-| str = VAR COMMA rest=formalparm {str:: rest}
+| str = variable rest = formalparmRest {
+  match rest with 
+  | None  -> [str]
+  | Some rest -> str ::rest
+  }
 
 
 specification: 

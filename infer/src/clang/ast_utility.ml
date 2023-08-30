@@ -592,6 +592,7 @@ let rec string_of_es (eff:es) : string =
       "(" ^ string_of_es eff1 ^ " \\/ " ^ string_of_es eff2 ^ ")"
   | Kleene effIn          ->
       "(" ^ string_of_es effIn ^ ")^*"
+      
 
   | _ -> "string_of_es error"
 
@@ -1759,3 +1760,19 @@ let rec returningNULL eff : bool =
   match eff with 
   | [] -> false  
   | (_, es) :: xs -> if returningNULLES es then true else returningNULL xs 
+
+
+let isNotProjectFile source_Address source_Addressnow  = 
+  let source_Address = String.sub source_Address 0 10 in 
+  let source_Addressnow = String.sub source_Addressnow 0 10 in 
+  if String.compare source_Address source_Addressnow == 0 then false else true
+
+
+let mergeSpec eff1 eff2 = 
+  match (eff1, eff2) with 
+  | (None, None) -> None 
+  | (Some a, None) 
+  | (None, Some a) -> Some a 
+  | (Some a, Some b) -> Some (a@b)
+
+

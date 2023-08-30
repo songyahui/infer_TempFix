@@ -559,6 +559,13 @@ let rec findSpecFrom (specs:specification list) (fName: string): (specification 
       (spec, ((str, li), a, b, c)::rest)
   ;;
 
+let insertSpecifications moduleName (newSpec:specification) = 
+  let (mnsignature, pre, post, future) = newSpec in 
+  match findSpecFrom !propogatedSpecs !currentModule with 
+  | (Some (a, b,  c, d), rest) -> propogatedSpecs := rest @ [(a, mergeSpec b pre, mergeSpec post c, mergeSpec future d)]
+  | (None, _) -> 
+    propogatedSpecs := !propogatedSpecs @ [newSpec]
+
 
 let string_of_decl (decl:Clang_ast_t.decl) : string = 
   match decl with
@@ -855,7 +862,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
     
 
 
-let rec syh_compute_stmt_postcondition (env:(specification list)) (current:programStates) 
+let rec syh_compute_stmt_postcondition (current:programStates) 
 (future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
 
   
@@ -918,7 +925,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
 
 
-            let (spec, _) = findSpecFrom env calleeName in 
+            let (spec, _) = findSpecFrom !propogatedSpecs calleeName in 
             match spec with
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
@@ -965,7 +972,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
             "Pre-condition checking for \'"^calleeName^"\': " in 
             (*print_endline (string_of_inclusion_results extra_info info); *)
-            let (head, patches) = program_repair info env in 
+            let (head, patches) = program_repair info !propogatedSpecs in 
             if String.compare patches "" == 0 then 
             ()
             else 
@@ -1098,7 +1105,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
                     (*print_endline (string_of_inclusion_results extra_info info); *)
                     
           
-                      let (head, patches) = program_repair singleInfo env in 
+                      let (head, patches) = program_repair singleInfo !propogatedSpecs in 
                       if String.compare patches "" == 0 then 
                       ()
                       else 
@@ -1114,18 +1121,15 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
                       let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
                       let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
                       (* print_endline (string_of_specification newSpec); *)
-                      (match findSpecFrom !propogatedSpecs !currentModule with 
-                      | (Some (a, b,  c, None), rest) -> propogatedSpecs := rest @ [(a, b,  c, Some ([pi, es2]))]
-                      | (None, _) -> propogatedSpecs := !propogatedSpecs @ [newSpec]
-                      | _ -> ()
-                      ))
+                      insertSpecifications !currentModule newSpec
+                      )
                     else (
                       let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
                       ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
                       (*print_endline (string_of_inclusion_results extra_info info); *)
                       
             
-                        let (head, patches) = program_repair singleInfo env in 
+                        let (head, patches) = program_repair singleInfo !propogatedSpecs in 
                         if String.compare patches "" == 0 then 
                         ()
                         else 
@@ -1175,7 +1179,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
               else checkIsGlobalVar str xs
           in 
 
-          let stateX = syh_compute_stmt_postcondition env current' future x in 
+          let stateX = syh_compute_stmt_postcondition current' future x in 
 
           
          
@@ -1236,21 +1240,21 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             (*
             print_endline ("DeclStmt0 " ^  string_of_decl handler ^ " " ^ Clang_ast_proj.get_stmt_kind_string x ); 
 *)
-            let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
+            let effectLi4X = syh_compute_stmt_postcondition current' future x in 
             let effectRest = helper (concatenateTwoEffectswithFlag current' effectLi4X) xs in 
             concatenateTwoEffectswithFlag effectLi4X effectRest
           )
 
     
     | (IfStmt (stmt_info, [x;y], if_stmt_info)) :: xsifelse -> 
-      if peekTheEffectOfStmtsAndItHasEffects env [y] then 
+      if peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs [y] then 
         (
         let elseBranch = Clang_ast_t.CompoundStmt (stmt_info, []) in 
         let statement' = Clang_ast_t.IfStmt (stmt_info, [x;y;elseBranch], if_stmt_info) in 
         helper current' (statement'::xsifelse))
       else 
         (
-        let effectLi4X = syh_compute_stmt_postcondition env current' future (IfStmt (stmt_info, [x;y], if_stmt_info)) in 
+        let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y], if_stmt_info)) in 
         let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
         let effectRest = helper new_history xsifelse in 
         concatenateTwoEffectswithFlag effectLi4X effectRest)
@@ -1263,7 +1267,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         | _ ->  Clang_ast_t.CompoundStmt (stmt_info, a:: xsifelse)
       in 
       let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
-      syh_compute_stmt_postcondition env current' future statement'
+      syh_compute_stmt_postcondition current' future statement'
     
     | DoStmt (stmt_info, [x;y])::xs  ->
       
@@ -1318,7 +1322,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       (*print_endline ("===================================");
       print_endline (List.fold_left (li) ~init:"" ~f:(fun acc a -> acc ^ ", " ^ (Clang_ast_proj.get_stmt_kind_string a)));
       *)
-      let effectLi4X = syh_compute_stmt_postcondition env current' future x in 
+      let effectLi4X = syh_compute_stmt_postcondition current' future x in 
       let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
       let effectRest = helper new_history xs in 
       concatenateTwoEffectswithFlag effectLi4X effectRest
@@ -1342,21 +1346,42 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     (match ret with
     | CallExpr (stmt_info, stmt_list, ei) ->
 
+      (match stmt_list with 
+      | [] -> ()
+      | x::rest -> 
+        (match extractEventFromFUnctionCall x rest with 
+        | None -> ()
+        | Some (calleeName, acturelli) -> 
+          let (spec, _) = findSpecFrom !propogatedSpecs calleeName in 
+          (match spec with
+          | None -> ()
+          | Some (_, prec, postc, futurec)-> 
+            let (newSpec:specification) = ((!currentModule, !parametersInScope), prec, postc, futurec) in 
+            insertSpecifications !currentModule newSpec
+          
+          )
+        )
+      );
+
       let freshVar = verifier_getAfreeVar "r" in 
       let declRefExprStmt = constructADeclRefExprStmt stmt_info ei freshVar in 
       let returnStmt = Clang_ast_t.ReturnStmt(stmt_info, [declRefExprStmt]) in  
       let () = handlerVar := Some (freshVar) in 
       let stmt = Clang_ast_t.CompoundStmt (stmt_info, [ret;returnStmt]) in 
-      syh_compute_stmt_postcondition env current future stmt
-
+      syh_compute_stmt_postcondition current future stmt
+      
       
       
     | ParenExpr _ -> 
       [(TRUE, Singleton ((("RET", [BNULL])), fp1) , 1, fp)]
+
+    | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
+      syh_compute_stmt_postcondition current future  (ReturnStmt (stmt_info, [x]))
       
     | _ -> 
       
-      (*print_endline ("returning... " ^ string_of_stmt ret ^ " which is " ^ Clang_ast_proj.get_stmt_kind_string ret ^ string_of_foot_print fp);*)
+      (*print_endline ("returning... " ^ string_of_stmt ret ^ " which is " ^ Clang_ast_proj.get_stmt_kind_string ret ^ string_of_foot_print fp);
+      *)
       let retTerm = stmt2Term ret in 
       let extrapure = 
         match retTerm with 
@@ -1421,7 +1446,7 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       
     | _ -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
-      prefixLoction fp (syh_compute_stmt_postcondition env current future x)
+      prefixLoction fp (syh_compute_stmt_postcondition current future x)
     )
 
   | DefaultStmt (stmt_info, stmt_list) 
@@ -1493,8 +1518,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
     
           | _ -> 
 
-            let eff4X = syh_compute_stmt_postcondition env current future x in
-            let eff4Y = syh_compute_stmt_postcondition env current future y in
+            let eff4X = syh_compute_stmt_postcondition current future x in
+            let eff4Y = syh_compute_stmt_postcondition current future y in
             let final = prefixLoction locX 
               (List.append 
               (postfixLoction locZ eff4X) 
@@ -1514,8 +1539,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
         print_endline (string_of_pure condition);
         print_endline (string_of_pure (Neg condition));
 *)
-          let eff4X = syh_compute_stmt_postcondition env current future  x in
-          let eff4Y = syh_compute_stmt_postcondition env current future  y in
+          let eff4X = syh_compute_stmt_postcondition current future  x in
+          let eff4Y = syh_compute_stmt_postcondition current future  y in
           let res = prefixLoction locX 
             (List.append 
             (postfixLoction locZ (enforePure (Neg condition) eff4X))
@@ -1546,9 +1571,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
             let () = handlerVar := Some (freshVar) in 
             helper current ([stmtCall; stmtNewIFELSE])
           | _ -> 
-          let eff4X = syh_compute_stmt_postcondition env current future x in
-          let eff4Y = syh_compute_stmt_postcondition env current future y in
-          let eff4Z = syh_compute_stmt_postcondition env current future z in
+          let eff4X = syh_compute_stmt_postcondition current future x in
+          let eff4Y = syh_compute_stmt_postcondition current future y in
+          let eff4Z = syh_compute_stmt_postcondition current future z in
           prefixLoction locX 
           (List.append 
             ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
@@ -1557,9 +1582,9 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
 
         | Some (condition, morevar) -> 
 
-          let eff4X = syh_compute_stmt_postcondition env current future x in
-          let eff4Y = syh_compute_stmt_postcondition env current future y in
-          let eff4Z = syh_compute_stmt_postcondition env current future z in
+          let eff4X = syh_compute_stmt_postcondition current future x in
+          let eff4Y = syh_compute_stmt_postcondition current future y in
+          let eff4Z = syh_compute_stmt_postcondition current future z in
           prefixLoction locX (List.append 
           (prefixLoction locZ (enforePure (Neg condition) (concatenateTwoEffectswithFlag eff4X eff4Z))) 
           (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
@@ -1575,12 +1600,12 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
   
   | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
-      prefixLoction fp (syh_compute_stmt_postcondition env current future x)
+      prefixLoction fp (syh_compute_stmt_postcondition current future x)
   | ArraySubscriptExpr(stmt_info, x::_, _)  
   | MemberExpr (stmt_info, x::_, _, _) -> 
     (match x with 
     | ArraySubscriptExpr _ -> 
-      syh_compute_stmt_postcondition env current future x 
+      syh_compute_stmt_postcondition current future x 
     | _ -> 
       let (fp, _) =  getStmtlocation instr in 
       let varFromX = string_of_stmt x in 
@@ -1618,8 +1643,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       let varFromY = string_of_stmt y in 
       (*print_endline ("BinaryOperator CONSUME: " ^ varFromY);*) 
 
-      let stateY = syh_compute_stmt_postcondition env current future y in 
-      let stateX = syh_compute_stmt_postcondition env current future x in 
+      let stateY = syh_compute_stmt_postcondition current future y in 
+      let stateX = syh_compute_stmt_postcondition current future x in 
 
 
       let res  = 
@@ -1636,8 +1661,8 @@ let rec syh_compute_stmt_postcondition (env:(specification list)) (current:progr
       
 
     | _ -> 
-      let stateX = syh_compute_stmt_postcondition env current future x in 
-      let stateY = syh_compute_stmt_postcondition env current future y in 
+      let stateX = syh_compute_stmt_postcondition current future x in 
+      let stateY = syh_compute_stmt_postcondition current future y in 
       concatenateTwoEffectswithFlag stateX stateY
 
 
@@ -1855,14 +1880,14 @@ let int_of_optionint intop =
 
 
 
-let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specification list) (source_Address:string): unit  = 
+let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): unit  = 
 
   match dec with
     | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
       let source_Addressnow = string_of_source_range  decl_info.di_source_range in 
 
 
-      if String.compare source_Address source_Addressnow !=0 then ()
+      if isNotProjectFile source_Address source_Addressnow then ()
       else 
       let (l1, l2) = decl_info.di_source_range in 
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
@@ -1888,7 +1913,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
       *)
 
-      let (functionspec, _) = findSpecFrom specifications funcName in 
+      let (functionspec, _) = findSpecFrom !propogatedSpecs funcName in 
       let (_, precondition, postcondition, futurecondition) = 
         match functionspec with
         | None -> ((funcName, []), None, None, None)
@@ -1909,8 +1934,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
       let () = currentModuleBody := Some stmt in 
       let () = currentLable := [] in 
 
-      let raw_final = (syh_compute_stmt_postcondition 
-            specifications 
+      let raw_final = (syh_compute_stmt_postcondition  
             defultPrecondition
             futurecondition  
             stmt) in 
@@ -1929,14 +1953,9 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
 
               (if returningNULL postcondition 
               then (
-                let (doNotUseFuture:effect) = [(Eq(Basic(BRET), Basic(BINT(0))), Kleene(NotArguments([(BRET)])))] in 
+                let (doNotUseFuture:effect) = [(Eq(Basic(BRET), Basic(BINT(0))), Kleene(NotSingleton("_", [(BRET)])))] in 
                 let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some doNotUseFuture) in 
-                (match findSpecFrom !propogatedSpecs !currentModule with 
-                | (Some (a, b, c, None), rest) -> propogatedSpecs := rest @ [(a, b, c, Some doNotUseFuture)]
-                | (Some (a, b, c, Some existingFuture), rest) -> propogatedSpecs := rest @ [(a, b, c, Some (existingFuture@doNotUseFuture))]
-                | (None, _) -> propogatedSpecs := !propogatedSpecs @ [newSpec]
-                | _ -> ()
-                )
+                insertSpecifications !currentModule newSpec
 
               )
 
@@ -1947,15 +1966,8 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (specifications: specificat
               (if List.length postcondition == 0 then ()
               else 
                 let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
-                (match findSpecFrom !propogatedSpecs !currentModule with 
-                | (Some (a, b,  None, c), rest) -> 
-                  if forallNullable postcondition then ()
-                  else propogatedSpecs := rest @ [(a, b, Some postcondition, c)]
-                | (None, _) -> 
-                  if forallNullable postcondition then ()
-                  else propogatedSpecs := !propogatedSpecs @ [newSpec]
-                | _ -> ()
-                )
+                if forallNullable postcondition then ()
+                else insertSpecifications !currentModule newSpec
               );
 
 
@@ -2146,12 +2158,12 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
 
   let (source_Address, decl_list, lines_of_code) = retrive_basic_info_from_AST ast in
   
-  let () = propogatedSpecs := [] in 
+  let () = propogatedSpecs := user_sepcifications in 
 
   let reasoning_Res = List.map decl_list  
-    ~f:(fun dec -> reason_about_declaration dec user_sepcifications source_Address) in 
+    ~f:(fun dec -> reason_about_declaration dec source_Address) in 
 
-  let updatedSpec = List.fold_left (user_sepcifications@(!propogatedSpecs)) ~init:"" ~f:(fun acc a -> acc ^ "\n" ^ (string_of_specification a) ) in 
+  let updatedSpec = List.fold_left ((!propogatedSpecs)) ~init:"" ~f:(fun acc a -> acc ^ "\n" ^ (string_of_specification a) ) in 
 
   (*print_endline (updatedSpec);*)
   let start2 = Unix.gettimeofday () in 
