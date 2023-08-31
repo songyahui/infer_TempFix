@@ -847,12 +847,7 @@ let rec nullable (eff:es) : bool =
   | Kleene effIn      -> true
   | _ -> false 
 
-let rec forallNullable (eff:effect): bool = 
-  match eff with 
-  | [] -> true 
-  | (_, es) :: xs  -> 
-    if nullable es then true
-    else false 
+
 
 let rec fst (eff:es) : (fstElem list) = 
   match eff with 
@@ -1071,6 +1066,7 @@ let modifiyTheassertionCounters () =
 let rec getFirstPostion es currentposition = 
   match es with 
   | Singleton (ins, Some fp) ->  fp
+  | Concatenate (es1, _) -> getFirstPostion es1 currentposition
   | _ -> currentposition
 
 
@@ -1829,3 +1825,8 @@ let deepSimplifyEffect ((pi, es1):(pure * es)): (pure * es) =
     | Concatenate  (esIn1, esIn2) -> Concatenate (aux esIn1, aux esIn2)
     | Kleene  (esIn1) -> Kleene (aux esIn1)
   in (normalPure pi, normalise_es (aux es1))
+
+let isNotFalse pi = 
+  match pi with 
+  | FALSE -> true 
+  | _ ->  false 

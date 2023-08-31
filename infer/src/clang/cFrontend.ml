@@ -571,17 +571,22 @@ let rec findSpecFrom (specs:specification list) (fName: string): (specification 
 
 let insertSpecifications moduleName (newSpec:specification) = 
   let (mnsignature, pre, post, future) = newSpec in 
-  match findSpecFrom !propogatedSpecs !currentModule with 
-  | (Some (a, b,  c, d), rest) -> propogatedSpecs := rest @ [(a, mergeSpec b pre, mergeSpec post c, mergeSpec future d)]
-  | (None, _) -> 
-    let post = match post with 
+  let post = match post with 
     | Some (x::_) -> 
-      let state = deepSimplifyEffect x in 
-      if forallNullable [state] then None 
-      else Some [state]
+      let (pi, es) = deepSimplifyEffect x in 
+      (match es with 
+      | Emp ->  None 
+      | _ -> Some [(pi, es)])
     | _ -> post 
-    in 
-    propogatedSpecs := !propogatedSpecs @ [(mnsignature, pre, post, future)]
+  in 
+  match pre, post, future with 
+  | (None, None, None ) -> ()
+  | _ -> 
+    (match findSpecFrom !propogatedSpecs !currentModule with 
+    | (Some (a, b,  c, d), rest) -> 
+      propogatedSpecs := rest @ [(a, mergeSpec b pre, mergeSpec post c, mergeSpec future d)]
+    | (None, _) -> 
+      propogatedSpecs := !propogatedSpecs @ [(mnsignature, pre, post, future)])
 
 
 let string_of_decl (decl:Clang_ast_t.decl) : string = 
@@ -768,6 +773,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
         print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
 *)
         
+        (*
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
         let (startNum, endNum) = 
@@ -775,6 +781,8 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           let endNum' = if upperError < endNum then upperError else endNum in 
           (startNum', endNum')
         in 
+        *)
+        let startNum = getFirstPostion realspec startNum in 
         
 
         if existSameRecord !repairRecord startNum endNum then ()
@@ -936,13 +944,13 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             print_string (string_of_event (calleeName, acturelli) ^ ":\n");
             *)
 
+            print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
 
             let (spec, _) = findSpecFrom !propogatedSpecs calleeName in 
             match spec with
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
-              print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
               (*
               print_endline ("formal Arg = " ^ List.fold_left formalLi ~init:"" ~f:(fun acc a -> acc ^ "," ^a));
@@ -1043,6 +1051,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let effectRest = 
         let fp1 = match fp with | [] -> None | x::_ -> Some x in 
         if (String.compare calleeName "exit") == 0 || 
+           (String.compare calleeName "yy_fatal_error") == 0 || 
            (String.compare calleeName "_exit") == 0 ||
            (String.compare calleeName "flexerror") == 0 || 
            (String.compare calleeName "flexfatal") == 0 ||
@@ -1135,10 +1144,11 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                         let () = finalReport := !finalReport ^ ("[Patches]\n ") ^ patches ^ "\n" in 
                         ()
                   | Some str -> 
-                    if String.compare (getRoot str) (getRoot currentHandler) == 0 then 
+                    let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
+
+                    if String.compare (getRoot str) (getRoot currentHandler) == 0 && (isNotFalse pi) then 
 
                       (print_endline (!currentModule ^ " should have some future condition ");
-                      let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
                       let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
                       let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
                       (* print_endline (string_of_specification newSpec); *)
@@ -1643,9 +1653,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
       let varFromX = string_of_stmt instr in 
       
+      (*
       print_endline ("dereferenceing ... " ^ varFromX);
       print_endline ("afrer  ... " ^ getMostRoot varFromX);
-
+*)
 
       let ev = if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope)) then 
         Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
