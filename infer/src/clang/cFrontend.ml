@@ -565,7 +565,7 @@ let insertSpecifications moduleName (newSpec:specification) =
   | (Some (a, b,  c, d), rest) -> propogatedSpecs := rest @ [(a, mergeSpec b pre, mergeSpec post c, mergeSpec future d)]
   | (None, _) -> 
     let post = match post with 
-    | Some (x::_) -> Some [x]
+    | Some (x::_) -> Some [deepSimplifyEffect x]
     | _ -> post 
     in 
     propogatedSpecs := !propogatedSpecs @ [(mnsignature, pre, post, future)]
@@ -994,10 +994,11 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           if twoStringSetOverlap [getRoot handler] (!parametersInScope) then  
             (instantiateReturn postc handler, None, handler)
           else
-          ((
+          (
+          (
           match futurec with 
           | None -> ()
-          | Some f ->  print_endline ("|- futurec_raw " ^ string_of_effect f)
+          | Some f ->  print_endline ("|- futurec_raw " ^ string_of_effect f ^ ", and the handler is " ^ handler); 
           );
 
           (instantiateReturn postc handler, 
@@ -1314,19 +1315,16 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let stmt_list' = aux [] [] stmt_list in 
 
 
-      (*
-      print_string ("==> SwitchStmt: ");
-      let _ = List.map stmt_list' ~f:(fun a-> 
-        let _ = List.map a ~f:(fun b -> print_endline ((Clang_ast_proj.get_stmt_kind_string b)^",")) in 
-        print_string ("\n ")) in 
-      print_endline ("");
-      *)
-
     
-      let stateSummary = List.map stmt_list' ~f:(fun x -> helper current (x@xs)) in 
-      let res = flattenList stateSummary  in 
-      (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
-      res
+      let stmt_list'  = List.filter stmt_list' ~f:(fun stmtLi -> peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs stmtLi) in 
+      (match stmt_list' with 
+      | [] ->  helper current xs
+      | _ -> 
+        let stateSummary = List.map stmt_list' ~f:(fun x -> helper current (x@xs)) in 
+        let res = flattenList stateSummary  in 
+        (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
+        res
+      )
 
 
     | LabelStmt (stmt_info, stmt_list, _)::xs

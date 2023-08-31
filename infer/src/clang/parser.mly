@@ -41,7 +41,8 @@ variable:
 basic_type : 
 | i = INTE{      BINT ( i)
     }
-| v = variable {BVAR v} 
+| v = VAR {BVAR v} 
+| UNDERLINE v = variable {BVAR ("_"^v)} 
 | NULL {BNULL}
 | RETURN {BRET}
 

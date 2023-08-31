@@ -1789,3 +1789,18 @@ let mergeSpec eff1 eff2 =
     else Some (a@b) *)
 
 
+let deepSimplifyEffect ((pi, es1):(pure * es)): (pure * es) = 
+  let (vacabulary: (string list) ref) = ref [] in 
+  let rec aux es: es = 
+    match es with 
+    | Bot | Emp | Any -> es 
+    | NotArguments _
+    | NotSingleton _
+    | Singleton _ -> 
+      let sign = string_of_es es in 
+      if twoStringSetOverlap [sign] !vacabulary then Emp 
+      else (let () = vacabulary := !vacabulary @[sign] in es)
+    | Disj (esIn1, esIn2) -> Disj (aux esIn1, aux esIn2)
+    | Concatenate  (esIn1, esIn2) -> Concatenate (aux esIn1, aux esIn2)
+    | Kleene  (esIn1) -> Kleene (aux esIn1)
+  in (pi, aux es1)
