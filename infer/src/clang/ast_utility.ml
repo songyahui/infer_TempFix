@@ -1763,16 +1763,29 @@ let rec returningNULL eff : bool =
 
 
 let isNotProjectFile source_Address source_Addressnow  = 
-  let source_Address = String.sub source_Address 0 10 in 
+  String.compare source_Address source_Addressnow != 0
+  (*let source_Address = String.sub source_Address 0 10 in 
   let source_Addressnow = String.sub source_Addressnow 0 10 in 
-  if String.compare source_Address source_Addressnow == 0 then false else true
+  if String.compare source_Address source_Addressnow == 0 then false else true*)
 
 
 let mergeSpec eff1 eff2 = 
   match (eff1, eff2) with 
   | (None, None) -> None 
   | (Some a, None) 
-  | (None, Some a) -> Some a 
-  | (Some a, Some b) -> Some (a@b)
+  | (None, Some a) -> 
+    (match a with 
+    | [] -> Some []
+    | e1::_-> Some [e1]
+    )
+    
+  | (Some a, Some b) -> 
+    (match a with 
+    | [] -> Some []
+    | e1::_-> Some [e1]
+    )
+    (*if String.compare (string_of_effect_prime a) (string_of_effect_prime b) == 0 then Some a 
+    else if List.length a >= 5 then Some a 
+    else Some (a@b) *)
 
 

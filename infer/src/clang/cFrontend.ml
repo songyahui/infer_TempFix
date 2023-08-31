@@ -564,7 +564,11 @@ let insertSpecifications moduleName (newSpec:specification) =
   match findSpecFrom !propogatedSpecs !currentModule with 
   | (Some (a, b,  c, d), rest) -> propogatedSpecs := rest @ [(a, mergeSpec b pre, mergeSpec post c, mergeSpec future d)]
   | (None, _) -> 
-    propogatedSpecs := !propogatedSpecs @ [newSpec]
+    let post = match post with 
+    | Some (x::_) -> Some [x]
+    | _ -> post 
+    in 
+    propogatedSpecs := !propogatedSpecs @ [(mnsignature, pre, post, future)]
 
 
 let string_of_decl (decl:Clang_ast_t.decl) : string = 
@@ -829,6 +833,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
     | CaseStmt (stmt_info, stmt_list) 
     | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
     | IfStmt (stmt_info, stmt_list, _)
+    | DoStmt (stmt_info, stmt_list)
     | CompoundStmt (stmt_info, stmt_list) ->  
         peekTheEffectOfStmtsAndItHasEffects env stmt_list
 
@@ -845,11 +850,6 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
             (match findSpecFrom env calleeName with
             | (Some ((_, _), _, _, Some _), _) ->  true 
             | _ -> false   )
-            (*let spec = findSpecFrom env calleeName in 
-            match spec with
-            | None -> false 
-            | Some ((_, _), _, _, Some _) ->  true 
-            *)
           )
  
       )
@@ -1083,8 +1083,15 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           *)
 
           let lhsEffect = ((normaliseProgramStates restSpecLHS)) in 
-          if (List.length lhsEffect) > 50 then ()
-          else 
+          let lhsEffect = 
+            match lhsEffect with 
+            | []
+            | [_]
+            | [_;_] 
+            | [_;_;_] -> lhsEffect
+            | e1::e2::e3::_ -> [e1;e2;e3]
+           
+          in 
             (
             print_endline ("checking futurecondition ... " ^ string_of_int (List.length lhsEffect) ^ "|-" ^ string_of_int (List.length futurec));
 
@@ -1261,13 +1268,25 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
     | (IfStmt (stmt_info, [x;y;z], if_stmt_info)) :: xsifelse -> 
-      let addTail (a:Clang_ast_t.stmt) = 
-        match a with
-        | CompoundStmt (c_stmt_info, c_stmt_list) ->  Clang_ast_t.CompoundStmt (c_stmt_info, List.append c_stmt_list xsifelse) 
-        | _ ->  Clang_ast_t.CompoundStmt (stmt_info, a:: xsifelse)
-      in 
-      let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
-      syh_compute_stmt_postcondition current' future statement'
+
+      if not (peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs [y;z]) then 
+        (
+
+        let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y;z], if_stmt_info)) in 
+        let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
+        let effectRest = helper new_history xsifelse in 
+        concatenateTwoEffectswithFlag effectLi4X effectRest
+  
+        )
+      else 
+        (
+        let addTail (a:Clang_ast_t.stmt) = 
+          match a with
+          | CompoundStmt (c_stmt_info, c_stmt_list) ->  Clang_ast_t.CompoundStmt (c_stmt_info, List.append c_stmt_list xsifelse) 
+          | _ ->  Clang_ast_t.CompoundStmt (stmt_info, a:: xsifelse)
+        in 
+        let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
+        syh_compute_stmt_postcondition current' future statement')
     
     | DoStmt (stmt_info, [x;y])::xs  ->
       
@@ -1308,7 +1327,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let res = flattenList stateSummary  in 
       (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
       res
-
 
 
     | LabelStmt (stmt_info, stmt_list, _)::xs
@@ -1372,8 +1390,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       
       
       
-    | ParenExpr _ -> 
-      [(TRUE, Singleton ((("RET", [BNULL])), fp1) , 1, fp)]
+    | ParenExpr (_, x::rest, _) -> 
+      if String.compare (string_of_stmt x) "0" == 0  then 
+        [(TRUE, Singleton ((("RET", [BNULL])), fp1) , 1, fp)]
+      else [(TRUE, Singleton ((("RET", [])), fp1) , 1, fp)]
 
     | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       syh_compute_stmt_postcondition current future  (ReturnStmt (stmt_info, [x]))
@@ -1610,7 +1630,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let (fp, _) =  getStmtlocation instr in 
       let varFromX = string_of_stmt x in 
 
-      let ev = if twoStringSetOverlap [varFromX] (!varSet) then 
+      let ev = if twoStringSetOverlap [varFromX] (!varSet@(!parametersInScope)) then 
         Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
         else Emp
       in 
