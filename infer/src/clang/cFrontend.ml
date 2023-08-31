@@ -387,10 +387,13 @@ let concatenateTwoEffectswithoutFlag (effectLi4X: programStates) (effectRest: pr
       (*match findReturnValue pi1 with 
       | Some (Basic (BVAR (retTerm))) -> 
         (conjunctPure pi1 pi2, Concatenate (eff_x, instantiateRetEs eff_y [(retTerm, BRET)]  ),  t_y, List.append fp1 fp2)
-      | _ ->*) (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),  t_y, List.append fp1 fp2)
+      | _ ->*) 
+      let (pi, es) = deepSimplifyEffect (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y)) in 
+      
+      (pi, es,  t_y, List.append fp1 fp2)
 
   ) in 
-  normaliseProgramStates temp
+ temp
   
 
 
@@ -410,12 +413,12 @@ let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: progr
     fun ((pi1, eff_x, t_x, fp1),  (pi2, eff_y, t_y, fp2)) -> 
       if t_x > 0 then (pi1, eff_x, t_x, fp1)
       else
-      (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y),  t_y, List.append fp1 fp2)
+      let (pi, es) = deepSimplifyEffect (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y)) in 
+
+      (pi, es,  t_y, List.append fp1 fp2)
   ) in 
 
-  let ret = normaliseProgramStates temp in 
-
-  ret
+   temp
   
 
 
