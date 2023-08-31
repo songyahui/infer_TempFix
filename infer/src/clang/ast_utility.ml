@@ -266,6 +266,31 @@ let rec getRoot str =
   | x :: _ -> x
 ;;
 
+let rec getMostRoot str = 
+  let strLi = String.split_on_chars  str ['.'] in 
+  let rec helper acc li =
+    match li with
+    | []
+    | [_]  -> acc  
+    | x :: rest -> helper (acc@[x]) rest
+  in 
+  let dereferencelist = helper [] strLi in 
+  let rec aux li =
+    match li with 
+    | [] -> ""
+    | [x] ->  x 
+    | x :: xs -> x ^ "." ^ aux xs
+  in  aux dereferencelist
+;;
+
+let rec string_with_seperator f li sep = 
+  match li with 
+  | [] -> ""
+  | [x] -> f x 
+  | x :: xs  -> f x ^ sep ^ string_with_seperator f xs sep
+
+
+
 let twoStringSetOverlap (sli1) (sli2) = 
   let rec helper str li = 
     match li with 
@@ -1797,10 +1822,10 @@ let deepSimplifyEffect ((pi, es1):(pure * es)): (pure * es) =
     | NotArguments _
     | NotSingleton _
     | Singleton _ -> 
-      let sign = string_of_es es in 
+      let sign = string_of_es_prime es in 
       if twoStringSetOverlap [sign] !vacabulary then Emp 
       else (let () = vacabulary := !vacabulary @[sign] in es)
     | Disj (esIn1, esIn2) -> Disj (aux esIn1, aux esIn2)
     | Concatenate  (esIn1, esIn2) -> Concatenate (aux esIn1, aux esIn2)
     | Kleene  (esIn1) -> Kleene (aux esIn1)
-  in (pi, aux es1)
+  in (normalPure pi, normalise_es (aux es1))

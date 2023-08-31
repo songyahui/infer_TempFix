@@ -205,15 +205,26 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
   | ReturnStmt (stmt_info, stmt_list) ->
     "ReturnStmt " ^ string_of_stmt_list stmt_list " " 
 
+  | ArraySubscriptExpr (_, arlist, _)  -> 
+    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+    (*print_endline (string_of_int (List.length temp)); *)
+    string_with_seperator  (fun a -> match a with | None -> "_" | Some t -> (string_of_terms t)) temp "."
+
   | MemberExpr (_, arlist, _, member_expr_info)  -> 
     let memArg = member_expr_info.mei_name.ni_name in 
     let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+
+    let name  = string_with_seperator (fun a -> match a with | None -> "_" | Some t ->(string_of_terms t)) temp "." in 
+    if String.compare memArg "" == 0 then name 
+    else name ^ "." ^ memArg
+    (*
     let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
     acc ^ (
       match a with
       | None -> "_"
       | Some t -> string_of_terms t ^ "."
     )) in name^memArg
+    *)
 
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
     (*"IntegerLiteral " ^*) integer_literal_info.ili_value
@@ -286,16 +297,15 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
 
   | BreakStmt _ -> "BreakStmt"
 
-  | ArraySubscriptExpr (_, arlist, _)  -> 
-    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
-    (*print_endline (string_of_int (List.length temp)); *)
+    (*
     let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
     acc ^ (
       match a with
       | None -> "_"
-      | Some t -> string_of_terms t ^ "_"
+      | Some t -> string_of_terms t ^ "."
     )) in 
-    ("ArraySubscriptExpr " ^ name)
+    (name)
+    *)
 
 
   | _ -> "string_of_stmt not yet " ^ Clang_ast_proj.get_stmt_kind_string instr;;
@@ -565,7 +575,10 @@ let insertSpecifications moduleName (newSpec:specification) =
   | (Some (a, b,  c, d), rest) -> propogatedSpecs := rest @ [(a, mergeSpec b pre, mergeSpec post c, mergeSpec future d)]
   | (None, _) -> 
     let post = match post with 
-    | Some (x::_) -> Some [deepSimplifyEffect x]
+    | Some (x::_) -> 
+      let state = deepSimplifyEffect x in 
+      if forallNullable [state] then None 
+      else Some [state]
     | _ -> post 
     in 
     propogatedSpecs := !propogatedSpecs @ [(mnsignature, pre, post, future)]
@@ -1451,6 +1464,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
   | UnaryOperator (stmt_info, x::_, expr_info, op_info)->
     (match op_info.uoi_kind with
+    (*
     | `Deref -> 
       let (fp, _) =  getStmtlocation instr in 
       let varFromX = string_of_stmt x in 
@@ -1461,7 +1475,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       in 
       let fp = match fp with | None -> [] | Some l -> [l] in 
       [(TRUE, ev, 0, fp)]
-      
+    *)
     | _ -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
       prefixLoction fp (syh_compute_stmt_postcondition current future x)
@@ -1619,16 +1633,21 @@ let rec syh_compute_stmt_postcondition (current:programStates)
   | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
       prefixLoction fp (syh_compute_stmt_postcondition current future x)
-  | ArraySubscriptExpr(stmt_info, x::_, _)  
-  | MemberExpr (stmt_info, x::_, _, _) -> 
+  | ArraySubscriptExpr(stmt_info, x::stmt_list, _)  
+  | MemberExpr (stmt_info, x::stmt_list, _, _) -> 
     (match x with 
     | ArraySubscriptExpr _ -> 
       syh_compute_stmt_postcondition current future x 
     | _ -> 
       let (fp, _) =  getStmtlocation instr in 
-      let varFromX = string_of_stmt x in 
 
-      let ev = if twoStringSetOverlap [varFromX] (!varSet@(!parametersInScope)) then 
+      let varFromX = string_of_stmt instr in 
+      
+      print_endline ("dereferenceing ... " ^ varFromX);
+      print_endline ("afrer  ... " ^ getMostRoot varFromX);
+
+
+      let ev = if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope)) then 
         Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
         else Emp
       in 
@@ -1984,8 +2003,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
               (if List.length postcondition == 0 then ()
               else 
                 let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
-                if forallNullable postcondition then ()
-                else insertSpecifications !currentModule newSpec
+                insertSpecifications !currentModule newSpec
               );
 
 
