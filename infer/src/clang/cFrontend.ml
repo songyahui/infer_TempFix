@@ -62,7 +62,7 @@ let stmt2Term_helper (op: string) (t1: terms option) (t2: terms option) : terms 
   | (_, None ) -> None 
   | (Some t1, Some t2) -> 
     let p = 
-      if String.compare op "+" == 0 then Plus (t1, t2)
+      if String.compare op "_plus_" == 0 then Plus (t1, t2)
     else Minus (t1, t2)
     in Some p 
 
@@ -84,8 +84,8 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
   
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
     (match binop_info.boi_kind with
-    | `Add -> stmt2Term_helper "+" (stmt2Term x) (stmt2Term y) 
-    | `Sub -> stmt2Term_helper "" (stmt2Term x) (stmt2Term y) 
+    | `Add -> stmt2Term_helper "_plus_" (stmt2Term x) (stmt2Term y) 
+    | `Sub -> stmt2Term_helper "_minus_" (stmt2Term x) (stmt2Term y) 
     | _ -> None 
     )
   | IntegerLiteral (_, stmt_list, expr_info, integer_literal_info) ->
@@ -348,17 +348,6 @@ let conjunctPure (pi1:pure) (pi2:pure): pure =
         else*)  PureAnd (pi1, pi2)
 
 
-let concatenateTwoEffect (eff1:effect) (eff2:effect) : effect = 
-  let (mixLi:(((pure * es) * (pure * es)) list)) = cartesian_product eff1 eff2 in 
-  List.map mixLi ~f:(fun ((pi1, es1), (pi2, es2)) -> 
-    let (trace:es)  = Concatenate(es1, es2) in 
-    match (pi1, pi2) with
-    | (TRUE, p2) -> (p2, trace)
-    | (p1, TRUE) -> (p1, trace)
-    | (_, _) -> 
-      let newPure = conjunctPure pi1 pi2 in 
-      (newPure, trace)
-  )
 
 let rec findReturnValue (pi:pure) : terms option = 
   match pi with
@@ -381,6 +370,20 @@ let rec findReturnValue (pi:pure) : terms option =
 (* be carefule with this function, which is specifically used when checking future condition. *)
 let concatenateTwoEffectswithoutFlag (effectLi4X: programStates) (effectRest: programStates): programStates = 
   let mixLi = cartesian_product effectLi4X effectRest in 
+
+  (*
+  print_endline ("concatenateTwoEffectswith OUT Flag");
+  print_endline (string_of_programStates effectLi4X);
+  print_endline (string_of_programStates effectRest);
+
+  print_endline ("============");
+  print_string (string_of_int (List.length effectLi4X) ^ 
+  " x " ^  string_of_int (List.length effectRest)^ "\n");
+
+  print_string (string_of_int (List.length mixLi) ^ "\n");
+  print_endline ("============");
+*)
+
   
   let temp = List.map mixLi ~f:(
     fun ((pi1, eff_x, t_x, fp1),  (pi2, eff_y, t_y, fp2)) -> 
@@ -399,24 +402,29 @@ let concatenateTwoEffectswithoutFlag (effectLi4X: programStates) (effectRest: pr
 
 let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: programStates): programStates = 
   let mixLi = cartesian_product effectLi4X effectRest in 
-  (*
+  (*print_endline ("concatenateTwoEffectswithFlag");
+  print_endline (string_of_programStates effectLi4X);
+  print_endline (string_of_programStates effectRest);
+
   print_endline ("============");
   print_string (string_of_int (List.length effectLi4X) ^ 
   " x " ^  string_of_int (List.length effectRest)^ "\n");
-
-  print_string (string_of_int (List.length mixLi) ^ "\n");
-  print_endline ("============");
-
-  print_endline ("concatenateTwoEffectswithFlag 0");
 *)
-  let temp = List.map mixLi ~f:(
+  
+
+
+  let temp = compactDisjunctions (List.map mixLi ~f:(
     fun ((pi1, eff_x, t_x, fp1),  (pi2, eff_y, t_y, fp2)) -> 
       if t_x > 0 then (pi1, eff_x, t_x, fp1)
       else
       let (pi, es) = deepSimplifyEffect (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y)) in 
 
       (pi, es,  t_y, List.append fp1 fp2)
-  ) in 
+  )) in 
+  (*print_string (string_of_int (List.length temp) ^ "\n");
+  print_endline ("============");
+  print_endline ("result is: " ^ string_of_programStates temp);
+  *)
 
   temp
   
@@ -579,10 +587,7 @@ let insertSpecifications moduleName (newSpec:specification) =
       let (pi, es) = deepSimplifyEffect x in 
       (match es with 
       | Emp ->  None 
-      | _ -> 
-        print_endline("\n=====> Actual effects of function: "^ moduleName ^" ======>" );
-        print_string (string_of_effect ([(pi, es)]) ^ "\n");
-        Some [(pi, es)])
+      | _ -> Some [(pi, es)])
     | _ -> post 
   in 
   match pre, post, future with 
@@ -1569,7 +1574,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             let eff4X = syh_compute_stmt_postcondition current future x in
             let eff4Y = syh_compute_stmt_postcondition current future y in
             let final = prefixLoction locX 
-              (List.append 
+              (creatingDisjunctiveProgramStates
               (postfixLoction locZ eff4X) 
               (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y))) in 
             final
@@ -1577,20 +1582,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
         | Some (condition, morevar) -> 
-          (*
-          print_endline (string_of_stmt x ^", it is not Relavent");
-*)
-
-        (*let ()= varSet := (List.append !varSet morevar) in *)
-
-        (*
-        print_endline (string_of_pure condition);
-        print_endline (string_of_pure (Neg condition));
-*)
           let eff4X = syh_compute_stmt_postcondition current future  x in
           let eff4Y = syh_compute_stmt_postcondition current future  y in
           let res = prefixLoction locX 
-            (List.append 
+            (creatingDisjunctiveProgramStates
             (postfixLoction locZ (enforePure (Neg condition) eff4X))
             (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y)))) 
           in 
@@ -1623,7 +1618,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           let eff4Y = syh_compute_stmt_postcondition current future y in
           let eff4Z = syh_compute_stmt_postcondition current future z in
           prefixLoction locX 
-          (List.append 
+          (creatingDisjunctiveProgramStates
             ((prefixLoction locZ (concatenateTwoEffectswithFlag eff4X eff4Z))) 
             (prefixLoction locY (concatenateTwoEffectswithFlag eff4X eff4Y)))
           )
@@ -1633,7 +1628,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           let eff4X = syh_compute_stmt_postcondition current future x in
           let eff4Y = syh_compute_stmt_postcondition current future y in
           let eff4Z = syh_compute_stmt_postcondition current future z in
-          prefixLoction locX (List.append 
+          prefixLoction locX (creatingDisjunctiveProgramStates
           (prefixLoction locZ (enforePure (Neg condition) (concatenateTwoEffectswithFlag eff4X eff4Z))) 
           (prefixLoction locY (enforePure (condition) (concatenateTwoEffectswithFlag eff4X eff4Y))))
         )
@@ -2020,9 +2015,13 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
               (if List.length postcondition == 0 then ()
               else 
                 let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
-                print_endline (source_Address);
                 insertSpecifications !currentModule newSpec
               );
+
+              print_endline (source_Address);
+              print_endline("\n=====> Actual effects of function: "^ !currentModule ^" ======>" );
+              print_string (string_of_programStates final ^ "\n");
+
 
 
              ) ;

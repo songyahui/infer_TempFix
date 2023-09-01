@@ -78,20 +78,6 @@ term:
 | LPAR a = term PLUS b = term RPAR {Plus (a, b)}
 
 
-(*
-
-pure_helper:
-| GT b = term {(">", b)}
-| LT b = term {("<", b)}
-| GTEQ b = term {(">=", b)}
-| LTEQ b = term {("<=", b)}
-| EQ b = term {("=", b)}
-
-pure_aux:
-| CONJ b = pure {("conj", b)}
-| DISJ b = pure {("disj", b)}
-
-*)
 
 pure:
 | TRUE {TRUE}

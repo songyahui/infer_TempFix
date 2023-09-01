@@ -211,8 +211,8 @@ let argumentsTerms2basic_types (t: (terms option) list): (basic_type list) =
 let rec string_of_terms (t:terms):string = 
   match t with
   | Basic v -> string_of_basic_t v 
-  | Plus (t1, t2) -> (string_of_terms t1) ^ ("+") ^ (string_of_terms t2)
-  | Minus (t1, t2) -> (string_of_terms t1) ^ ("-") ^ (string_of_terms t2)
+  | Plus (t1, t2) -> (string_of_terms t1) ^ ("_plus_") ^ (string_of_terms t2)
+  | Minus (t1, t2) -> (string_of_terms t1) ^ ("_minus_") ^ (string_of_terms t2)
 
 
 let string_of_termOption t : string option  = 
@@ -742,6 +742,21 @@ let rec normalPure (pi:pure):pure =
     )
 *)
 
+let rec nullable (eff:es) : bool = 
+  match eff with 
+  | Bot              -> false 
+  | Emp              -> true 
+  | Any              -> false 
+  | Singleton ((str, _), _) -> 
+    if String.compare str "RET" == 0 then true else false 
+  | NotSingleton str          -> false
+  | Concatenate (eff1, eff2) -> nullable eff1 && nullable eff2  
+  | Disj (eff1, eff2) -> nullable eff1 || nullable eff2  
+  | Kleene effIn      -> true
+  | _ -> false 
+
+
+
 let rec normalise_es (eff:es) : es = 
   match eff with 
   | Disj(es1, es2) -> 
@@ -749,10 +764,12 @@ let rec normalise_es (eff:es) : es =
     let es2 = normalise_es es2 in 
     (match (es1, es2) with 
     | (Emp, Emp) -> Emp
+    | (Emp, _) -> if nullable es2 then es2 else (Disj (es1, es2))
     | (Bot, es) -> normalise_es es 
     | (es, Bot) -> normalise_es es 
     | (Disj (es11, es12), es3) -> Disj (es11, Disj (es12, es3))
-    | _ -> (Disj (es1, es2))
+    | _ -> 
+      (Disj (es1, es2))
     )
   | Concatenate (es1, es2) -> 
     let es1 = normalise_es es1 in 
@@ -831,21 +848,6 @@ let normalise_effect (eff:effect) : effect =
     
   in helper noBoteff
 
-
-
-
-let rec nullable (eff:es) : bool = 
-  match eff with 
-  | Bot              -> false 
-  | Emp              -> true 
-  | Any              -> false 
-  | Singleton ((str, _), _) -> 
-    if String.compare str "RET" == 0 then true else false 
-  | NotSingleton str          -> false
-  | Concatenate (eff1, eff2) -> nullable eff1 && nullable eff2  
-  | Disj (eff1, eff2) -> nullable eff1 || nullable eff2  
-  | Kleene effIn      -> true
-  | _ -> false 
 
 
 
@@ -1599,8 +1601,8 @@ let string_of_basic_t_prime v =
 let rec string_of_terms_prime (t:terms):string = 
   match t with
   | Basic v -> string_of_basic_t_prime v 
-  | Plus (t1, t2) -> (string_of_terms_prime t1) ^ ("+") ^ (string_of_terms_prime t2)
-  | Minus (t1, t2) -> (string_of_terms_prime t1) ^ ("-") ^ (string_of_terms_prime t2)
+  | Plus (t1, t2) -> (string_of_terms_prime t1) ^ ("_plus_") ^ (string_of_terms_prime t2)
+  | Minus (t1, t2) -> (string_of_terms_prime t1) ^ ("_minus_") ^ (string_of_terms_prime t2)
 
 let rec string_of_pure_prime (p:pure):string =   
   match p with
@@ -1830,9 +1832,51 @@ print_endline (string_of_es es1);*)
   let es' = normalise_es (aux es1) in 
   (*print_endline ("after deepSimplifyEffect");
   print_endline (string_of_es es');*)
-    (normalPure pi, es')
+  (normalPure pi, es')
 
 let isNotFalse pi = 
   match pi with 
   | FALSE -> true 
   | _ ->  false 
+
+
+let compactDisjunctions (state:programStates): programStates = 
+  let rec mergeIntoAcc (pi, es, a, b) (acc:programStates) :programStates = 
+    match acc with 
+    | [] -> [(pi, es, a, b)]
+    | (piacc, esacc, aacc, bacc)::rest -> 
+      if comparePure pi piacc && aacc == a then (piacc, normalise_es(Disj(esacc, es)), aacc, bacc)::rest
+      else (piacc, esacc, aacc, bacc)::(mergeIntoAcc (pi, es, a, b) rest)
+
+  in 
+  let rec helper acc li  = 
+    match li with 
+    | [] -> acc 
+    | eff::rest -> 
+      let acc' = mergeIntoAcc eff acc in 
+      helper acc' rest 
+  in  helper [] state
+      
+
+
+
+
+let creatingDisjunctiveProgramStates (state1:programStates) (state2:programStates) :programStates = 
+  print_endline ("----------\nCreatingDisjunctiveProgramStates");
+  print_endline (string_of_programStates state1);
+  print_endline (string_of_programStates state2);
+  (*
+  match (state1, state2) with 
+  | ([(pi1, es1, a, b)], [(pi2, es2, _, _)]) -> 
+    if comparePure pi1 pi2 
+      then if  comparees es1 es2 then state1
+      else [(pi1, Disj(es1, es2), a, b)]
+    else 
+      List.append state1 state2
+
+  | _ -> 
+  *)
+  let temp =   compactDisjunctions (List.append state1 state2) in 
+  print_endline ("result: " ^ string_of_programStates temp);
+  temp
+
