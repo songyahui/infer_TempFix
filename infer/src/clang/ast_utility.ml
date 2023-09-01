@@ -1811,6 +1811,8 @@ let mergeSpec eff1 eff2 =
 
 
 let deepSimplifyEffect ((pi, es1):(pure * es)): (pure * es) = 
+(*print_endline ("deepSimplifyEffect");
+print_endline (string_of_es es1);*)
   let (vacabulary: (string list) ref) = ref [] in 
   let rec aux es: es = 
     match es with 
@@ -1824,7 +1826,11 @@ let deepSimplifyEffect ((pi, es1):(pure * es)): (pure * es) =
     | Disj (esIn1, esIn2) -> Disj (aux esIn1, aux esIn2)
     | Concatenate  (esIn1, esIn2) -> Concatenate (aux esIn1, aux esIn2)
     | Kleene  (esIn1) -> Kleene (aux esIn1)
-  in (normalPure pi, normalise_es (aux es1))
+  in 
+  let es' = normalise_es (aux es1) in 
+  (*print_endline ("after deepSimplifyEffect");
+  print_endline (string_of_es es');*)
+    (normalPure pi, es')
 
 let isNotFalse pi = 
   match pi with 

@@ -388,12 +388,12 @@ let concatenateTwoEffectswithoutFlag (effectLi4X: programStates) (effectRest: pr
       | Some (Basic (BVAR (retTerm))) -> 
         (conjunctPure pi1 pi2, Concatenate (eff_x, instantiateRetEs eff_y [(retTerm, BRET)]  ),  t_y, List.append fp1 fp2)
       | _ ->*) 
-      let (pi, es) = deepSimplifyEffect (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y)) in 
+      let (pi, es) = (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y)) in 
       
       (pi, es,  t_y, List.append fp1 fp2)
 
   ) in 
- temp
+  normaliseProgramStates temp
   
 
 
@@ -418,7 +418,7 @@ let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: progr
       (pi, es,  t_y, List.append fp1 fp2)
   ) in 
 
-   temp
+  temp
   
 
 
@@ -579,7 +579,10 @@ let insertSpecifications moduleName (newSpec:specification) =
       let (pi, es) = deepSimplifyEffect x in 
       (match es with 
       | Emp ->  None 
-      | _ -> Some [(pi, es)])
+      | _ -> 
+        print_endline("\n=====> Actual effects of function: "^ moduleName ^" ======>" );
+        print_string (string_of_effect ([(pi, es)]) ^ "\n");
+        Some [(pi, es)])
     | _ -> post 
   in 
   match pre, post, future with 
@@ -2017,13 +2020,12 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
               (if List.length postcondition == 0 then ()
               else 
                 let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
+                print_endline (source_Address);
                 insertSpecifications !currentModule newSpec
               );
 
 
-              print_endline (source_Address);
-              print_endline("\n=====> Actual effects of function: "^ funcName ^" ======>" );
-              print_string (string_of_programStates final ^ "\n")) ;
+             ) ;
 
 
 
