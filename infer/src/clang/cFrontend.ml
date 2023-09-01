@@ -464,6 +464,13 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     | `LE -> stmt2Pure_helper "<=" (stmt2Term x) (stmt2Term y) 
     | `EQ -> stmt2Pure_helper "=" (stmt2Term x) (stmt2Term y) 
     | `NE -> stmt2Pure_helper "!=" (stmt2Term x) (stmt2Term y) 
+    | `And | `LAnd -> 
+      (match ((stmt2Pure x ), (stmt2Pure y )) with 
+      | Some p1, Some p2 -> Some (Ast_utility.PureAnd (p1, p2))
+      | Some p1, None -> Some (p1)
+      | None, Some p1 -> Some (p1)
+      | None, None -> None 
+      )
     | `Or | `LOr | `Xor-> 
       (match ((stmt2Pure x ), (stmt2Pure y )) with 
       | Some p1, Some p2 -> Some (Ast_utility.PureOr (p1, p2))
@@ -859,7 +866,6 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
     match stmt with 
     | Clang_ast_t.BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)-> 
       helper x || helper y 
-    | ReturnStmt (stmt_info, stmt_list)   
     | UnaryOperator (stmt_info, stmt_list, _, _)
     | DefaultStmt (stmt_info, stmt_list) 
     | CaseStmt (stmt_info, stmt_list) 
@@ -955,13 +961,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             print_string (string_of_event (calleeName, acturelli) ^ ":\n");
             *)
 
-            print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
 
             let (spec, _) = findSpecFrom !propogatedSpecs calleeName in 
             match spec with
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
+            print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
+
 
               (*
               print_endline ("formal Arg = " ^ List.fold_left formalLi ~init:"" ~f:(fun acc a -> acc ^ "," ^a));
@@ -1062,6 +1069,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let effectRest = 
         let fp1 = match fp with | [] -> None | x::_ -> Some x in 
         if (String.compare calleeName "exit") == 0 || 
+            (String.compare calleeName "LXC_ERROR") == 0 || 
            (String.compare calleeName "yy_fatal_error") == 0 || 
            (String.compare calleeName "_exit") == 0 ||
            (String.compare calleeName "flexerror") == 0 || 
@@ -1126,12 +1134,16 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             | e1::e2::e3::_ -> [e1;e2;e3]
            
           in 
+          if twoStringSetOverlap [(calleeName^ string_of_foot_print fp)] !checkedMethord  then ()
+          else 
             (
+            print_endline ("current states: " ^ string_of_int (List.length current'));
             print_endline ("checking futurecondition ... " ^ string_of_int (List.length lhsEffect) ^ "|-" ^ string_of_int (List.length futurec));
 
             print_endline (" = LHS: " ^ string_of_programStates lhsEffect);
             print_endline ("|- RHS: " ^ string_of_effect futurec);
             let info = effectwithfootprintInclusion (programStates2effectwithfootprintlist lhsEffect) futurec in 
+            let () = checkedMethord := (calleeName^ string_of_foot_print fp )::(!checkedMethord ) in 
             let infos = seperateDisjunctives info in 
             let  _ = List.iter infos ~f:(fun singleInfo ->
               let (error_paths, _, _, _) = info in 
@@ -1721,6 +1733,12 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
   | GotoStmt (stmt_infogoto, _, {Clang_ast_t.gsi_label= label_name; _}) ->
+
+    (match findLableSpec !gotoStmtSpec label_name with 
+    | Some spec -> spec
+    | None ->  
+
+        
     let (fpGOTO, _) = stmt_intfor2FootPrint stmt_infogoto in 
     
     (*let rec find_stmtTillNextLable li acc =
@@ -1759,19 +1777,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         findTheLable currentModuleStmts
       | _ -> []
     in 
-    (*let exitsString li str =
-      let temp = List.filter li ~f:(fun a -> if String.compare a str == 0 then true else false) in 
-      if List.length temp > 5 then true 
-      else false 
-    in 
-    if exitsString !currentLable label_name then 
-      (let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
-      [(TRUE, Emp, 0, fp)])
-    else 
-    *)
-      (let () = currentLable := !currentLable @ [label_name] in  
+      (
       let stmt_list = findStmt_ListByLable () in 
-      helper current stmt_list)
+      let spec = helper current stmt_list in 
+      let () = gotoStmtSpec := (label_name, spec) :: !gotoStmtSpec in 
+      spec
+      
+      )
+      )
 
   (*
     | LabelStmt (stmt_info, stmt_list, label_name) ->
@@ -1981,7 +1994,8 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       print_endline ("annalysing " ^ funcName);
       let () = currentModule := funcName in 
       let () = currentModuleBody := Some stmt in 
-      let () = currentLable := [] in 
+      let () = checkedMethord := [] in 
+      let () = gotoStmtSpec := [] in 
 
       let raw_final = (syh_compute_stmt_postcondition  
             defultPrecondition

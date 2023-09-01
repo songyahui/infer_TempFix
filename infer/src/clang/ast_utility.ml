@@ -67,7 +67,8 @@ let (dynamicSpec: (specification list) ref) = ref []
 let (propogatedSpecs: (specification list) ref) = ref [] 
 let (currentModule: string ref) = ref ""
 let (currentModuleBody: (Clang_ast_t.stmt) option  ref) = ref None
-let (currentLable: (string list)  ref) = ref []
+let (checkedMethord: ((string) list)  ref) = ref []
+let (gotoStmtSpec: ((string * programStates) list)  ref) = ref []
 
 let (variablesInScope: (string list) ref) = ref [] 
 let (parametersInScope: (string list) ref) = ref [] 
@@ -1227,7 +1228,7 @@ let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) :
   let (functionStart, _) = !currentFunctionLineNumber in 
 
   let (f_re, f_tree, correctT, errorT) = 
-  (List.fold_left validPairs ~init:([], [], [], []) ~f:(
+    (List.fold_left validPairs ~init:([], [], [], []) ~f:(
     fun (accre, acctree, correctTrace, errorTrace) ((p1, es1, li), (p2, es2)) ->
 
     let (re, tree) = inclusion' p1 functionStart es1 es2 [] in   
@@ -1241,7 +1242,7 @@ let effectwithfootprintInclusion (lhs: effectwithfootprint list) (rhs:effect) :
     (List.append accre re, List.append acctree [(Node ((string_of_pure p1 ^ "|-" ^ string_of_pure p2) , [tree]))], 
     correctTrace', errorTrace'
     )
-    )) in 
+  )) in 
     (f_re, Node ("TRS:", f_tree), correctT, errorT)
 
 
@@ -1855,16 +1856,34 @@ let compactDisjunctions (state:programStates): programStates =
     | eff::rest -> 
       let acc' = mergeIntoAcc eff acc in 
       helper acc' rest 
-  in  helper [] state
+  in  
+  match state with 
+  | [] -> []
+  | _ -> 
+    let rec getFirstEle li n =
+      if n == 0 then []
+      else 
+        match li with 
+        | [] -> []
+        | x ::xs -> x :: getFirstEle xs (n-1)
+    in 
+    if List.length state > 10 then getFirstEle state 10
+    else 
+      let temp = helper [] state in 
+      if List.length temp > 8 then 
+      print_endline ("compactDisjunctions: "^ string_of_programStates temp)
+      else ();
+      temp
       
 
 
 
 
 let creatingDisjunctiveProgramStates (state1:programStates) (state2:programStates) :programStates = 
-  print_endline ("----------\nCreatingDisjunctiveProgramStates");
+  (*print_endline ("----------\nCreatingDisjunctiveProgramStates");
   print_endline (string_of_programStates state1);
   print_endline (string_of_programStates state2);
+  *)
   (*
   match (state1, state2) with 
   | ([(pi1, es1, a, b)], [(pi2, es2, _, _)]) -> 
@@ -1877,6 +1896,14 @@ let creatingDisjunctiveProgramStates (state1:programStates) (state2:programState
   | _ -> 
   *)
   let temp =   compactDisjunctions (List.append state1 state2) in 
-  print_endline ("result: " ^ string_of_programStates temp);
+  (*print_endline ("result: " ^ string_of_programStates temp);*)
   temp
 
+
+
+let rec findLableSpec li str = 
+  match li with 
+  | [] -> None 
+  | (lable, spec):: xs  -> 
+    if String.compare lable str == 0 then Some spec 
+    else findLableSpec xs str
