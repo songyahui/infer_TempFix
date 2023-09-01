@@ -1867,12 +1867,12 @@ let compactDisjunctions (state:programStates): programStates =
         | [] -> []
         | x ::xs -> x :: getFirstEle xs (n-1)
     in 
-    if List.length state > 20 then getFirstEle state 20
+    if List.length state > 10 then getFirstEle state 10
     else 
       let temp = helper [] state in 
-      if List.length temp > 12 then 
+     (* if List.length temp > 8 then 
       print_endline ("compactDisjunctions: "^ string_of_programStates temp)
-      else ();
+      else ();*)
       temp
       
 

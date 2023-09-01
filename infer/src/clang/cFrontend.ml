@@ -1026,24 +1026,23 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let (postc, futurec, currentHandler) = 
         match !handlerVar with 
         | None -> 
+
           if existRetEff postc || existRetEff futurec 
           then (None, None, "")
           else (postc, futurec, "")
         | Some handler ->  
-          if twoStringSetOverlap [getRoot handler] (!parametersInScope) then  
-            (instantiateReturn postc handler, None, handler)
-          else
-          (
+          
           (
           match futurec with 
-          | None -> ()
+          | None -> 
+            ()
           | Some f ->  print_endline ("|- futurec_raw " ^ string_of_effect f ^ ", and the handler is " ^ handler); 
           );
 
           (instantiateReturn postc handler, 
           instantiateReturn futurec handler, 
           handler
-          ))
+          )
       in 
 
       let () = handlerVar := None in 
@@ -1134,7 +1133,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             | e1::e2::e3::_ -> [e1;e2;e3]
            
           in 
-          if twoStringSetOverlap [(calleeName^ string_of_foot_print fp)] !checkedMethord  then ()
+          if twoStringSetOverlap [(calleeName^ string_of_foot_print fp)] !checkedMethord  then 
+            (print_endline ("skipping the fucture condition check. ");
+            ())
           else 
             (
             print_endline ("current states: " ^ string_of_int (List.length current'));
@@ -1157,7 +1158,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                     ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
                     (*print_endline (string_of_inclusion_results extra_info info); *)
                     
-          
                       let (head, patches) = program_repair singleInfo !propogatedSpecs in 
                       if String.compare patches "" == 0 then 
                       ()
@@ -1243,8 +1243,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           print_endline ("variablesInScope: " ^ List.fold_left (!variablesInScope) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
           print_endline (string_of_bool (checkIsGlobalVar (getRoot currentHandler) !variablesInScope)); 
 
-          
-*)
+          *)
+
 
           let rest = 
             if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
@@ -1374,13 +1374,18 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       )
 
 
+    | ContinueStmt _:: xs 
+    | BreakStmt _ :: xs -> 
+      [(TRUE, Emp, 0, [])]
+    
     | LabelStmt (stmt_info, stmt_list, _)::xs
     | DoStmt (stmt_info, stmt_list)::xs 
     | ForStmt (stmt_info, stmt_list)::xs
-    | CompoundStmt (stmt_info, stmt_list)::xs
-    | WhileStmt (stmt_info, stmt_list)::xs -> 
+    | CompoundStmt (stmt_info, stmt_list)::xs -> 
+    (*| WhileStmt (stmt_info, stmt_list)::xs -> *)
       let stmt' = List.append stmt_list xs in 
       helper current'  stmt'
+
     | x :: xs -> 
       (*print_endline ("===================================");
       print_endline (List.fold_left (li) ~init:"" ~f:(fun acc a -> acc ^ ", " ^ (Clang_ast_proj.get_stmt_kind_string a)));
@@ -1518,6 +1523,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
   | DefaultStmt (stmt_info, stmt_list) 
   | CaseStmt (stmt_info, stmt_list) 
   | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
+  | WhileStmt (stmt_info, stmt_list)
   | CompoundStmt (stmt_info, stmt_list) -> 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
@@ -1791,13 +1797,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | LabelStmt (stmt_info, stmt_list, label_name) ->
     labelStmt_trans trans_state stmt_info stmt_list label_name
  *)
-  | ContinueStmt _ -> 
-      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in  
-      [(TRUE, Emp, 1, fp)]
       
   | ConditionalOperator _
   | ParenExpr _ (* assert(max > min); *)
-  | BreakStmt _ 
   | LabelStmt _ 
   | ImplicitCastExpr _ (*stmt_info, stmt_list, _, _, _*) 
   | MemberExpr _
@@ -1816,7 +1818,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
   | RecoveryExpr _ 
   | DeclRefExpr _  
   | CStyleCastExpr _
-  | WhileStmt _ 
   | ConstantExpr _ 
   | UnaryExprOrTypeTraitExpr _ 
   | CXXOperatorCallExpr _ 
