@@ -466,7 +466,7 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     | `NE -> stmt2Pure_helper "!=" (stmt2Term x) (stmt2Term y) 
     | `And | `LAnd -> 
       (match ((stmt2Pure x ), (stmt2Pure y )) with 
-      | Some p1, Some p2 -> Some (Ast_utility.PureAnd (p1, p2))
+      | Some p1, Some p2 -> Some (p1) (*Some (Ast_utility.PureAnd (p1, p2))*)
       | Some p1, None -> Some (p1)
       | None, Some p1 -> Some (p1)
       | None, None -> None 
@@ -1336,8 +1336,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         syh_compute_stmt_postcondition current' future statement')
     
     | DoStmt (stmt_info, [x;y])::xs  ->
-      
-      let stmt' = List.append [x] xs in 
+      let if_stmt_info = {Clang_ast_t.isi_init=None;isi_cond_var=None;isi_cond=0;isi_then=0;isi_else=None} in 
+      let hd = Clang_ast_t.IfStmt (stmt_info, [y;(Clang_ast_t.CompoundStmt (stmt_info, []));(Clang_ast_t.CompoundStmt (stmt_info, xs))], if_stmt_info) in 
+      let stmt' =  [x;hd] in 
       helper current'  stmt'
 
     | SwitchStmt (_, _::x::_, _)::xs -> 
@@ -1790,7 +1791,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | LabelStmt (stmt_info, stmt_list, label_name) ->
     labelStmt_trans trans_state stmt_info stmt_list label_name
  *)
-  | ContinueStmt _
+  | ContinueStmt _ -> 
+      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in  
+      [(TRUE, Emp, 1, fp)]
+      
   | ConditionalOperator _
   | ParenExpr _ (* assert(max > min); *)
   | BreakStmt _ 
