@@ -256,8 +256,7 @@ and string_of_stmt (instr: Clang_ast_t.stmt) : string =
 
   | ParenExpr (stmt_info (*{Clang_ast_t.si_source_range} *), stmt_list, _) ->
 
-    "ParenExpr " (*^ string_of_source_range  stmt_info.si_source_range*)
-    ^ string_of_stmt_list stmt_list " " 
+    string_of_stmt_list stmt_list " " 
 
     
   | CStyleCastExpr (stmt_info, stmt_list, expr_info, cast_kind, _) -> 
@@ -917,7 +916,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     
     (*
     print_string ("==> helper: ");
-    let _ = List.map li ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
+    let _ = List.map li ~f:(fun a-> 
+      let (fp, _) = getStmtlocation a in 
+      let fp = match fp with | None -> [] | Some l -> [l] in 
+      print_string ((Clang_ast_proj.get_stmt_kind_string a) ^ string_of_foot_print fp ^ ", ")) in 
     print_endline ("==> helper: ");
 *)
     
@@ -938,6 +940,31 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let () = handlerVar := Some (localVar) in 
       let () = variablesInScope := !variablesInScope @ [localVar] in 
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
+
+    (*
+    | DeclStmt (stmt_info, x ::rest, [del]) ::xs ->
+      print_endline ("checking DeclStmt: "^(string_of_stmt x));
+      print_endline ("with Hanlder: "^(string_of_decl del));
+
+      if String.compare (string_of_stmt x) "0" ==0 then 
+        let callname = "assignnullsyh" in 
+        let ei = {Clang_ast_t.ei_qual_type={Clang_ast_t.qt_type_ptr=Clang_ast_types.TypePtr.Ptr (0);qt_is_const=false;qt_is_restrict=false;qt_is_trivially_copyable=false;qt_is_volatile=false};ei_value_kind=`RValue;ei_object_kind=`Ordinary} in 
+        let declRefExprStmt = constructADeclRefExprStmt stmt_info ei callname in 
+        let localVar = (string_of_decl del) in 
+        print_endline ("assignning null to " ^ localVar);
+
+        let () = handlerVar := Some (localVar) in 
+        let () = variablesInScope := !variablesInScope @ [localVar] in 
+  
+        helper current' ((Clang_ast_t.CallExpr (stmt_info, [declRefExprStmt], ei))::xs)
+
+
+      else
+        (let effectLi4X = syh_compute_stmt_postcondition current' future (Clang_ast_t.DeclStmt (stmt_info, x ::rest, [del])) in 
+        let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
+        let effectRest = helper new_history xs in 
+        concatenateTwoEffectswithFlag effectLi4X effectRest)
+*)
 
     | (CallExpr (stmt_info, stmt_list, ei)) ::xs 
     | CStyleCastExpr(_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _) ::xs 
@@ -1275,6 +1302,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         (*print_endline ("rest ...");*)
         helper current' xs 
       )
+
  
 
     | DeclStmt (_, [x], handler::handlerRest):: xs  ->
