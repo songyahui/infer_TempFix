@@ -1945,7 +1945,10 @@ let int_of_optionint intop =
   | None  -> (-1)
   | Some i -> i ;;
 
-
+let existingSpecs funcName  = 
+  match findSpecFrom !propogatedSpecs funcName with 
+  | (None, _) -> false 
+  | (Some _, _) -> true 
 
 let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): unit  = 
 
@@ -1954,7 +1957,9 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       let source_Addressnow = string_of_source_range  decl_info.di_source_range in 
 
 
-      if isNotProjectFile source_Address source_Addressnow then ()
+      if isNotProjectFile source_Address source_Addressnow then 
+        (
+        ())
       else 
       let (l1, l2) = decl_info.di_source_range in 
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
@@ -1968,6 +1973,9 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       | None -> ()
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
+      if existingSpecs funcName then ()
+      else 
+      
       let argumentNames = List.map (function_decl_info.fdi_parameters) ~f:(fun a -> string_of_decl a) in 
       let () = variablesInScope := argumentNames in 
       let () = parametersInScope := argumentNames in 

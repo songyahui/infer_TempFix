@@ -68,6 +68,7 @@ let (propogatedSpecs: (specification list) ref) = ref []
 let (currentModule: string ref) = ref ""
 let (currentModuleBody: (Clang_ast_t.stmt) option  ref) = ref None
 let (checkedMethord: ((string) list)  ref) = ref []
+
 let (gotoStmtSpec: ((string * programStates) list)  ref) = ref []
 
 let (variablesInScope: (string list) ref) = ref [] 
@@ -1786,11 +1787,13 @@ let rec returningNULL eff : bool =
   | (_, es) :: xs -> if returningNULLES es then true else returningNULL xs 
 
 
-let isNotProjectFile source_Address source_Addressnow  = 
+let isNotProjectFile source_Address' source_Addressnow'  = 
+  (*String.compare source_Address source_Addressnow != 0 *)
+  let source_Address = String.sub source_Address' 0 33 in 
+  let source_Addressnow = String.sub source_Addressnow' 0 33 in 
   String.compare source_Address source_Addressnow != 0
-  (*let source_Address = String.sub source_Address 0 10 in 
-  let source_Addressnow = String.sub source_Addressnow 0 10 in 
-  if String.compare source_Address source_Addressnow == 0 then false else true*)
+
+
 
 
 let mergeSpec eff1 eff2 = 
