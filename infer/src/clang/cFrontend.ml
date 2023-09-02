@@ -1363,7 +1363,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
     
+      (*
       let stmt_list'  = List.filter stmt_list' ~f:(fun stmtLi -> peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs stmtLi) in 
+      *)
       (match stmt_list' with 
       | [] ->  helper current xs
       | _ -> 
@@ -1374,9 +1376,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       )
 
 
-    | ContinueStmt _:: xs 
-    | BreakStmt _ :: xs -> 
-      [(TRUE, Emp, 0, [])]
     
     | LabelStmt (stmt_info, stmt_list, _)::xs
     | DoStmt (stmt_info, stmt_list)::xs 
@@ -1447,6 +1446,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
     | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       syh_compute_stmt_postcondition current future  (ReturnStmt (stmt_info, [x]))
+
+    | MemberExpr _ 
+    | ArraySubscriptExpr _ -> 
+      let state = syh_compute_stmt_postcondition current future  (ret) in 
+      let fp1 = match fp with | [] -> None | x::_ -> Some x in 
+      let es = Singleton (("RET", []), fp1) in 
+      concatenateTwoEffectswithFlag state [(Ast_utility.TRUE, es, 1, fp)]
+
       
     | _ -> 
       
@@ -1523,10 +1530,16 @@ let rec syh_compute_stmt_postcondition (current:programStates)
   | DefaultStmt (stmt_info, stmt_list) 
   | CaseStmt (stmt_info, stmt_list) 
   | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
-  | WhileStmt (stmt_info, stmt_list)
   | CompoundStmt (stmt_info, stmt_list) -> 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
+
+
+  | WhileStmt (stmt_info, stmt_list) -> 
+    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+    let states = (helper current stmt_list) in 
+    let states =  List.map states ~f:(fun (a, b, c, d)-> if c == 2 then (a, b, 0, d) else (a, b, c, d)) in 
+    prefixLoction fp states
 
 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
@@ -1727,6 +1740,30 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       concatenateTwoEffectswithFlag stateY (concatenateTwoEffectswithFlag stateX [res])
 
       
+    | `Or | `LOr | `Xor-> 
+      (match (stmt2Pure x) with 
+      | Some (Eq(_, Basic(BINT 0)))  -> [(Ast_utility.TRUE, Emp, 0, fp)]
+      | _ -> 
+        let stateX = syh_compute_stmt_postcondition current future x in 
+        let stateY = syh_compute_stmt_postcondition current future y in 
+        concatenateTwoEffectswithFlag stateX stateY
+      )
+
+    | `And | `LAnd -> 
+      (match (stmt2Pure x) with 
+      | Some (Neg(Eq(Basic( BVAR varFromX), Basic(BINT 0))))  -> 
+        if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope)) then 
+          (let stateX = syh_compute_stmt_postcondition current future x in 
+          let stateY = syh_compute_stmt_postcondition current future y in 
+          concatenateTwoEffectswithFlag stateX stateY)
+        else 
+          [(Ast_utility.TRUE, Emp, 0, fp)]
+      | _ -> 
+        let stateX = syh_compute_stmt_postcondition current future x in 
+        let stateY = syh_compute_stmt_postcondition current future y in 
+        concatenateTwoEffectswithFlag stateX stateY
+      )
+
 
     | _ -> 
       let stateX = syh_compute_stmt_postcondition current future x in 
@@ -1797,7 +1834,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | LabelStmt (stmt_info, stmt_list, label_name) ->
     labelStmt_trans trans_state stmt_info stmt_list label_name
  *)
-      
+  | ContinueStmt _
+  | BreakStmt _  -> 
+   [(TRUE, Emp, 2, [])]
+
   | ConditionalOperator _
   | ParenExpr _ (* assert(max > min); *)
   | LabelStmt _ 
@@ -1965,10 +2005,10 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
-      if functionEnd - functionStart > 230 then 
+      (*if functionEnd - functionStart > 230 then 
         (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
         ())
-      else 
+      else *)
       match function_decl_info.fdi_body with 
       | None -> ()
       | Some stmt -> 
