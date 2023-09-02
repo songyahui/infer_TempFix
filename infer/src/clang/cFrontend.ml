@@ -1539,7 +1539,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
   | UnaryOperator (stmt_info, x::_, expr_info, op_info)->
     (match op_info.uoi_kind with
-    (*
+    
     | `Deref -> 
       let (fp, _) =  getStmtlocation instr in 
       let varFromX = string_of_stmt x in 
@@ -1550,7 +1550,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       in 
       let fp = match fp with | None -> [] | Some l -> [l] in 
       [(TRUE, ev, 0, fp)]
-    *)
+    
     | _ -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
       prefixLoction fp (syh_compute_stmt_postcondition current future x)
