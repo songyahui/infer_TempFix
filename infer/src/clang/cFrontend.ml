@@ -903,18 +903,19 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 (future:effect option) (instr: Clang_ast_t.stmt) : programStates = 
 
   
+  (*
+  let (fp, _) = getStmtlocation instr in 
+  let fp = match fp with | None -> [] | Some l -> [l] in 
+
+  print_endline ((Clang_ast_proj.get_stmt_kind_string instr^ string_of_foot_print fp ));
+  *)
   
-  
-  (*print_endline ((Clang_ast_proj.get_stmt_kind_string instr));
-  
-  
-  print_endline ("program state is " ^ string_of_programStates current);
-*)
+
   let rec helper current' (li: Clang_ast_t.stmt list): programStates  = 
     
     
     
-    (*
+   (* 
     print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> 
       let (fp, _) = getStmtlocation a in 
@@ -1704,6 +1705,16 @@ let rec syh_compute_stmt_postcondition (current:programStates)
   | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
       prefixLoction fp (syh_compute_stmt_postcondition current future x)
+
+
+  (*
+  | ArraySubscriptExpr(stmt_info, MemberExpr (_, x::x_stmt_list, _, _)::MemberExpr (_,y::y_stmt_list, _, _)::stmt_list, a)  -> 
+    (syh_compute_stmt_postcondition current future (ArraySubscriptExpr(stmt_info,( x::x_stmt_list)@(y::y_stmt_list)@stmt_list, a)))
+
+
+  | MemberExpr (stmt_info, x::(ArraySubscriptExpr(_, y::y_stmt_list, _))::x_stmt_list, a, b)  ->
+    (syh_compute_stmt_postcondition current future (MemberExpr (stmt_info, x::y::y_stmt_list@x_stmt_list, a, b)))
+*)
   | ArraySubscriptExpr(stmt_info, x::stmt_list, _)  
   | MemberExpr (stmt_info, x::stmt_list, _, _) -> 
     (match x with 
@@ -2033,10 +2044,10 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
-      (*if functionEnd - functionStart > 230 then 
+      if functionEnd - functionStart > 230 then 
         (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
         ())
-      else *)
+      else 
       match function_decl_info.fdi_body with 
       | None -> ()
       | Some stmt -> 
