@@ -108,6 +108,21 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
       )
     )
   | NullStmt _ -> Some (Basic(BVAR ("NULL")))
+
+  | ArraySubscriptExpr (_, arlist, _)  -> 
+    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+    (*print_endline (string_of_int (List.length temp)); *)
+    Some (Basic(BVAR(string_with_seperator  (fun a -> match a with | None -> "_" | Some t -> (string_of_terms t)) temp ".")))
+
+  | MemberExpr (_, arlist, _, member_expr_info)  -> 
+    let memArg = member_expr_info.mei_name.ni_name in 
+    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
+
+    let name  = string_with_seperator (fun a -> match a with | None -> "_" | Some t ->(string_of_terms t)) temp "." in 
+    if String.compare memArg "" == 0 then Some (Basic(BVAR(name )))
+    else Some (Basic(BVAR(name ^ "." ^ memArg)))
+
+(*
   | MemberExpr (_, arlist, _, member_expr_info)  -> 
     let memArg = member_expr_info.mei_name.ni_name in 
     let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
@@ -118,6 +133,7 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
       | Some t -> string_of_terms t ^ "."
     )) in 
     Some (Basic(BVAR(name^memArg)))
+
 
   | ArraySubscriptExpr (_, arlist, _)  -> 
     let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
@@ -135,7 +151,8 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
         ^ "_"
     )) in 
     Some (Basic(BVAR(name)))
-
+   
+*)
   | UnaryOperator (stmt_info, x::_, expr_info, op_info) ->
     (match op_info.uoi_kind with
     | `Minus -> 
@@ -789,8 +806,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
         (*
         print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
 *)
-        
-        (*
+        (*let startNum = getFirstPostion realspec startNum in *)
+
+
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
         let (startNum, endNum) = 
@@ -798,9 +816,7 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           let endNum' = if upperError < endNum then upperError else endNum in 
           (startNum', endNum')
         in 
-        *)
-        let startNum = getFirstPostion realspec startNum in 
-        
+
 
         if existSameRecord !repairRecord startNum endNum then ()
         else 
@@ -1074,6 +1090,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       in 
 
       let () = handlerVar := None in 
+      let () = hanlderWhichIsChecked := currentHandler in 
 
 
       let () = varSet := List.append !varSet (varFromEffects postc) in 
@@ -1180,7 +1197,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
               | [] -> ()
               | _ ->  
                 let  _ = List.iter error_paths ~f:(fun (pi,es1, _, es2) -> 
-                  match findReturnValueES es1 with 
+                  match findReturnValueESOrParameter es1 currentHandler with 
                   | None -> (* If there is no return value, then we proceed to repair the future condition *)
                     let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
                     ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
@@ -1197,8 +1214,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                   | Some str -> 
                     let pi =  normalPure (instantiateAugumentPure pi [(str, BRET)]) in 
 
-                    if String.compare (getRoot str) (getRoot currentHandler) == 0 && (isNotFalse pi) then 
-
+                    if String.compare (getRoot str) (getRoot currentHandler) == 0 then 
+                      if (isNotFalse pi) then ()
+                      else 
                       (print_endline (!currentModule ^ " should have some future condition ");
                       let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
                       let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
@@ -1328,7 +1346,21 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             concatenateTwoEffectswithFlag effectLi4X effectRest
           )
 
-    
+    | ForStmt (stmt_info, stmt_list)::xs
+    | WhileStmt (stmt_info, stmt_list)::xs -> 
+      if peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs stmt_list then 
+        let stmt' = List.append stmt_list xs in 
+        helper current'  stmt'
+      else 
+        let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+        let states = (helper current stmt_list) in 
+        let states =  List.map states ~f:(fun (a, b, c, d)-> if c == 2 then (a, b, 0, d) else (a, b, c, d)) in 
+        let effectLi4X = prefixLoction fp states in 
+        let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
+        let effectRest = helper new_history xs in 
+        concatenateTwoEffectswithFlag effectLi4X effectRest
+      
+      
     | (IfStmt (stmt_info, [x;y], if_stmt_info)) :: xsifelse -> 
       if peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs [y] then 
         (
@@ -1347,11 +1379,15 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
       if not (peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs [y;z]) then 
         (
-
+        print_endline ("no effect");
         let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y;z], if_stmt_info)) in 
         let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
         let effectRest = helper new_history xsifelse in 
-        concatenateTwoEffectswithFlag effectLi4X effectRest
+        let res = concatenateTwoEffectswithFlag effectLi4X effectRest in 
+        print_endline ("effectLi4X: " ^  string_of_programStates effectLi4X);
+        print_endline ("effectRest: " ^  string_of_programStates effectRest);
+        print_endline ("after if else " ^  string_of_programStates res);
+        res
   
         )
       else 
@@ -1365,10 +1401,19 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         syh_compute_stmt_postcondition current' future statement')
     
     | DoStmt (stmt_info, [x;y])::xs  ->
-      let if_stmt_info = {Clang_ast_t.isi_init=None;isi_cond_var=None;isi_cond=0;isi_then=0;isi_else=None} in 
-      let hd = Clang_ast_t.IfStmt (stmt_info, [y;(Clang_ast_t.CompoundStmt (stmt_info, []));(Clang_ast_t.CompoundStmt (stmt_info, xs))], if_stmt_info) in 
-      let stmt' =  [x;hd] in 
-      helper current'  stmt'
+      (match stmt2Pure y with 
+      | None -> helper current'  (x::y::xs)
+      | Some condition -> 
+      
+        let (varFromPure: string list) = varFromPure condition in 
+        if twoStringSetOverlap varFromPure (!varSet) then 
+          (let if_stmt_info = {Clang_ast_t.isi_init=None;isi_cond_var=None;isi_cond=0;isi_then=0;isi_else=None} in 
+          let hd = Clang_ast_t.IfStmt (stmt_info, [y;(Clang_ast_t.CompoundStmt (stmt_info, []));(Clang_ast_t.CompoundStmt (stmt_info, xs))], if_stmt_info) in 
+          let stmt' =  [x;hd] in 
+          helper current'  stmt')
+        else helper current'  (x::y::xs)
+      )
+      
 
     | SwitchStmt (_, _::x::_, _)::xs -> 
 
@@ -1389,8 +1434,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       in 
 
       let stmt_list' = aux [] [] stmt_list in 
-
-
+      (*
+      print_endline ("number of switch cases: " ^ string_of_int (List.length stmt_list'));
+*)
     
       (*
       let stmt_list'  = List.filter stmt_list' ~f:(fun stmtLi -> peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs stmtLi) in 
@@ -1408,7 +1454,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     
     | LabelStmt (stmt_info, stmt_list, _)::xs
     | DoStmt (stmt_info, stmt_list)::xs 
-    | ForStmt (stmt_info, stmt_list)::xs
     | CompoundStmt (stmt_info, stmt_list)::xs -> 
     (*| WhileStmt (stmt_info, stmt_list)::xs -> *)
       let stmt' = List.append stmt_list xs in 
@@ -1471,7 +1516,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | ParenExpr (_, x::rest, _) -> 
       if String.compare (string_of_stmt x) "0" == 0  then 
         [(TRUE, Singleton ((("RET", [BNULL])), fp1) , 1, fp)]
-      else [(TRUE, Singleton ((("RET", [])), fp1) , 1, fp)]
+      else syh_compute_stmt_postcondition current future  (ReturnStmt (stmt_info, [x]))
 
     | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       syh_compute_stmt_postcondition current future  (ReturnStmt (stmt_info, [x]))
@@ -1563,12 +1608,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
 
-
-  | WhileStmt (stmt_info, stmt_list) -> 
-    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
-    let states = (helper current stmt_list) in 
-    let states =  List.map states ~f:(fun (a, b, c, d)-> if c == 2 then (a, b, 0, d) else (a, b, c, d)) in 
-    prefixLoction fp states
 
 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->

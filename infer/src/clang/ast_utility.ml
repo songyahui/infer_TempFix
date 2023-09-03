@@ -77,6 +77,7 @@ let (parametersInScope: (string list) ref) = ref []
 
 let (varSet: (string list) ref) = ref [] 
 let (handlerVar: string option ref) = ref None 
+let (hanlderWhichIsChecked: string ref) = ref "" 
 
 (* net value of request of proving, (total number * failed number)*)
 let (proofObligations: int ref) = ref 0 
@@ -766,7 +767,7 @@ let rec normalise_es (eff:es) : es =
     let es2 = normalise_es es2 in 
     (match (es1, es2) with 
     | (Emp, Emp) -> Emp
-    | (Emp, _) -> if nullable es2 then es2 else (Disj (es1, es2))
+    | (Emp, _) -> if nullable es2 then es2 else (Disj (es2, es1))
     | (Bot, es) -> normalise_es es 
     | (es, Bot) -> normalise_es es 
     | (Disj (es11, es12), es3) -> Disj (es11, Disj (es12, es3))
@@ -1071,6 +1072,10 @@ let rec getFirstPostion es currentposition =
   match es with 
   | Singleton (ins, Some fp) ->  fp
   | Concatenate (es1, _) -> getFirstPostion es1 currentposition
+  | Disj (es1, es2) -> 
+    let temp = getFirstPostion es1 currentposition in 
+    if currentposition == temp then getFirstPostion es2 currentposition
+    else temp
   | _ -> currentposition
 
 
@@ -1082,6 +1087,7 @@ let rec inclusion'
   (rhs:es) 
   (ctx: (es*es) list) : ((error_info list) * binary_tree ) =
 
+let currentposition = getFirstPostion lhs currentposition in 
 (*
 print_endline (string_of_pure pathcondition);
 *)
@@ -1486,6 +1492,19 @@ let rec findReturnValueES es : string option =
       |Some str -> Some str)
     | Kleene (a) -> findReturnValueES a
 
+
+let findReturnValueESOrParameter es (currentHandler:string): string option = 
+  match findReturnValueES es with 
+  | Some str -> 
+    if String.compare (getRoot str) (getRoot currentHandler) == 0 then Some str 
+    else 
+      if twoStringSetOverlap [(getRoot currentHandler)] (!parametersInScope) then Some str 
+      else None 
+  | None  -> 
+    if twoStringSetOverlap [(getRoot currentHandler)] (!parametersInScope) then Some currentHandler 
+    else None 
+      
+
 let rec findReturnValueProgramStates (eff:programStates) : string option =
  
   match eff with
@@ -1815,6 +1834,10 @@ let mergeSpec eff1 eff2 =
     else if List.length a >= 5 then Some a 
     else Some (a@b) *)
 
+let notfree str : bool = 
+  if String.length str <= 4 then false 
+  else if String.compare (String.sub str 0 4) "free" == 0 then true 
+  else false 
 
 let deepSimplifyEffect ((pi, es1):(pure * es)): (pure * es) = 
 (*print_endline ("deepSimplifyEffect");
@@ -1823,6 +1846,14 @@ print_endline (string_of_es es1);*)
   let rec aux es: es = 
     match es with 
     | Bot | Emp | Any -> es 
+    | Singleton ((name, [arg]), _) -> 
+      let argStr = string_of_basic_t arg in 
+      if String.compare name "free" == 0 && twoStringSetOverlap [argStr] [!hanlderWhichIsChecked] then 
+        es
+      else 
+        (let sign = string_of_es_prime es in 
+        if twoStringSetOverlap [sign] !vacabulary then Emp 
+        else (let () = vacabulary := !vacabulary @[sign] in es)) 
     | NotArguments _
     | NotSingleton _
     | Singleton _ -> 
@@ -1833,7 +1864,9 @@ print_endline (string_of_es es1);*)
     | Concatenate  (esIn1, esIn2) -> Concatenate (aux esIn1, aux esIn2)
     | Kleene  (esIn1) -> Kleene (aux esIn1)
   in 
-  let es' = normalise_es (aux es1) in 
+  let es' = (aux es1) in 
+ (* print_endline ("before normal " ^ string_of_es es');*)
+  let es' = normalise_es es' in 
   (*print_endline ("after deepSimplifyEffect");
   print_endline (string_of_es es');*)
   (normalPure pi, es')
@@ -1849,8 +1882,8 @@ let compactDisjunctions (state:programStates): programStates =
     match acc with 
     | [] -> [(pi, es, a, b)]
     | (piacc, esacc, aacc, bacc)::rest -> 
-      if comparePure pi piacc && aacc == a then (piacc, normalise_es(Disj(esacc, es)), aacc, bacc)::rest
-      else (piacc, esacc, aacc, bacc)::(mergeIntoAcc (pi, es, a, b) rest)
+      (*if comparePure pi piacc && aacc == a then (piacc, normalise_es(Disj(esacc, es)), aacc, bacc)::rest
+      else*) (piacc, esacc, aacc, bacc)::(mergeIntoAcc (pi, es, a, b) rest)
 
   in 
   let rec helper acc li  = 
@@ -1870,7 +1903,9 @@ let compactDisjunctions (state:programStates): programStates =
         | [] -> []
         | x ::xs -> x :: getFirstEle xs (n-1)
     in 
-    if List.length state > 10 then getFirstEle state 10
+    if List.length state > 30 then 
+      (print_endline ("too many states: " ^ string_of_int (List.length state));
+      getFirstEle state 30)
     else 
       let temp = helper [] state in 
      (* if List.length temp > 8 then 
