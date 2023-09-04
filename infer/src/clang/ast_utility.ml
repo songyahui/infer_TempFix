@@ -795,14 +795,16 @@ let rec normalise_es (eff:es) : es =
   | _ -> eff 
 
 
-let comapreEvents (str1, li1) (str2, li2) = 
-  let rec aux l1 l2  =
+let rec comapreBasic_typeList l1 l2  =
     match (l1, l2) with 
     | ([], []) -> true 
-    | (x::xs, y:: ys) -> compareBasic_type x y &&  aux xs ys
+    | (x::xs, y:: ys) -> compareBasic_type x y &&  comapreBasic_typeList xs ys
     | (_, _) -> false 
-  in 
-  String.compare str1 str2 == 0 && aux li1 li2
+
+
+
+let comapreEvents (str1, li1) (str2, li2) = 
+  String.compare str1 str2 == 0 && comapreBasic_typeList li1 li2
 
 let compareLineNumOption (l1:int option) (l2:int option) : bool = 
   match (l1, l2) with 
@@ -825,6 +827,7 @@ let rec comparees (eff1:es) (eff2:es): bool =
   | (Disj (a1, a2), Disj(a3, a4)) -> 
     comparees a1 a3 && comparees a2 a4
   | (Kleene e1, Kleene e2) -> comparees e1 e2
+  | (NotArguments e1, NotArguments e2) -> comapreBasic_typeList e1 e2
   | _ -> false 
 
 
@@ -1883,7 +1886,12 @@ let compactDisjunctions (state:programStates): programStates =
     | [] -> [(pi, es, a, b)]
     | (piacc, esacc, aacc, bacc)::rest -> 
       (*if comparePure pi piacc && aacc == a then (piacc, normalise_es(Disj(esacc, es)), aacc, bacc)::rest
-      else*) (piacc, esacc, aacc, bacc)::(mergeIntoAcc (pi, es, a, b) rest)
+      else*) 
+      if comparePure pi piacc && aacc == a then 
+        if comparees es esacc then acc 
+        else (piacc, normalise_es(Disj(esacc, es)), aacc, bacc)::rest
+      else 
+        (piacc, esacc, aacc, bacc)::(mergeIntoAcc (pi, es, a, b) rest)
 
   in 
   let rec helper acc li  = 
@@ -1904,7 +1912,8 @@ let compactDisjunctions (state:programStates): programStates =
         | x ::xs -> x :: getFirstEle xs (n-1)
     in 
     if List.length state > 30 then 
-      (print_endline ("too many states: " ^ string_of_int (List.length state));
+      (print_endline ("========= \ntoo many states: " ^ string_of_int (List.length state));
+      print_endline (string_of_programStates state);
       getFirstEle state 30)
     else 
       let temp = helper [] state in 

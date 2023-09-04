@@ -526,6 +526,11 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     | Some t -> Some (Neg(Eq(t, Basic(BINT 0))))
     | _ -> Some (Gt ((Basic( BVAR (Clang_ast_proj.get_stmt_kind_string instr))), Basic( BVAR ("null"))))
     )
+
+  | IntegerLiteral _ -> 
+    if String.compare (string_of_stmt instr) "0" == 0 then Some (FALSE)
+    else if String.compare (string_of_stmt instr) "1" == 0 then Some (TRUE)
+    else None 
   
   | _ -> Some (Gt ((Basic( BVAR (Clang_ast_proj.get_stmt_kind_string instr))), Basic( BVAR ("null"))))
 
@@ -618,7 +623,7 @@ let insertSpecifications moduleName (newSpec:specification) =
   | _ -> 
     (match findSpecFrom !propogatedSpecs !currentModule with 
     | (Some (a, b,  c, d), rest) -> 
-      propogatedSpecs := rest @ [(a, mergeSpec b pre, mergeSpec post c, mergeSpec future d)]
+      propogatedSpecs := rest @ [(a, mergeSpec b pre, mergeSpec c post, mergeSpec d future)]
     | (None, _) -> 
       propogatedSpecs := !propogatedSpecs @ [(mnsignature, pre, post, future)])
 
@@ -1145,18 +1150,28 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             | None -> effectRest 
             | Some ctxfuture -> 
 
-              let ctxfuture = match findReturnValueProgramStates effectRest with 
-              | None  -> ctxfuture
-              | Some str -> 
-                (*print_endline(str);*)
-                instantiateRetSome ctxfuture str 
-              in 
-              
-              (*
-              print_endline ("+ ctx future spec: " ^ string_of_programStates (effects2programStates ctxfuture));
+              (*print_endline ("effectRest: " ^ string_of_programStates effectRest ^ "\n"); 
               *)
+              let disjunctiveEffects = List.map effectRest ~f:(
+                fun effr -> 
+                match findReturnValueProgramStates [effr] with 
+                | None  -> 
+                  [effr]
+                | Some str -> 
+                  (*print_endline(str);*)
+                  if String.compare str "NULL" == 0 then [effr]
+                  else 
+                  (
+                  (*print_endline ("+ ctx future spec: " ^ string_of_programStates (effects2programStates ctxfuture) ^ "\n");*)
+                  let ctxfuture = instantiateRetSome ctxfuture str in 
+                  concatenateTwoEffectswithoutFlag ([effr]) (effects2programStates ctxfuture)) 
+              ) in 
 
-              let temp = concatenateTwoEffectswithoutFlag (effectRest) (effects2programStates ctxfuture) in 
+              let temp = flattenList disjunctiveEffects in 
+              (*print_endline ("after flattenList: " ^ string_of_programStates temp ^ "\n"); 
+              *)
+              
+            
               temp 
           in 
           (*
@@ -1379,14 +1394,15 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
       if not (peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs [y;z]) then 
         (
-        print_endline ("no effect");
+        (*print_endline ("no effect");*)
         let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y;z], if_stmt_info)) in 
         let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
         let effectRest = helper new_history xsifelse in 
         let res = concatenateTwoEffectswithFlag effectLi4X effectRest in 
-        print_endline ("effectLi4X: " ^  string_of_programStates effectLi4X);
+        (*print_endline ("effectLi4X: " ^  string_of_programStates effectLi4X);
         print_endline ("effectRest: " ^  string_of_programStates effectRest);
         print_endline ("after if else " ^  string_of_programStates res);
+        *)
         res
   
         )
@@ -1402,17 +1418,29 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     
     | DoStmt (stmt_info, [x;y])::xs  ->
       (match stmt2Pure y with 
-      | None -> helper current'  (x::y::xs)
+      | None
+      | Some TRUE 
+      | Some FALSE -> 
+        let temp = helper current'  (x::y::xs) in 
+        print_endline ("dostmt after: " ^ string_of_programStates temp);
+        temp 
       | Some condition -> 
-      
+        print_endline ("dostmt " ^ string_of_pure condition);
         let (varFromPure: string list) = varFromPure condition in 
         if twoStringSetOverlap varFromPure (!varSet) then 
           (let if_stmt_info = {Clang_ast_t.isi_init=None;isi_cond_var=None;isi_cond=0;isi_then=0;isi_else=None} in 
           let hd = Clang_ast_t.IfStmt (stmt_info, [y;(Clang_ast_t.CompoundStmt (stmt_info, []));(Clang_ast_t.CompoundStmt (stmt_info, xs))], if_stmt_info) in 
           let stmt' =  [x;hd] in 
           helper current'  stmt')
-        else helper current'  (x::y::xs)
+        else 
+          (print_endline ("out");
+          helper current'  (x::y::xs))
       )
+    | DoStmt (stmt_info, stmt_list)::xs -> 
+      let stmt' = List.append stmt_list xs in 
+      let temp = helper current'  stmt' in 
+      print_endline ("dostmt after: " ^ string_of_programStates temp);
+      temp 
       
 
     | SwitchStmt (_, _::x::_, _)::xs -> 
@@ -1453,7 +1481,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
     
     | LabelStmt (stmt_info, stmt_list, _)::xs
-    | DoStmt (stmt_info, stmt_list)::xs 
     | CompoundStmt (stmt_info, stmt_list)::xs -> 
     (*| WhileStmt (stmt_info, stmt_list)::xs -> *)
       let stmt' = List.append stmt_list xs in 
@@ -2063,10 +2090,10 @@ let int_of_optionint intop =
   | None  -> (-1)
   | Some i -> i ;;
 
-let existingSpecs funcName  = 
+let existingPostSpecs funcName  = 
   match findSpecFrom !propogatedSpecs funcName with 
-  | (None, _) -> false 
-  | (Some _, _) -> true 
+  | (Some (_, _, Some _, _), _) -> true 
+  | _ -> false 
 
 let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): unit  = 
 
@@ -2091,7 +2118,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       | None -> ()
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
-      if existingSpecs funcName then ()
+      if existingPostSpecs funcName then ()
       else 
       
       let argumentNames = List.map (function_decl_info.fdi_parameters) ~f:(fun a -> string_of_decl a) in 
