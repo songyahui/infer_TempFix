@@ -893,7 +893,9 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
     | CaseStmt (stmt_info, stmt_list) 
     | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
     | IfStmt (stmt_info, stmt_list, _)
+    | ForStmt (stmt_info, stmt_list)
     | DoStmt (stmt_info, stmt_list)
+    | WhileStmt (stmt_info, stmt_list)
     | CompoundStmt (stmt_info, stmt_list) ->  
         peekTheEffectOfStmtsAndItHasEffects env stmt_list
 
