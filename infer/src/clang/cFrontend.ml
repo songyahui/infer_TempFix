@@ -182,6 +182,7 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     *)
 
   | ConditionalOperator (_, x::y::_, _) -> stmt2Term y 
+  | CharacterLiteral _ -> None 
 
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
 
@@ -531,6 +532,8 @@ let rec stmt2Pure (instr: Clang_ast_t.stmt) : pure option =
     if String.compare (string_of_stmt instr) "0" == 0 then Some (FALSE)
     else if String.compare (string_of_stmt instr) "1" == 0 then Some (TRUE)
     else None 
+
+    
   
   | _ -> Some (Gt ((Basic( BVAR (Clang_ast_proj.get_stmt_kind_string instr))), Basic( BVAR ("null"))))
 
@@ -1427,7 +1430,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           helper current'  stmt')
         else 
           (print_endline ("out");
-          helper current'  (x::y::xs))
+          let temp = helper current'  (x::y::xs) in 
+          print_endline ("dostmt after: " ^ string_of_programStates temp);
+          temp )
       )
     | DoStmt (stmt_info, stmt_list)::xs -> 
       let stmt' = List.append stmt_list xs in 
