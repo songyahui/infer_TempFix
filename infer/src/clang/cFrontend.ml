@@ -887,8 +887,7 @@ let constructBinaryOperatorAssign stmt_info expr_info x y : Clang_ast_t.stmt =
 let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrList: Clang_ast_t.stmt list) : bool = 
   let rec helper (stmt:Clang_ast_t.stmt) = 
     match stmt with 
-    | Clang_ast_t.BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)-> 
-      helper x || helper y 
+    | Clang_ast_t.BinaryOperator (stmt_info, stmt_list, _, _)
     | UnaryOperator (stmt_info, stmt_list, _, _)
     | DefaultStmt (stmt_info, stmt_list) 
     | CaseStmt (stmt_info, stmt_list) 
@@ -898,6 +897,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
     | CompoundStmt (stmt_info, stmt_list) ->  
         peekTheEffectOfStmtsAndItHasEffects env stmt_list
 
+    | CStyleCastExpr (stmt_info, x::_, _, _, _) 
     | ImplicitCastExpr (stmt_info, x::_, _, _, _) 
     | ArraySubscriptExpr(stmt_info, x::_, _)  
     | MemberExpr (stmt_info, x::_, _, _) -> helper x
