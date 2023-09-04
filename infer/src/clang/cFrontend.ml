@@ -811,11 +811,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   
   let rec aux arg : unit  = 
       let (pathcondition, realspec, (startNum ,endNum),  spec) = arg in 
-        (*
-        print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
-*)
         (*let startNum = getFirstPostion realspec startNum in *)
 
+        print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
 
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
@@ -824,6 +822,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           let endNum' = if upperError < endNum then upperError else endNum in 
           (startNum', endNum')
         in 
+
+        print_endline ("after:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
+
 
 
         if existSameRecord !repairRecord startNum endNum then ()
@@ -1205,7 +1206,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             let () = checkedMethord := (calleeName^ string_of_foot_print fp )::(!checkedMethord ) in 
             let infos = seperateDisjunctives info in 
             let  _ = List.iter infos ~f:(fun singleInfo ->
-              let (error_paths, _, _, _) = info in 
+              let (error_paths, _, _, _) = singleInfo in 
               (match error_paths with 
               | [] -> ()
               | _ ->  
@@ -1239,7 +1240,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                     else (
                       let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
                       ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
-                      (*print_endline (string_of_inclusion_results extra_info info); *)
+                      print_endline (string_of_inclusion_results extra_info info); 
                       
             
                         let (head, patches) = program_repair singleInfo !propogatedSpecs in 
