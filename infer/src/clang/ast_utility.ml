@@ -54,9 +54,9 @@ type programState = (pure * es  * int * int list)
 
 type programStates = (programState list)
 
-type mnsigniture = (string *  (string list))
+type mnsignature = (string *  (string list))
 
-type specification = (mnsigniture * effect option * effect option * effect option)
+type specification = (mnsignature * effect option * effect option * effect option)
 
 type fstElem = Wildcard | Event of (event * line_number)  | NotEvent of event
 
@@ -1081,6 +1081,16 @@ let rec getFirstPostion es currentposition =
     else temp
   | _ -> currentposition
 
+let rec getLastPostion es currentposition = 
+  match es with 
+  | Singleton (ins, Some fp) ->  fp
+  | Concatenate (_, es1) -> getLastPostion es1 currentposition
+  | Disj (es1, es2) -> 
+    let temp = getLastPostion es1 currentposition in 
+    if currentposition == temp then getLastPostion es2 currentposition
+    else temp
+  | _ -> currentposition
+
 
   
 let rec inclusion' 
@@ -1106,7 +1116,7 @@ else
 
   if isBot lhs then ([], Node (entailent ^ "  [False LHS]", []) )
   else if nullable lhs && (not (nullable rhs)) then 
-    let currentposition = getFirstPostion lhs currentposition in 
+    let currentposition = getLastPostion lhs currentposition in 
     ([(pathcondition, lhs, currentposition ,rhs)], Node (entailent ^ "  [Nullable Disprove]", []) )
 
   else if reoccur lhs rhs ctx then 
@@ -1879,6 +1889,13 @@ let isNotFalse pi =
   | FALSE -> true 
   | _ ->  false 
 
+let rec getFirstEle li n =
+  if n == 0 then []
+  else 
+    match li with 
+    | [] -> []
+    | x ::xs -> x :: getFirstEle xs (n-1)
+
 
 let compactDisjunctions (state:programStates): programStates = 
   let rec mergeIntoAcc (pi, es, a, b) (acc:programStates) :programStates = 
@@ -1887,11 +1904,15 @@ let compactDisjunctions (state:programStates): programStates =
     | (piacc, esacc, aacc, bacc)::rest -> 
       (*if comparePure pi piacc && aacc == a then (piacc, normalise_es(Disj(esacc, es)), aacc, bacc)::rest
       else*) 
-      if comparePure pi piacc && aacc == a then 
-        if comparees es esacc then acc 
-        else (piacc, normalise_es(Disj(esacc, es)), aacc, bacc)::rest
+      (*print_endline ("compareing: ");
+      print_endline (string_of_programStates [(pi, es, a, b)]);
+      print_endline (string_of_programStates [(piacc, esacc, aacc, bacc)]);
+*)
+      if comparePure pi piacc && comparees es esacc && aacc == a then 
+        ((*print_endline ("true");*) acc )
       else 
-        (piacc, esacc, aacc, bacc)::(mergeIntoAcc (pi, es, a, b) rest)
+        ((*print_endline ("false");*)
+        (piacc, esacc, aacc, bacc)::(mergeIntoAcc (pi, es, a, b) rest))
 
   in 
   let rec helper acc li  = 
@@ -1904,17 +1925,10 @@ let compactDisjunctions (state:programStates): programStates =
   match state with 
   | [] -> []
   | _ -> 
-    let rec getFirstEle li n =
-      if n == 0 then []
-      else 
-        match li with 
-        | [] -> []
-        | x ::xs -> x :: getFirstEle xs (n-1)
-    in 
-    if List.length state > 30 then 
+    if List.length state > 45 then 
       (print_endline ("========= \ntoo many states: " ^ string_of_int (List.length state));
       print_endline (string_of_programStates state);
-      getFirstEle state 30)
+      getFirstEle state 45)
     else 
       let temp = helper [] state in 
      (* if List.length temp > 8 then 

@@ -1184,14 +1184,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           *)
 
           let lhsEffect = ((normaliseProgramStates restSpecLHS)) in 
-          let lhsEffect = 
-            match lhsEffect with 
-            | []
-            | [_]
-            | [_;_] 
-            | [_;_;_] -> lhsEffect
-            | e1::e2::e3::_ -> [e1;e2;e3]
-           
+          let lhsEffect = if List.length lhsEffect > 30 then getFirstEle lhsEffect 30 else lhsEffect
           in 
           if twoStringSetOverlap [(calleeName^ string_of_foot_print fp)] !checkedMethord  then 
             (print_endline ("skipping the fucture condition check. ");
@@ -2184,7 +2177,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
 
 
               let postcondition = eliminateAllTheRetturn postcondition in 
-              (if List.length postcondition == 0 then ()
+              (if List.length postcondition == 0 || (String.compare (!currentModule) "open_file"== 0) || (String.compare (!currentModule) "init"== 0) then ()
               else 
                 let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
                 insertSpecifications !currentModule newSpec
