@@ -93,12 +93,12 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
 
     if String.length int_str > 18 then Some (Basic(BVAR "SYH_BIGINT"))
     else Some (Basic(BINT (int_of_string(int_str))))
-
+    
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
     let (sl1, sl2) = stmt_info.si_source_range in 
 
     (match decl_ref_expr_info.drti_decl_ref with 
-    | None -> None 
+    | None -> None
     | Some decl_ref ->
       (
       match decl_ref.dr_name with 
@@ -169,7 +169,6 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
    
 
   | RecoveryExpr (_, [], _) -> Some (Basic(BINT(0))) 
-  | StringLiteral (_, _, _, str_list) -> None 
     
     (*let str = 
       let rec straux li = 
@@ -182,7 +181,8 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     *)
 
   | ConditionalOperator (_, x::y::_, _) -> stmt2Term y 
-  | CharacterLiteral _ -> None 
+  | StringLiteral (_, _, _, _)
+  | CharacterLiteral _ -> Some (Basic(BVAR "char")) 
 
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
 
@@ -813,8 +813,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
       let (pathcondition, realspec, (startNum ,endNum),  spec) = arg in 
         (*let startNum = getFirstPostion realspec startNum in *)
 
+        (*
         print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
-
+*)
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
         let (startNum, endNum) = 
@@ -822,9 +823,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
           let endNum' = if upperError < endNum then upperError else endNum in 
           (startNum', endNum')
         in 
-
+(*
         print_endline ("after:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
-
+*)
 
 
         if existSameRecord !repairRecord startNum endNum then ()
@@ -1011,6 +1012,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
             
+            
             (*
             let () = print_string ("=========================\n") in 
             print_string (string_of_event (calleeName, acturelli) ^ ":\n");
@@ -1022,13 +1024,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             match spec with
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
-            print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
+              print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
 
               (*
               print_endline ("formal Arg = " ^ List.fold_left formalLi ~init:"" ~f:(fun acc a -> acc ^ "," ^a));
               print_endline ("actual Arg = " ^ List.fold_left acturelli ~init:"" ~f:(fun acc a -> acc ^ "," ^ string_of_basic_t a));
-*)            
+              *)
+
               (match !handlerVar, futurec with 
               | None, _  -> () (*print_endline ("with no handler = ")*)
               | Some str, Some _ -> 
@@ -1036,11 +1039,11 @@ let rec syh_compute_stmt_postcondition (current:programStates)
               | _, _ -> ()
                 (*print_endline ("with handler = " ^ str)*)); 
 
-                let vb = var_binding formalLi acturelli in 
-                ((signiture, formalLi), 
-                instantiateAugument prec vb, 
-                instantiateAugument postc vb, 
-                instantiateAugument futurec vb)
+              let vb = var_binding formalLi acturelli in 
+              ((signiture, formalLi), 
+              instantiateAugument prec vb, 
+              instantiateAugument postc vb, 
+              instantiateAugument futurec vb)
             
           )
       in 
@@ -1081,10 +1084,17 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let (postc, futurec, currentHandler) = 
         match !handlerVar with 
         | None -> 
-
+          
           if existRetEff postc || existRetEff futurec 
           then (None, None, "")
           else (postc, futurec, "")
+
+          (*
+                      let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
+            ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': Failed! because there is no handler " in 
+            let () = finalReport := !finalReport ^ extra_info in 
+   
+          *)
         | Some handler ->  
           
           (
@@ -1240,7 +1250,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                     else (
                       let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
                       ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
-                      print_endline (string_of_inclusion_results extra_info info); 
+                      (*print_endline (string_of_inclusion_results extra_info info); *)
                       
             
                         let (head, patches) = program_repair singleInfo !propogatedSpecs in 
