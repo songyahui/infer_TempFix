@@ -69,6 +69,8 @@ def sum_up_float(col):
 #loc = sum_up_prime(1)
 loS = content[1][2]
 protocols = content[1][3]
+generated_protocols = content[len(content)-1][3]
+
 analysis_time =  sum_up_float(4)
 repair_time =  sum_up_float(5)
 fail_Assert = sum_up(6)
@@ -76,12 +78,13 @@ succeed_Assert = sum_up(7)
 
 print("===================================")
 #print("[Lines of  Code] " + str(loc))
-print("[Lines of  Spec] " + loS)
-print("[Num  Protocols] " + protocols)
-print("[Failed  Assert] " + str(fail_Assert))
-print("[      Repaired] " + str(succeed_Assert))
-print("[Analysis   (s)] " + str(analysis_time))
-print("[Repair     (s)] " + str(repair_time))
+print("[Lines  of  Spec] " + loS)
+print("[Predefined Spec] " + protocols)
+print("[Generated  Spec] " + generated_protocols)
+#print("[Failed   Assert] " + str(fail_Assert))
+print("[Repaired   Bugs] " + str(succeed_Assert))
+print("[Analysis    (s)] " + str(analysis_time))
+print("[Repair      (s)] " + str(repair_time))
 
 
 # "Filename, Loc, LoS,  #protocols, analysis Time(s), repair time,  Failed, Repaired\n"

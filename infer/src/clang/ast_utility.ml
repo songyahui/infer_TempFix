@@ -1625,6 +1625,30 @@ let existRetEff (eff: effect option) : bool =
   | None -> false 
   | Some effIn -> helper effIn
 
+
+let rec existRetEventES es : bool =
+  match es with 
+  | Singleton ((a, x::rest), b) -> 
+     (match x with
+    | BRET -> true 
+    | _ -> existRetEventES (Singleton ((a, rest), b))
+    )
+    
+  | Singleton ((a, []), b) -> false 
+  | Concatenate (a, b) 
+  | Disj (a, b) -> existRetEventES a || existRetEventES b
+  | Kleene (a) -> existRetEventES a
+  | _ -> false  
+
+
+
+let existRetEvent (eff: effect option) : bool = 
+  match eff with 
+  | Some [(_, es)] -> existRetEventES es
+  | _ -> false 
+
+
+
 let string_of_basic_t_prime v = 
   match v with 
   | BVAR name -> name

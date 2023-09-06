@@ -1013,6 +1013,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
             
             
+          print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
+
             (*
             let () = print_string ("=========================\n") in 
             print_string (string_of_event (calleeName, acturelli) ^ ":\n");
@@ -1024,7 +1026,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             match spec with
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
-              print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
 
               (*
@@ -1084,15 +1085,24 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let (postc, futurec, currentHandler) = 
         match !handlerVar with 
         | None -> 
+          let postc' = if existRetEff postc then None else postc in 
+          let futurec' = 
+            if existRetEff futurec then 
+              if existRetEvent futurec then 
+                let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
+                ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp 
+                ^"\': Failed! because there is no handler ! \n"
+                ^ string_of_function_sepc (prec, postc, futurec)^"\n"
+                in 
+                let () = finalReport := !finalReport ^ extra_info in 
+                None 
+              else None 
+            else futurec
+          in 
+          (postc', futurec', "")
           
-          if existRetEff postc || existRetEff futurec 
-          then (None, None, "")
-          else (postc, futurec, "")
-
           (*
-                      let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
-            ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': Failed! because there is no handler " in 
-            let () = finalReport := !finalReport ^ extra_info in 
+                      
    
           *)
         | Some handler ->  
@@ -1639,12 +1649,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       prefixLoction fp (syh_compute_stmt_postcondition current future x)
     )
 
+
   | DefaultStmt (stmt_info, stmt_list) 
   | CaseStmt (stmt_info, stmt_list) 
   | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
   | CompoundStmt (stmt_info, stmt_list) -> 
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
     prefixLoction fp (helper current stmt_list)
+
 
 
 
@@ -1682,13 +1694,13 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | x::ifelseRest -> 
       (match ifelseRest with 
       | [y] -> 
+
         let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
 
         let (locY, locZ) = maybeIntToListInt (getStmtlocation y) in 
 
         (match checkRelavent x with 
         | None  -> 
-          (*print_endline (string_of_stmt x ^", it is not Relavent");*)
           (match x with 
           | BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _) 
           | BinaryOperator (_, BinaryOperator (_, [(CallExpr (call_stmt_info, call_stmt_list, call_ei));y], _, _)::_ , _, _) -> 
@@ -1710,6 +1722,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           | _ -> 
 
             let eff4X = syh_compute_stmt_postcondition current future x in
+
             let eff4Y = syh_compute_stmt_postcondition current future y in
             let final = prefixLoction locX 
               (creatingDisjunctiveProgramStates
@@ -1778,7 +1791,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     final
     
 
-  
+  | ParenExpr (stmt_info, x::_, _) (* assert(max > min); *)
   | ImplicitCastExpr (stmt_info, x::_, _, _, _) -> 
       let (fp, _) = stmt_intfor2FootPrint stmt_info in 
       prefixLoction fp (syh_compute_stmt_postcondition current future x)
@@ -1824,7 +1837,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
   | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
 
-    
+
 
     (match binop_info.boi_kind with
     | `Assign -> 
@@ -1833,7 +1846,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     
     
     (*
-    print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ " " ^ Clang_ast_proj.get_stmt_kind_string y ); 
+        print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.get_stmt_kind_string y ); 
 *)
       let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
       let (fp', _) = getStmtlocation instr in
@@ -1856,9 +1869,12 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       concatenateTwoEffectswithFlag stateY (concatenateTwoEffectswithFlag stateX [res])
 
       
+    (*
     | `Or | `LOr | `Xor-> 
       (match (stmt2Pure x) with 
-      | Some (Eq(_, Basic(BINT 0)))  -> [(Ast_utility.TRUE, Emp, 0, fp)]
+      | Some (Eq(_, Basic(BINT 0)))  -> 
+        (print_endline (" `Or | `LOr | `Xor" ^ (match (stmt2Pure x) with | Some pure -> string_of_pure pure | None -> "") );
+        [(Ast_utility.TRUE, Emp, 0, fp)])
       | _ -> 
         let stateX = syh_compute_stmt_postcondition current future x in 
         let stateY = syh_compute_stmt_postcondition current future y in 
@@ -1873,13 +1889,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           let stateY = syh_compute_stmt_postcondition current future y in 
           concatenateTwoEffectswithFlag stateX stateY)
         else 
-          [(Ast_utility.TRUE, Emp, 0, fp)]
+          (print_endline (" `And | `LAnd" ^ (match (stmt2Pure x) with | Some pure -> string_of_pure pure | None -> "") );
+          [(Ast_utility.TRUE, Emp, 0, fp)])
       | _ -> 
         let stateX = syh_compute_stmt_postcondition current future x in 
         let stateY = syh_compute_stmt_postcondition current future y in 
         concatenateTwoEffectswithFlag stateX stateY
       )
-
+*)
 
     | _ -> 
       let stateX = syh_compute_stmt_postcondition current future x in 
@@ -1955,7 +1972,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
    [(TRUE, Emp, 2, [])]
 
   | ConditionalOperator _
-  | ParenExpr _ (* assert(max > min); *)
   | LabelStmt _ 
   | ImplicitCastExpr _ (*stmt_info, stmt_list, _, _, _*) 
   | MemberExpr _
@@ -2413,7 +2429,7 @@ let analysisTime = compution_time -. !repairTime in
   
 let msg = 
     source_Address ^ ","
-  ^ string_of_int ( lines_of_code + 1 ) ^ "," (*  lines of code;  *) 
+  ^ string_of_int (lines_of_code + 1 ) ^ "," (*  lines of code;  *) 
   ^ string_of_int lines_of_spec ^ "," (*  lines of specs; *) 
   ^ string_of_int (List.length user_sepcifications) ^ "," (*  protocols.  *)
   ^ string_of_float (analysisTime)^ "," (* "Analysis took "^ , seconds.\n\n *)
