@@ -886,7 +886,62 @@ let constructBinaryOperatorAssign stmt_info expr_info x y : Clang_ast_t.stmt =
   BinaryOperator (stmt_info, [x;y], expr_info, binary_operator_info)
 
 
-let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrList: Clang_ast_t.stmt list) : bool = 
+let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt list) : unit = 
+  let rec helper (stmt:Clang_ast_t.stmt) : unit= 
+    match stmt with 
+    | Clang_ast_t.BinaryOperator (stmt_info, stmt_list, _, _)
+    | UnaryOperator (stmt_info, stmt_list, _, _)
+    | DefaultStmt (stmt_info, stmt_list) 
+    | CaseStmt (stmt_info, stmt_list) 
+    | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
+    | IfStmt (stmt_info, stmt_list, _)
+    | ForStmt (stmt_info, stmt_list)
+    | DoStmt (stmt_info, stmt_list)
+    | WhileStmt (stmt_info, stmt_list)
+    | CompoundStmt (stmt_info, stmt_list) ->  
+      scanForTheFunctionCallsWithoutHandlders stmt_list
+
+    | CStyleCastExpr (stmt_info, x::_, _, _, _) 
+    | ImplicitCastExpr (stmt_info, x::_, _, _, _) 
+    | ArraySubscriptExpr(stmt_info, x::_, _)  
+    | MemberExpr (stmt_info, x::_, _, _) -> helper x
+    | (CallExpr (stmt_info, stmt_list, ei)) -> 
+      
+      (match stmt_list with 
+      | [] -> ()  
+      | x::rest -> 
+          (match extractEventFromFUnctionCall x rest with 
+          | None -> () 
+          | Some (calleeName, acturelli) -> 
+            let (fp, _) = getStmtlocation stmt in 
+            let fp = match fp with | None -> [] | Some l -> [l] in 
+        
+            (match findSpecFrom !propogatedSpecs calleeName with
+            | (Some ((_, _), prec, postc, futurec), _) ->  
+              if existRetEff futurec then 
+                if existRetEvent futurec then 
+                  let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
+                  ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp 
+                  ^"\': Failed! because there is no handler ! \n"
+                  ^ string_of_function_sepc (prec, postc, futurec)^"\n"
+                  in 
+                  let () = finalReport := !finalReport ^ extra_info in 
+                  () 
+                else () 
+              else () 
+            | _ -> ()   )
+          )
+ 
+      )
+    | _ -> () 
+
+  in 
+  match instrList with 
+  | [] -> () 
+  | x ::xs -> helper x; scanForTheFunctionCallsWithoutHandlders xs 
+
+
+let rec peekTheEffectOfStmtsAndItHasEffects (instrList: Clang_ast_t.stmt list) : bool = 
   let rec helper (stmt:Clang_ast_t.stmt) = 
     match stmt with 
     | Clang_ast_t.BinaryOperator (stmt_info, stmt_list, _, _)
@@ -899,7 +954,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
     | DoStmt (stmt_info, stmt_list)
     | WhileStmt (stmt_info, stmt_list)
     | CompoundStmt (stmt_info, stmt_list) ->  
-        peekTheEffectOfStmtsAndItHasEffects env stmt_list
+        peekTheEffectOfStmtsAndItHasEffects stmt_list
 
     | CStyleCastExpr (stmt_info, x::_, _, _, _) 
     | ImplicitCastExpr (stmt_info, x::_, _, _, _) 
@@ -912,7 +967,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
           (match extractEventFromFUnctionCall x rest with 
           | None -> false 
           | Some (calleeName, acturelli) -> 
-            (match findSpecFrom env calleeName with
+            (match findSpecFrom !propogatedSpecs calleeName with
             | (Some ((_, _), _, _, Some _), _) ->  true 
             | _ -> false   )
           )
@@ -923,7 +978,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (env:(specification list)) (instrLis
   in 
   match instrList with 
   | [] -> false 
-  | x ::xs -> if helper x then true else peekTheEffectOfStmtsAndItHasEffects env xs 
+  | x ::xs -> if helper x then true else peekTheEffectOfStmtsAndItHasEffects xs 
     
 
 
@@ -1013,7 +1068,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
             
             
-          print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
             (*
             let () = print_string ("=========================\n") in 
@@ -1027,6 +1081,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
 
+              print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
               (*
               print_endline ("formal Arg = " ^ List.fold_left formalLi ~init:"" ~f:(fun acc a -> acc ^ "," ^a));
@@ -1382,7 +1437,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
     | ForStmt (stmt_info, stmt_list)::xs
     | WhileStmt (stmt_info, stmt_list)::xs -> 
-      if peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs stmt_list then 
+      if peekTheEffectOfStmtsAndItHasEffects stmt_list then 
         let stmt' = List.append stmt_list xs in 
         helper current'  stmt'
       else 
@@ -1396,7 +1451,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       
       
     | (IfStmt (stmt_info, [x;y], if_stmt_info)) :: xsifelse -> 
-      if peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs [y] then 
+      if peekTheEffectOfStmtsAndItHasEffects [y] then 
         (
         let elseBranch = Clang_ast_t.CompoundStmt (stmt_info, []) in 
         let statement' = Clang_ast_t.IfStmt (stmt_info, [x;y;elseBranch], if_stmt_info) in 
@@ -1411,7 +1466,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
     | (IfStmt (stmt_info, [x;y;z], if_stmt_info)) :: xsifelse -> 
 
-      if not (peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs [y;z]) then 
+      if not (peekTheEffectOfStmtsAndItHasEffects [y;z]) then 
         (
         (*print_endline ("no effect");*)
         let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y;z], if_stmt_info)) in 
@@ -1487,9 +1542,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       print_endline ("number of switch cases: " ^ string_of_int (List.length stmt_list'));
 *)
     
-      (*
-      let stmt_list'  = List.filter stmt_list' ~f:(fun stmtLi -> peekTheEffectOfStmtsAndItHasEffects !propogatedSpecs stmtLi) in 
-      *)
       (match stmt_list' with 
       | [] ->  helper current xs
       | _ -> 
@@ -2137,13 +2189,12 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       let (functionStart, functionEnd) = (int_of_optionint (l1.sl_line), int_of_optionint (l2.sl_line)) in 
       let () = currentFunctionLineNumber := (functionStart, functionEnd) in 
       (
-      if functionEnd - functionStart > 230 then 
-        (print_endline (string_of_int functionStart ^ " -- " ^ string_of_int functionEnd);
-        ())
-      else 
       match function_decl_info.fdi_body with 
       | None -> ()
       | Some stmt -> 
+      if functionEnd - functionStart > 230 then (scanForTheFunctionCallsWithoutHandlders [stmt])
+      else 
+
       let funcName = named_decl_info.ni_name in 
       if existingPostSpecs funcName then ()
       else 
