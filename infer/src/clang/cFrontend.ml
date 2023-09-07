@@ -1272,7 +1272,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           let lhsEffect = if List.length lhsEffect > 30 then getFirstEle lhsEffect 30 else lhsEffect
           in 
           if twoStringSetOverlap [(calleeName^ string_of_foot_print fp)] !checkedMethord  then 
-            (print_endline ("skipping the fucture condition check. ");
+            (print_endline ("skipping the fucture condition check for "^ calleeName ^ string_of_foot_print fp);
             ())
           else 
             (
@@ -2232,11 +2232,11 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
 
-      (*if functionEnd - functionStart > 230 then 
+      if functionEnd - functionStart > 500 then 
         let () = currentModule := funcName in 
         (scanForTheFunctionCallsWithoutHandlders [stmt])
       else 
-      *)
+      
 
       if existingPostSpecs funcName then ()
       else 
@@ -2269,6 +2269,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
         | None -> [(Ast_utility.TRUE, Emp (*Kleene (Any)*), 0, [])]
         | Some eff -> List.map eff ~f:(fun (p, es)->(p, es, 0, []))
       in 
+      print_endline (source_Address);
       print_endline ("annalysing " ^ funcName);
       let () = currentModule := funcName in 
       let () = currentModuleBody := Some stmt in 

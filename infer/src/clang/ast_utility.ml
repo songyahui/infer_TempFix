@@ -1925,6 +1925,7 @@ let compactDisjunctions (state:programStates): programStates =
   let rec mergeIntoAcc (pi, es, a, b) (acc:programStates) :programStates = 
     match acc with 
     | [] -> [(pi, es, a, b)]
+    | (FALSE, _, _, _)::rest -> mergeIntoAcc (pi, es, a, b) rest
     | (piacc, esacc, aacc, bacc)::rest -> 
       (*if comparePure pi piacc && aacc == a then (piacc, normalise_es(Disj(esacc, es)), aacc, bacc)::rest
       else*) 
@@ -1952,7 +1953,7 @@ let compactDisjunctions (state:programStates): programStates =
     if List.length state > 25 then 
       (print_endline ("========= \ntoo many states: " ^ string_of_int (List.length state));
       (*print_endline (string_of_programStates state);*)
-      getFirstEle state 25)
+      helper [] (getFirstEle state 25))
     else 
       let temp = helper [] state in 
      (* if List.length temp > 8 then 
