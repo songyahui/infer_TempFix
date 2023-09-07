@@ -601,14 +601,14 @@ F ｜- {current} instr {postconsition }
 *)
 
 
-let rec findSpecFrom (specs:specification list) (fName: string): (specification option * specification list) = 
+let rec findSpecFrom (specs:specification list) (fName: string): (specification option * specification list * specification list) = 
   match specs with 
-  | [] -> (None, [])
+  | [] -> (None, [], [])
   | ((str, li), a, b, c):: rest -> 
-    if String.compare str fName == 0 then (Some ((str, li), a, b, c), rest) 
+    if String.compare str fName == 0 then (Some ((str, li), a, b, c), [], rest) 
     else 
-      let (spec, rest) = findSpecFrom rest fName in 
-      (spec, ((str, li), a, b, c)::rest)
+      let (spec, prev, rest) = findSpecFrom rest fName in 
+      (spec, ((str, li), a, b, c)::prev, rest)
   ;;
 
 let insertSpecifications moduleName (newSpec:specification) = 
@@ -625,9 +625,9 @@ let insertSpecifications moduleName (newSpec:specification) =
   | (None, None, None ) -> ()
   | _ -> 
     (match findSpecFrom !propogatedSpecs !currentModule with 
-    | (Some (a, b,  c, d), rest) -> 
-      propogatedSpecs := rest @ [(a, mergeSpec b pre, mergeSpec c post, mergeSpec d future)]
-    | (None, _) -> 
+    | (Some (a, b,  c, d), prev, rest) -> 
+      propogatedSpecs := prev @ [(a, mergeSpec b pre, mergeSpec c post, mergeSpec d future)] @ rest
+    | (None, _, _) -> 
       propogatedSpecs := !propogatedSpecs @ [(mnsignature, pre, post, future)])
 
 
@@ -917,7 +917,7 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
             let fp = match fp with | None -> [] | Some l -> [l] in 
         
             (match findSpecFrom !propogatedSpecs calleeName with
-            | (Some ((_, _), prec, postc, futurec), _) ->  
+            | (Some ((_, _), prec, postc, futurec), _, _) ->  
               if existRetEff futurec then 
                 if existRetEvent futurec && (not (String.compare calleeName "malloc" == 0)) then 
                 
@@ -970,7 +970,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (instrList: Clang_ast_t.stmt list) :
           | None -> false 
           | Some (calleeName, acturelli) -> 
             (match findSpecFrom !propogatedSpecs calleeName with
-            | (Some ((_, _), _, _, Some _), _) ->  true 
+            | (Some ((_, _), _, _, Some _), _, _) ->  true 
             | _ -> false   )
           )
  
@@ -1078,7 +1078,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
 
-            let (spec, _) = findSpecFrom !propogatedSpecs calleeName in 
+            let (spec, _, _) = findSpecFrom !propogatedSpecs calleeName in 
             match spec with
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
@@ -1633,7 +1633,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         (match extractEventFromFUnctionCall x rest with 
         | None -> ()
         | Some (calleeName, acturelli) -> 
-          let (spec, _) = findSpecFrom !propogatedSpecs calleeName in 
+          let (spec, _, _) = findSpecFrom !propogatedSpecs calleeName in 
           (match spec with
           | None -> ()
           | Some (_, prec, postc, futurec)-> 
@@ -2211,7 +2211,7 @@ let int_of_optionint intop =
 
 let existingPostSpecs funcName  = 
   match findSpecFrom !propogatedSpecs funcName with 
-  | (Some (_, _, Some _, _), _) -> true 
+  | (Some (_, _, Some _, _), _, _) -> true 
   | _ -> false 
 
 let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): unit  = 
@@ -2234,7 +2234,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
 
-      if functionEnd - functionStart > 230 then 
+      if functionEnd - functionStart > 1000 then 
         let () = currentModule := funcName in 
         (scanForTheFunctionCallsWithoutHandlders [stmt])
       else 
@@ -2254,7 +2254,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
 
       *)
 
-      let (functionspec, _) = findSpecFrom !propogatedSpecs funcName in 
+      let (functionspec, _, _) = findSpecFrom !propogatedSpecs funcName in 
       let (_, precondition, postcondition, futurecondition) = 
         match functionspec with
         | None -> ((funcName, []), None, None, None)
@@ -2477,25 +2477,22 @@ let deleteAndWrite (str:string) path =
 
 
 let do_source_file (translation_unit_context : CFrontend_config.translation_unit_context) ast =
-
   let tenv = Tenv.create () in
   CType_decl.add_predefined_types tenv ;
   init_global_state_capture () ;
+
+  let start1 = Unix.gettimeofday () in 
   let source_file = translation_unit_context.CFrontend_config.source_file in
   let integer_type_widths = translation_unit_context.CFrontend_config.integer_type_widths in
 
- 
   (*print_endline ("\n======================================================="); *)
   (*print_endline ("================ Here is Yahui's Code =================");*)
-  let start = Unix.gettimeofday () in 
 
   let which_system = if String.compare (String.sub (Sys.getcwd()) 0 5 ) "/home" == 0 then 1 else 0 in 
   let loris1_path = "/home/yahui/future_condition/infer_TempFix/"  in 
   let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/" in 
   let path = if which_system == 1  then loris1_path else mac_path  in 
-  let start1 = Unix.gettimeofday () in 
   let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications (path ^ "spec.c") in 
-  repairTime := !repairTime +. (Unix.gettimeofday () -. start1); 
   let output_report =  path ^ "TempFix-out/report.csv" in 
   let output_detail =  path ^ "TempFix-out/detail.txt" in 
 
@@ -2504,21 +2501,23 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   
   let () = propogatedSpecs := user_sepcifications in 
 
+  repairTime := !repairTime +. (Unix.gettimeofday () -. start1); 
+
+
+  let start = Unix.gettimeofday () in 
   let reasoning_Res = List.map decl_list  
     ~f:(fun dec -> reason_about_declaration dec source_Address) in 
+  let analysisTime = (Unix.gettimeofday () -. start) in 
 
-  let updatedSpec = List.fold_left ((!propogatedSpecs)) ~init:"" ~f:(fun acc a -> acc ^ "\n" ^ (string_of_specification a) ) in 
 
-  (*print_endline (updatedSpec);*)
   let start2 = Unix.gettimeofday () in 
+  let updatedSpec = List.fold_left ((!propogatedSpecs)) ~init:"" ~f:(fun acc a -> acc ^ "\n" ^ (string_of_specification a) ) in 
+  (*print_endline (updatedSpec);*)
   deleteAndWrite (updatedSpec ^ "\n") (path ^ "spec.c") ; 
   repairTime := !repairTime +. (Unix.gettimeofday () -. start2); 
 
   
-  let compution_time = (Unix.gettimeofday () -. start) in 
 
-
-let analysisTime = compution_time -. !repairTime in 
 
   
 let msg = 
