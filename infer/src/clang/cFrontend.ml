@@ -1476,13 +1476,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
    
         *)
         let stmt' = List.append stmt_list xs in 
-        helper current'  stmt'
+        let states = helper current'  stmt' in 
+        List.map states ~f:(fun (a, b, c, d)-> if c > 1 then (a, b, 0, d) else (a, b, c, d))
       else 
         let (fp, _) = stmt_intfor2FootPrint stmt_info in 
         let states = (helper current stmt_list) in 
-        print_endline ("while/for states: " ^ string_of_programStates states);
+        (*print_endline ("while/for states: " ^ string_of_programStates states);*)
         let states' =  List.map states ~f:(fun (a, b, c, d)-> if c > 1 then (a, b, 0, d) else (a, b, c, d)) in 
-        print_endline ("while/for states': " ^ string_of_programStates states');
+        (*print_endline ("while/for states': " ^ string_of_programStates states');*)
 
         let effectLi4X = prefixLoction fp states' in 
         let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
