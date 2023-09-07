@@ -2232,10 +2232,11 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
 
-      if functionEnd - functionStart > 230 then 
+      (*if functionEnd - functionStart > 230 then 
         let () = currentModule := funcName in 
         (scanForTheFunctionCallsWithoutHandlders [stmt])
       else 
+      *)
 
       if existingPostSpecs funcName then ()
       else 
