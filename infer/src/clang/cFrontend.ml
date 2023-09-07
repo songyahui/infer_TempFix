@@ -1535,7 +1535,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       | Some TRUE 
       | Some FALSE -> 
         let temp = helper current'  (x::y::xs) in 
-        print_endline ("dostmt after: " ^ string_of_programStates temp);
+        print_endline ("dostmt after1: " ^ string_of_programStates temp);
         temp 
       | Some condition -> 
         print_endline ("dostmt " ^ string_of_pure condition);
@@ -1548,13 +1548,13 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         else 
           (print_endline ("out");
           let temp = helper current'  (x::y::xs) in 
-          print_endline ("dostmt after: " ^ string_of_programStates temp);
+          print_endline ("dostmt after2: " ^ string_of_programStates temp);
           temp )
       )
     | DoStmt (stmt_info, stmt_list)::xs -> 
       let stmt' = List.append stmt_list xs in 
       let temp = helper current'  stmt' in 
-      print_endline ("dostmt after: " ^ string_of_programStates temp);
+      print_endline ("dostmt after3: " ^ string_of_programStates temp);
       temp 
       
 
