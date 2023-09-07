@@ -1205,13 +1205,11 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let effectRest = 
         let fp1 = match fp with | [] -> None | x::_ -> Some x in 
         if (String.compare calleeName "exit") == 0 || 
-            (String.compare calleeName "LXC_ERROR") == 0 || 
            (String.compare calleeName "yy_fatal_error") == 0 || 
            (String.compare calleeName "_exit") == 0 ||
            (String.compare calleeName "flexerror") == 0 || 
            (String.compare calleeName "flexfatal") == 0 ||
            (String.compare calleeName "recutl_fatal") == 0 
-           (*|| (String.compare calleeName "error") == 0 *)
            then 
            let es = Singleton (("RET", []), fp1) in 
           ([(Ast_utility.TRUE, es, 1, fp)])
