@@ -919,12 +919,14 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
             (match findSpecFrom !propogatedSpecs calleeName with
             | (Some ((_, _), prec, postc, futurec), _) ->  
               if existRetEff futurec then 
-                if existRetEvent futurec then 
+                if existRetEvent futurec && (not (String.compare calleeName "malloc" == 0)) then 
+                
                   let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
                   ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp 
                   ^"\': Failed! because there is no handler ! \n"
                   ^ string_of_function_sepc (prec, postc, futurec)^"\n"
                   in 
+                  modifiyTheassertionCounters();
                   let () = finalReport := !finalReport ^ extra_info in 
                   () 
                 else () 
@@ -1089,7 +1091,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
               *)
 
               (match !handlerVar, futurec with 
-              | None, _  -> () (*print_endline ("with no handler = ")*)
+              | None, _  -> () 
               | Some str, Some _ -> 
                 varSet := List.append !varSet [str]
               | _, _ -> ()
@@ -1144,13 +1146,17 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           let futurec' = 
             if existRetEff futurec then 
               if existRetEvent futurec then 
+                (scanForTheFunctionCallsWithoutHandlders [(CallExpr (stmt_info, stmt_list, ei))];
+                None)
+                (*
                 let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
                 ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp 
                 ^"\': Failed! because there is no handler ! \n"
                 ^ string_of_function_sepc (prec, postc, futurec)^"\n"
                 in 
-                let () = finalReport := !finalReport ^ extra_info in 
-                None 
+                let () = finalReport := !finalReport ^ extra_info in    
+                *)
+                 
               else None 
             else futurec
           in 
@@ -1169,10 +1175,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           | Some f ->  print_endline ("|- futurec_raw " ^ string_of_effect f ^ ", and the handler is " ^ handler); 
           );
 
-          (instantiateReturn postc handler, 
-          instantiateReturn futurec handler, 
-          handler
-          )
+          if twoStringSetOverlap [getRoot handler] !parametersInScope then 
+            (instantiateReturn postc handler, None, handler)
+          else 
+            (instantiateReturn postc handler, instantiateReturn futurec handler, handler)
       in 
 
       let () = handlerVar := None in 
@@ -1438,13 +1444,47 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | ForStmt (stmt_info, stmt_list)::xs
     | WhileStmt (stmt_info, stmt_list)::xs -> 
       if peekTheEffectOfStmtsAndItHasEffects stmt_list then 
+        (*
+                let rec aux (prefix:Clang_ast_t.stmt list) (li:Clang_ast_t.stmt list) : ((Clang_ast_t.stmt list) list) = 
+          match li with 
+          | [] 
+          | (ContinueStmt _)::_ 
+          | (BreakStmt _)::_ -> [prefix]
+          | IfStmt(stmt_info, [x;y], if_stmt_info) :: xs -> 
+            (match (aux [] [y]) with 
+            | [] -> aux (prefix@[IfStmt(stmt_info, [x;y], if_stmt_info)]) (xs)
+            | traces::_ -> (prefix @ [IfStmt(stmt_info, [x;CompoundStmt(stmt_info, traces)], if_stmt_info)]) @ (aux prefix (xs))
+            )
+
+          | CompoundStmt (_, stmt_list)::xs -> aux acc prefix (stmt_list@xs)
+          | a :: xs -> aux acc ((prefix@[a])) xs 
+        in 
+
+        let stmt_list' = aux [] stmt_list in 
+        (*
+        print_endline ("number of switch cases: " ^ string_of_int (List.length stmt_list'));
+  *)
+      
+        (match stmt_list' with 
+        | [] ->  helper current xs
+        | _ -> 
+          let stateSummary = List.map stmt_list' ~f:(fun x -> helper current (x@xs)) in 
+          let res = flattenList stateSummary  in 
+          (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
+          res
+        )
+   
+        *)
         let stmt' = List.append stmt_list xs in 
         helper current'  stmt'
       else 
         let (fp, _) = stmt_intfor2FootPrint stmt_info in 
         let states = (helper current stmt_list) in 
-        let states =  List.map states ~f:(fun (a, b, c, d)-> if c == 2 then (a, b, 0, d) else (a, b, c, d)) in 
-        let effectLi4X = prefixLoction fp states in 
+        print_endline ("while/for states: " ^ string_of_programStates states);
+        let states' =  List.map states ~f:(fun (a, b, c, d)-> if c > 1 then (a, b, 0, d) else (a, b, c, d)) in 
+        print_endline ("while/for states': " ^ string_of_programStates states');
+
+        let effectLi4X = prefixLoction fp states' in 
         let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
         let effectRest = helper new_history xs in 
         concatenateTwoEffectswithFlag effectLi4X effectRest
@@ -1555,7 +1595,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     
     | LabelStmt (stmt_info, stmt_list, _)::xs
     | CompoundStmt (stmt_info, stmt_list)::xs -> 
-    (*| WhileStmt (stmt_info, stmt_list)::xs -> *)
       let stmt' = List.append stmt_list xs in 
       helper current'  stmt'
 
@@ -1657,21 +1696,21 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         | Some _ -> Emp
       in 
 
-      (*
+      
       let rec consumeAlltheParameters li = 
         match li with 
         | [] -> Emp 
-        | [x] -> Singleton (("CONSUME", [(BVAR x)]), fp1)
+        | [x] -> Singleton (("CONSUME", [x]), fp1)
         | x ::xs -> 
-          Concatenate (Singleton (("CONSUME", [(BVAR x)]), fp1), 
+          Concatenate (Singleton (("CONSUME", [x]), fp1), 
                        consumeAlltheParameters xs)
-      in *)
+      in 
 
       let es = Singleton (("RET", (retTerm1)), fp1) in 
-      if List.length !parametersInScope == 0 then 
+      if List.length retTerm1 == 0 then 
         [(extrapure, Concatenate(ev, es), 1, fp)]
       else 
-        [(extrapure, Concatenate((*consumeAlltheParameters !parametersInScope *) Emp,Concatenate(ev, es)), 1, fp)]
+        [(extrapure, Concatenate(consumeAlltheParameters retTerm1,Concatenate(ev, es)), 1, fp)]
     )
   
   | ReturnStmt (stmt_info, stmt_list) ->
@@ -2192,10 +2231,13 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       match function_decl_info.fdi_body with 
       | None -> ()
       | Some stmt -> 
-      if functionEnd - functionStart > 230 then (scanForTheFunctionCallsWithoutHandlders [stmt])
+      let funcName = named_decl_info.ni_name in 
+
+      if functionEnd - functionStart > 230 then 
+        let () = currentModule := funcName in 
+        (scanForTheFunctionCallsWithoutHandlders [stmt])
       else 
 
-      let funcName = named_decl_info.ni_name in 
       if existingPostSpecs funcName then ()
       else 
       
