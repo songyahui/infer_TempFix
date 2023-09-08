@@ -602,7 +602,9 @@ F ｜- {current} instr {postconsition }
 
 
 let rec findSpecFrom (specs:specification list) (fName: string): (specification option * specification list * specification list) = 
-  match specs with 
+  (None, [], specs)
+  (*
+match specs with 
   | [] -> (None, [], [])
   | ((str, li), a, b, c):: rest -> 
     if String.compare str fName == 0 then (Some ((str, li), a, b, c), [], rest) 
@@ -610,6 +612,8 @@ let rec findSpecFrom (specs:specification list) (fName: string): (specification 
       let (spec, prev, rest) = findSpecFrom rest fName in 
       (spec, ((str, li), a, b, c)::prev, rest)
   ;;
+  *)
+  
 
 let insertSpecifications moduleName (newSpec:specification) = 
   let (mnsignature, pre, post, future) = newSpec in 
