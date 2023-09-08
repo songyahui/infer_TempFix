@@ -622,6 +622,7 @@ let insertSpecifications moduleName (newSpec:specification) =
     | _ -> post 
   in 
   match pre, post, future with 
+  | (_, Some _, _ )  -> ()
   | (None, None, None ) -> ()
   | _ -> 
     (match findSpecFrom !propogatedSpecs !currentModule with 
@@ -1989,7 +1990,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 *)
 
     | _ -> 
-      let stateX = syh_compute_stmt_postcondition current future x in 
+      let stateX = helper current [x] in 
       let stateY = syh_compute_stmt_postcondition current future y in 
       concatenateTwoEffectswithFlag stateX stateY
 
