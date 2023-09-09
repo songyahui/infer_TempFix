@@ -40,7 +40,6 @@ type pure = TRUE
 
 type es = Bot | Emp | Any 
               | Singleton of (event * line_number) 
-              | NotArguments of (basic_type list) 
               | NotSingleton of event 
               | Disj of es * es 
               | Concatenate of es * es 
@@ -610,9 +609,6 @@ let rec string_of_es (eff:es) : string =
   | Any -> "_" 
   | Singleton (str, l)  -> 
     string_of_event str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)
-  (* | NotArguments (x::_) -> -> "!_" ^ string_of_basic_t x  
-  currently NotArguments is represented using NotSingleton _
-  *)
   | NotSingleton str          -> "!" ^ string_of_event str 
   | Concatenate (eff1, eff2) ->
       string_of_es eff1 ^ " · " ^ string_of_es eff2 
@@ -756,7 +752,7 @@ let rec nullable (eff:es) : bool =
   | Concatenate (eff1, eff2) -> nullable eff1 && nullable eff2  
   | Disj (eff1, eff2) -> nullable eff1 || nullable eff2  
   | Kleene effIn      -> true
-  | _ -> false 
+  
 
 
 
@@ -827,7 +823,6 @@ let rec comparees (eff1:es) (eff2:es): bool =
   | (Disj (a1, a2), Disj(a3, a4)) -> 
     comparees a1 a3 && comparees a2 a4
   | (Kleene e1, Kleene e2) -> comparees e1 e2
-  | (NotArguments e1, NotArguments e2) -> comapreBasic_typeList e1 e2
   | _ -> false 
 
 
@@ -1150,10 +1145,13 @@ else
           let derL = (derivitives f lhs) in 
           let derR = normalise_es (derivitives f rhs) in 
           if (isBot derR) then 
-            let currentposition = if currentposition == (1000) then 
-            ( (*print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n"); *)
-            (getLineNumFromfstElem f currentposition)) else currentposition in 
-            ([(pathcondition, lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
+            let currentposition = 
+              if currentposition == (1000) then 
+              ( (*print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n"); *)
+              (getLineNumFromfstElem f currentposition)) 
+              else currentposition 
+            in 
+            ([(pathcondition, lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove1]", []) )
           else 
             let (result, tree) = inclusion' pathcondition (getLineNumFromfstElem f currentposition) derL derR ((lhs, rhs):: ctx) in 
             (result, Node(entailent ^ "  [Unfold]" , [tree])) 
@@ -1161,10 +1159,12 @@ else
           let derL = (derivitives f lhs) in 
           let derR = normalise_es (derivitives f rhs) in 
           if (isBot derR) then 
-            let currentposition = if currentposition == (1000) then 
-            ((*print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");*)
-            (getLineNumFromfstElem f currentposition)) else currentposition in 
-            ([(pathcondition, lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove]", []) )
+            let currentposition = 
+              if currentposition == (1000) then 
+              ((*print_string ("lalallalallal"^ string_of_int (getLineNumFromfstElem f)  ^ "\n");*)
+              (getLineNumFromfstElem f currentposition)) else currentposition 
+            in 
+            ([(pathcondition, lhs, currentposition, rhs)], Node (entailent ^ "  [Disprove2]", []) )
           else 
           let (result, tree) = inclusion' pathcondition (getLineNumFromfstElem f currentposition) derL derR ((lhs, rhs):: ctx) in 
           (match result with 
@@ -1497,7 +1497,7 @@ let rec findReturnValueES es : string option =
       if String.compare str "RET" == 0 then Some arg else None 
     | Singleton _ -> None 
     | Concatenate (a, b) -> findReturnValueES b 
-    | Bot | Emp | Any | NotArguments _
+    | Bot | Emp | Any 
     | NotSingleton _ -> None 
     | Disj (a, b) -> 
       (match findReturnValueES a with
@@ -1514,8 +1514,8 @@ let findReturnValueESOrParameter es (currentHandler:string): string option =
       if twoStringSetOverlap [(getRoot currentHandler)] (!parametersInScope) then Some str 
       else None 
   | None  -> 
-    if twoStringSetOverlap [(getRoot currentHandler)] (!parametersInScope) then Some currentHandler 
-    else None 
+    (* if twoStringSetOverlap [(getRoot currentHandler)] (!parametersInScope) then Some currentHandler 
+    else*) None 
       
 
 let rec findReturnValueProgramStates (eff:programStates) : string option =
@@ -1694,9 +1694,6 @@ let rec string_of_es_prime (eff:es) : string =
   | Any -> "_" 
   | Singleton (str, l)  -> 
     string_of_event_prime str (*^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)*)
-  (* | NotArguments (x::_) -> -> "!_" ^ string_of_basic_t x  
-  currently NotArguments is represented using NotSingleton _
-  *)
   | NotSingleton str          -> "!" ^ string_of_event_prime str 
   | Concatenate (eff1, eff2) ->
       string_of_es_prime eff1 ^ " · " ^ string_of_es_prime eff2 
@@ -1828,7 +1825,7 @@ let rec returningNULLES es : bool =
   | Singleton ((_, [((BNULL))]), _) -> true 
   | Singleton _ -> false 
   | Concatenate (a, b) -> returningNULLES b 
-  | Bot | Emp | Any | NotArguments _
+  | Bot | Emp | Any 
   | NotSingleton _ -> false 
   | Disj (a, b) -> 
     (match returningNULLES a with
@@ -1888,13 +1885,12 @@ print_endline (string_of_es es1);*)
       if String.compare name "free" == 0 && twoStringSetOverlap [argStr] [!hanlderWhichIsChecked] then 
         es
       else 
-        (let sign = string_of_es_prime es in 
+        (let sign = string_of_es es in 
         if twoStringSetOverlap [sign] !vacabulary then Emp 
         else (let () = vacabulary := !vacabulary @[sign] in es)) 
-    | NotArguments _
     | NotSingleton _
     | Singleton _ -> 
-      let sign = string_of_es_prime es in 
+      let sign = string_of_es es in 
       if twoStringSetOverlap [sign] !vacabulary then Emp 
       else (let () = vacabulary := !vacabulary @[sign] in es)
     | Disj (esIn1, esIn2) -> Disj (aux esIn1, aux esIn2)

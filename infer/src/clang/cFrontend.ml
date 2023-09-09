@@ -408,9 +408,12 @@ let concatenateTwoEffectswithoutFlag (effectLi4X: programStates) (effectRest: pr
       | Some (Basic (BVAR (retTerm))) -> 
         (conjunctPure pi1 pi2, Concatenate (eff_x, instantiateRetEs eff_y [(retTerm, BRET)]  ),  t_y, List.append fp1 fp2)
       | _ ->*) 
+     ( match eff_y with 
+      | (Kleene(Any)) -> (pi1, eff_x, t_x, fp1)
+      | _ ->
       let (pi, es) = (conjunctPure pi1 pi2, Concatenate (eff_x, eff_y)) in 
       
-      (pi, es,  t_y, List.append fp1 fp2)
+      (pi, es,  t_y, List.append fp1 fp2))
 
   ) in 
   normaliseProgramStates temp
@@ -602,9 +605,7 @@ F ｜- {current} instr {postconsition }
 
 
 let rec findSpecFrom (specs:specification list) (fName: string): (specification option * specification list * specification list) = 
-  (None, [], specs)
-  (*
-match specs with 
+  match specs with 
   | [] -> (None, [], [])
   | ((str, li), a, b, c):: rest -> 
     if String.compare str fName == 0 then (Some ((str, li), a, b, c), [], rest) 
@@ -612,8 +613,6 @@ match specs with
       let (spec, prev, rest) = findSpecFrom rest fName in 
       (spec, ((str, li), a, b, c)::prev, rest)
   ;;
-  *)
-  
 
 let insertSpecifications moduleName (newSpec:specification) = 
   let (mnsignature, pre, post, future) = newSpec in 
@@ -1180,10 +1179,20 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           | Some f ->  print_endline ("|- futurec_raw " ^ string_of_effect f ^ ", and the handler is " ^ handler); 
           );
 
-          if twoStringSetOverlap [getRoot handler] !parametersInScope then 
+          (*if twoStringSetOverlap [getRoot handler] !parametersInScope && existRetEvent futurec then 
             (instantiateReturn postc handler, None, handler)
-          else 
-            (instantiateReturn postc handler, instantiateReturn futurec handler, handler)
+          else *)
+          let futurec = (match futurec with
+            | None -> None 
+            | Some futureLi -> 
+              let temp = List.fold_left futureLi ~init:[] ~f:(fun acc a ->
+                if  twoStringSetOverlap [getRoot handler] !parametersInScope && existRetEvent (Some [a]) then 
+                acc else acc @ [a]
+              ) in 
+              if List.length temp == 0 then None 
+              else Some temp
+          ) in 
+          (instantiateReturn postc handler, instantiateReturn futurec handler, handler)
       in 
 
       let () = handlerVar := None in 
@@ -1448,11 +1457,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | WhileStmt (stmt_info, stmt_list)::xs -> 
       if peekTheEffectOfStmtsAndItHasEffects stmt_list then 
         (*
-                let rec aux (prefix:Clang_ast_t.stmt list) (li:Clang_ast_t.stmt list) : ((Clang_ast_t.stmt list) list) = 
-          match li with 
-          | [] 
-          | (ContinueStmt _)::_ 
-          | (BreakStmt _)::_ -> [prefix]
           | IfStmt(stmt_info, [x;y], if_stmt_info) :: xs -> 
             (match (aux [] [y]) with 
             | [] -> aux (prefix@[IfStmt(stmt_info, [x;y], if_stmt_info)]) (xs)
@@ -1478,9 +1482,30 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         )
    
         *)
+        let rec preProcess (li:Clang_ast_t.stmt list) :Clang_ast_t.stmt list = 
+          let rec auc stmt : Clang_ast_t.stmt list = 
+            match stmt with 
+            | (Clang_ast_t.ContinueStmt _) 
+            | (BreakStmt _) -> xs 
+            |  IfStmt(stmt_info, x::rest, if_stmt_info) -> 
+              let rest' = flattenList (List.map rest ~f:(fun stmt -> auc stmt)) in 
+              [IfStmt(stmt_info, x::rest', if_stmt_info)]
+            | CompoundStmt (stmt_info, stmt_list) -> 
+              let rest' = flattenList (List.map stmt_list ~f:(fun stmt -> auc stmt)) in 
+              [CompoundStmt (stmt_info, rest')]
+            | _ -> [stmt]
+
+          in 
+
+          flattenList (List.map li ~f:(fun stmt -> auc stmt))
+
+        in 
+
+        let stmt_list = preProcess stmt_list in 
         let stmt' = List.append stmt_list xs in 
-        let states = helper current'  stmt' in 
+        let states = helper current' stmt' in 
         List.map states ~f:(fun (a, b, c, d)-> if c > 1 then (a, b, 0, d) else (a, b, c, d))
+        
       else 
         let (fp, _) = stmt_intfor2FootPrint stmt_info in 
         let states = (helper current stmt_list) in 
@@ -1732,7 +1757,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let (fp, _) =  getStmtlocation instr in 
       let varFromX = string_of_stmt x in 
 
-      let ev = if twoStringSetOverlap [varFromX] (!varSet) then 
+      let ev = if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope)) then 
         Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
         else Emp
       in 
@@ -1913,6 +1938,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       (*
       print_endline ("dereferenceing ... " ^ varFromX);
       print_endline ("afrer  ... " ^ getMostRoot varFromX);
+      print_endline ("!varSet@(!parametersInScope): " ^ List.fold_left (!varSet@(!parametersInScope)) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
+
+      print_endline (string_of_bool (twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope))));
 *)
 
       let ev = if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope)) then 
@@ -1936,6 +1964,37 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
     (match binop_info.boi_kind with
     | `Assign -> 
+      
+      
+      (
+        
+      match (y) with
+      | (ImplicitCastExpr (_, [(CallExpr (_, _, _))], _, _, _))
+      | (CStyleCastExpr (_, [(CallExpr (_, _, _))], _, _, _))
+      | (CallExpr (_, _, _)) -> syh_compute_stmt_postcondition current future x
+      | _ -> 
+        let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
+        let (fp', _) = getStmtlocation instr in
+        let varFromY = string_of_stmt y in 
+        (*print_endline ("BinaryOperator CONSUME: " ^ varFromY);*) 
+  
+        
+        let stateY = syh_compute_stmt_postcondition current future y in 
+        let stateX = syh_compute_stmt_postcondition current future x in 
+  
+  
+        let res  = 
+          if twoStringSetOverlap [varFromY] (!varSet) then 
+            (
+            let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
+            (Ast_utility.TRUE, ev, 0, fp))
+          else 
+            (Ast_utility.TRUE, Emp, 0, fp)
+        in 
+        concatenateTwoEffectswithFlag stateY (concatenateTwoEffectswithFlag stateX [res])
+
+      
+      )
 
 
     
@@ -1943,25 +2002,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     (*
         print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.get_stmt_kind_string y ); 
 *)
-      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
-      let (fp', _) = getStmtlocation instr in
-      let varFromY = string_of_stmt y in 
-      (*print_endline ("BinaryOperator CONSUME: " ^ varFromY);*) 
 
-      let stateY = syh_compute_stmt_postcondition current future y in 
-      let stateX = syh_compute_stmt_postcondition current future x in 
-
-
-      let res  = 
-        if twoStringSetOverlap [varFromY] (!varSet) then 
-          (
-          let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
-          (Ast_utility.TRUE, ev, 0, fp))
-        else 
-          (Ast_utility.TRUE, Emp, 0, fp)
-      in 
-
-      concatenateTwoEffectswithFlag stateY (concatenateTwoEffectswithFlag stateX [res])
 
       
     (*
@@ -1994,7 +2035,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 *)
 
     | _ -> 
-      let stateX = helper current [x] in 
+      let stateX = syh_compute_stmt_postcondition current future x in 
       let stateY = syh_compute_stmt_postcondition current future y in 
       concatenateTwoEffectswithFlag stateX stateY
 
@@ -2237,7 +2278,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
 
-      if functionEnd - functionStart > 500 then 
+      if functionEnd - functionStart > 300 then 
         let () = currentModule := funcName in 
         (scanForTheFunctionCallsWithoutHandlders [stmt])
       else 
