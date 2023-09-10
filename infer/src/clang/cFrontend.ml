@@ -775,7 +775,8 @@ let computeRange intList =
       else (min, max)) 
 
 
-let program_repair (info:((error_info list) * binary_tree * pathList * pathList)) specifications : (string * string) = 
+
+let program_repair ((callee, fp):(string * int list)) (info:((error_info list) * binary_tree * pathList * pathList)) specifications : (string * string) = 
   
   let headMsg = ref "" in 
   let repairMsg = ref "" in 
@@ -807,10 +808,13 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
   (* this is to prevent the same fixes *)
 
 
-  let rec existSameRecord recordList start endNum  : bool = 
+  let rec existSameRecord recordList ((str, line, spec), start, endNum)  : bool = 
     match recordList with 
     | [] -> false 
-    | (s',e'):: recordListxs -> if start ==s' (*&& endNum==e'*) then true else existSameRecord recordListxs start endNum
+    | ((fname, fp', spec'), s',e'):: recordListxs -> 
+      if String.compare fname str == 0 && compareFootPrint fp' line && (not (existRetEventES spec')) && comparees spec' spec then 
+        true 
+      else if start ==s' (*&& endNum==e'*) then true else existSameRecord recordListxs ((str, line, spec), start, endNum)
   in 
   
   let rec aux arg : unit  = 
@@ -832,9 +836,9 @@ let program_repair (info:((error_info list) * binary_tree * pathList * pathList)
 *)
 
 
-        if existSameRecord !repairRecord startNum endNum then ()
+        if existSameRecord !repairRecord ((callee, fp, spec), startNum ,endNum)  then ()
         else 
-        let () = repairRecord := (startNum ,endNum) :: (!repairRecord) in 
+        let () = repairRecord := ((callee, fp, spec), startNum ,endNum) :: (!repairRecord) in 
 
 
         (*print_endline ("post:" ^(string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
@@ -1131,7 +1135,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
             "Pre-condition checking for \'"^calleeName^"\': " in 
             (*print_endline (string_of_inclusion_results extra_info info); *)
-            let (head, patches) = program_repair info !propogatedSpecs in 
+            let (head, patches) = program_repair (calleeName, fp) info !propogatedSpecs in 
             if String.compare patches "" == 0 then 
             ()
             else 
@@ -1310,7 +1314,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                     ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
                     (*print_endline (string_of_inclusion_results extra_info info); *)
                     
-                      let (head, patches) = program_repair singleInfo !propogatedSpecs in 
+                      let (head, patches) = program_repair (calleeName, fp) singleInfo !propogatedSpecs in 
                       if String.compare patches "" == 0 then 
                       ()
                       else 
@@ -1336,7 +1340,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                       (*print_endline (string_of_inclusion_results extra_info info); *)
                       
             
-                        let (head, patches) = program_repair singleInfo !propogatedSpecs in 
+                        let (head, patches) = program_repair (calleeName, fp) singleInfo !propogatedSpecs in 
                         if String.compare patches "" == 0 then 
                         ()
                         else 
@@ -1456,32 +1460,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | ForStmt (stmt_info, stmt_list)::xs
     | WhileStmt (stmt_info, stmt_list)::xs -> 
       if peekTheEffectOfStmtsAndItHasEffects stmt_list then 
-        (*
-          | IfStmt(stmt_info, [x;y], if_stmt_info) :: xs -> 
-            (match (aux [] [y]) with 
-            | [] -> aux (prefix@[IfStmt(stmt_info, [x;y], if_stmt_info)]) (xs)
-            | traces::_ -> (prefix @ [IfStmt(stmt_info, [x;CompoundStmt(stmt_info, traces)], if_stmt_info)]) @ (aux prefix (xs))
-            )
 
-          | CompoundStmt (_, stmt_list)::xs -> aux acc prefix (stmt_list@xs)
-          | a :: xs -> aux acc ((prefix@[a])) xs 
-        in 
-
-        let stmt_list' = aux [] stmt_list in 
-        (*
-        print_endline ("number of switch cases: " ^ string_of_int (List.length stmt_list'));
-  *)
-      
-        (match stmt_list' with 
-        | [] ->  helper current xs
-        | _ -> 
-          let stateSummary = List.map stmt_list' ~f:(fun x -> helper current (x@xs)) in 
-          let res = flattenList stateSummary  in 
-          (*print_endline ("Res for switch: \n" ^ string_of_programStates res);*)
-          res
-        )
-   
-        *)
         let rec preProcess (li:Clang_ast_t.stmt list) :Clang_ast_t.stmt list = 
           let rec auc stmt : Clang_ast_t.stmt list = 
             match stmt with 
@@ -1501,7 +1480,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
         in 
 
-        let stmt_list = preProcess stmt_list in 
+        let stmt_list = if List.length xs > 3 then stmt_list else preProcess stmt_list in 
         let stmt' = List.append stmt_list xs in 
         let states = helper current' stmt' in 
         List.map states ~f:(fun (a, b, c, d)-> if c > 1 then (a, b, 0, d) else (a, b, c, d))
@@ -2005,12 +1984,17 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
       
-    (*
+    
     | `Or | `LOr | `Xor-> 
       (match (stmt2Pure x) with 
-      | Some (Eq(_, Basic(BINT 0)))  -> 
-        (print_endline (" `Or | `LOr | `Xor" ^ (match (stmt2Pure x) with | Some pure -> string_of_pure pure | None -> "") );
-        [(Ast_utility.TRUE, Emp, 0, fp)])
+      | Some (Eq(Basic( BVAR varFromX), Basic(BINT 0)))  -> 
+        if twoStringSetOverlap [getRoot varFromX] (!varSet) then 
+          (print_endline ("`Or | `LOr | `Xor-> " ^ varFromX);
+          [(Ast_utility.TRUE, Emp, 0, fp)])
+        else
+          let stateX = syh_compute_stmt_postcondition current future x in 
+          let stateY = syh_compute_stmt_postcondition current future y in 
+          concatenateTwoEffectswithFlag stateX stateY
       | _ -> 
         let stateX = syh_compute_stmt_postcondition current future x in 
         let stateY = syh_compute_stmt_postcondition current future y in 
@@ -2020,19 +2004,21 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | `And | `LAnd -> 
       (match (stmt2Pure x) with 
       | Some (Neg(Eq(Basic( BVAR varFromX), Basic(BINT 0))))  -> 
-        if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope)) then 
+        if twoStringSetOverlap [getRoot varFromX] (!varSet) then 
+          (
+          print_endline (" `And | `LAnd" ^ (match (stmt2Pure x) with | Some pure -> string_of_pure pure | None -> "") );
+          [(Ast_utility.TRUE, Emp, 0, fp)])
+        else 
           (let stateX = syh_compute_stmt_postcondition current future x in 
           let stateY = syh_compute_stmt_postcondition current future y in 
           concatenateTwoEffectswithFlag stateX stateY)
-        else 
-          (print_endline (" `And | `LAnd" ^ (match (stmt2Pure x) with | Some pure -> string_of_pure pure | None -> "") );
-          [(Ast_utility.TRUE, Emp, 0, fp)])
+          
       | _ -> 
         let stateX = syh_compute_stmt_postcondition current future x in 
         let stateY = syh_compute_stmt_postcondition current future y in 
         concatenateTwoEffectswithFlag stateX stateY
       )
-*)
+
 
     | _ -> 
       let stateX = syh_compute_stmt_postcondition current future x in 
@@ -2278,7 +2264,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
 
-      if functionEnd - functionStart > 300 then 
+      if specificBenchamrks source_Addressnow &&(functionEnd - functionStart > 300) then 
         let () = currentModule := funcName in 
         (scanForTheFunctionCallsWithoutHandlders [stmt])
       else 

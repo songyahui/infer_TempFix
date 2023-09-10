@@ -86,7 +86,7 @@ let (failedProofObligations: int ref) = ref 0
 assertions are differnet from proof obligations 
 because proof obligations can be triggerred while searching *)
 let (failedAssertions: int ref) =  ref 0 
-let (repairRecord:( (int * int) list) ref) = ref []  
+let (repairRecord:( ((string * int list * es)  * int * int) list) ref) = ref []  
 
 (* number of the assertions are failed, which are fixed *)
 let (reapiredFailedAssertions: int ref) =  ref 0 
@@ -1629,6 +1629,8 @@ let existRetEff (eff: effect option) : bool =
 let rec existRetEventES es : bool =
   match es with 
   | Singleton ((a, x::rest), b) -> 
+    if String.compare a "close" == 0 || String.compare a "fclose" == 0 then true 
+    else 
      (match x with
     | BRET -> true 
     | _ -> existRetEventES (Singleton ((a, rest), b))
@@ -1642,9 +1644,12 @@ let rec existRetEventES es : bool =
 
 
 
-let existRetEvent (eff: effect option) : bool = 
+  
+
+
+let rec existRetEvent (eff: effect option) : bool = 
   match eff with 
-  | Some [(_, es)] -> existRetEventES es
+  | Some ((_, es)::rest) -> if existRetEventES es then existRetEvent (Some rest) else false 
   | _ -> false 
 
 
@@ -1989,3 +1994,16 @@ let rec findLableSpec li str =
   | (lable, spec):: xs  -> 
     if String.compare lable str == 0 then Some spec 
     else findLableSpec xs str
+
+let rec compareFootPrint li1 li2 = 
+  match (li1, li2) with 
+  | ([], []) -> true 
+  | (n1::r1, n2::r2) -> if n1 == n2 then  compareFootPrint r1 r2 else false 
+  | (_, _) -> false 
+
+  
+(*1. to silence the NPE errors, and to use different line number for different projects. *)
+let specificBenchamrks address  = 
+  let strLi = String.split_on_chars  address ['/'] in 
+  if twoStringSetOverlap ["lxc";"recutils-1.8"] strLi then true 
+  else false 
