@@ -1629,8 +1629,6 @@ let existRetEff (eff: effect option) : bool =
 let rec existRetEventES es : bool =
   match es with 
   | Singleton ((a, x::rest), b) -> 
-    if String.compare a "close" == 0 || String.compare a "fclose" == 0 then true 
-    else 
      (match x with
     | BRET -> true 
     | _ -> existRetEventES (Singleton ((a, rest), b))
@@ -1642,6 +1640,22 @@ let rec existRetEventES es : bool =
   | Kleene (a) -> existRetEventES a
   | _ -> false  
 
+let rec existRetEventESPrime es : bool =
+  match es with 
+  | Singleton ((a, _), b) -> 
+    if String.compare a "_" == 0 then false else true 
+  | Concatenate (a, b) 
+  | Disj (a, b) -> existRetEventESPrime a || existRetEventESPrime b
+  | Kleene (a) -> existRetEventESPrime a
+  | NotSingleton _ -> false 
+  | _ -> false  
+
+
+
+let rec existRetEventESPrimeShell (eff: effect option) : bool = 
+  match eff with 
+  | Some ((_, es)::rest) -> if existRetEventESPrime es then existRetEventESPrimeShell (Some rest) else false 
+  | _ -> false 
 
 
   
@@ -1649,7 +1663,7 @@ let rec existRetEventES es : bool =
 
 let rec existRetEvent (eff: effect option) : bool = 
   match eff with 
-  | Some ((_, es)::rest) -> if existRetEventES es then existRetEvent (Some rest) else false 
+  | Some ((_, es)::_) -> existRetEventES es 
   | _ -> false 
 
 

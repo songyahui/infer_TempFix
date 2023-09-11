@@ -421,6 +421,11 @@ let concatenateTwoEffectswithoutFlag (effectLi4X: programStates) (effectRest: pr
 
 
 let concatenateTwoEffectswithFlag (effectLi4X: programStates) (effectRest: programStates): programStates = 
+  let effectLi4X  = 
+    match List.filter effectLi4X ~f:(fun (_, _, code,_) -> if code == 2 then false else true) with 
+    | [] -> [(Ast_utility.TRUE, Emp, 0, [])]
+    | othersituation -> othersituation
+  in 
   let mixLi = cartesian_product effectLi4X effectRest in 
   (*print_endline ("concatenateTwoEffectswithFlag");
   print_endline (string_of_programStates effectLi4X);
@@ -812,8 +817,15 @@ let program_repair ((callee, fp):(string * int list)) (info:((error_info list) *
     match recordList with 
     | [] -> false 
     | ((fname, fp', spec'), s',e'):: recordListxs -> 
-      if String.compare fname str == 0 && compareFootPrint fp' line && (not (existRetEventES spec')) && comparees spec' spec then 
+      if String.compare fname str == 0 && compareFootPrint fp' line 
+        && (not (existRetEventESPrime spec')) && comparees spec' spec then 
+        (
+        print_endline ("existing record: " ^str ^ string_of_foot_print line );
+        print_endline ("spec': " ^ string_of_es  spec');
+        print_endline ("spec: " ^ string_of_es  spec);
+        
         true 
+        )
       else if start ==s' (*&& endNum==e'*) then true else existSameRecord recordListxs ((str, line, spec), start, endNum)
   in 
   
@@ -897,6 +909,19 @@ let constructBinaryOperatorAssign stmt_info expr_info x y : Clang_ast_t.stmt =
 let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt list) : unit = 
   let rec helper (stmt:Clang_ast_t.stmt) : unit= 
     match stmt with 
+    | DeclStmt (_, [CStyleCastExpr(_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _)], [del])
+    | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], [del]) 
+    | DeclStmt (_, [(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))], [del]) 
+      -> ()
+    | BinaryOperator (_, _::(ImplicitCastExpr (_, [(BinaryOperator (stmt_info1, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info))], _, _, _))::_, _, _) 
+    | BinaryOperator (_, _::(ImplicitCastExpr (_, [BinaryOperator (stmt_info1, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info)], _, _, _))::_, _, _) 
+    | BinaryOperator (_, _::(ImplicitCastExpr (_, [BinaryOperator (stmt_info1, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info)], _, _, _))::_, _, _) 
+
+    | BinaryOperator (stmt_info1, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) 
+    | BinaryOperator (stmt_info1, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) 
+    | BinaryOperator (stmt_info1, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info)       
+      -> ()
+
     | Clang_ast_t.BinaryOperator (stmt_info, stmt_list, _, _)
     | UnaryOperator (stmt_info, stmt_list, _, _)
     | DefaultStmt (stmt_info, stmt_list) 
@@ -949,6 +974,49 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
   match instrList with 
   | [] -> () 
   | x ::xs -> helper x; scanForTheFunctionCallsWithoutHandlders xs 
+
+
+
+let rec peekTheEffectOfStmtsAndItHasPostOrFutureEffects (instrList: Clang_ast_t.stmt list) : bool = 
+  let rec helper (stmt:Clang_ast_t.stmt) = 
+    match stmt with 
+    | Clang_ast_t.BinaryOperator (stmt_info, stmt_list, _, _)
+    | UnaryOperator (stmt_info, stmt_list, _, _)
+    | DefaultStmt (stmt_info, stmt_list) 
+    | CaseStmt (stmt_info, stmt_list) 
+    | CXXDependentScopeMemberExpr (stmt_info, stmt_list, _)  
+    | IfStmt (stmt_info, stmt_list, _)
+    | ForStmt (stmt_info, stmt_list)
+    | DoStmt (stmt_info, stmt_list)
+    | WhileStmt (stmt_info, stmt_list)
+    | CompoundStmt (stmt_info, stmt_list) ->  
+    peekTheEffectOfStmtsAndItHasPostOrFutureEffects stmt_list
+
+    | CStyleCastExpr (stmt_info, x::_, _, _, _) 
+    | ImplicitCastExpr (stmt_info, x::_, _, _, _) 
+    | ArraySubscriptExpr(stmt_info, x::_, _)  
+    | MemberExpr (stmt_info, x::_, _, _) -> helper x
+    | (CallExpr (stmt_info, stmt_list, ei)) -> 
+      (match stmt_list with 
+      | [] -> false  
+      | x::rest -> 
+          (match extractEventFromFUnctionCall x rest with 
+          | None -> false 
+          | Some (calleeName, acturelli) -> 
+            (match findSpecFrom !propogatedSpecs calleeName with
+            | (Some ((_, _), _, _, Some _), _, _) ->  true 
+            | (Some ((_, _), _, Some _, _), _, _) ->  true 
+            | _ -> false   )
+          )
+ 
+      )
+    | _ -> false 
+
+  in 
+  match instrList with 
+  | [] -> false 
+  | x ::xs -> if helper x then true else peekTheEffectOfStmtsAndItHasPostOrFutureEffects xs 
+
 
 
 let rec peekTheEffectOfStmtsAndItHasEffects (instrList: Clang_ast_t.stmt list) : bool = 
@@ -1156,15 +1224,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
               if existRetEvent futurec then 
                 (scanForTheFunctionCallsWithoutHandlders [(CallExpr (stmt_info, stmt_list, ei))];
                 None)
-                (*
-                let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
-                ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp 
-                ^"\': Failed! because there is no handler ! \n"
-                ^ string_of_function_sepc (prec, postc, futurec)^"\n"
-                in 
-                let () = finalReport := !finalReport ^ extra_info in    
-                *)
-                 
               else None 
             else futurec
           in 
@@ -1190,8 +1249,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             | None -> None 
             | Some futureLi -> 
               let temp = List.fold_left futureLi ~init:[] ~f:(fun acc a ->
+                (*print_endline (getRoot handler);
+                print_endline (string_of_bool (twoStringSetOverlap [getRoot handler] !parametersInScope));
+                print_endline (string_of_effect [a]);
+                print_endline (string_of_bool (existRetEvent (Some [a])));
+                *)
                 if  twoStringSetOverlap [getRoot handler] !parametersInScope && existRetEvent (Some [a]) then 
-                acc else acc @ [a]
+                  acc 
+                else acc @ [a]
               ) in 
               if List.length temp == 0 then None 
               else Some temp
@@ -1461,29 +1526,30 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | WhileStmt (stmt_info, stmt_list)::xs -> 
       if peekTheEffectOfStmtsAndItHasEffects stmt_list then 
 
-        let rec preProcess (li:Clang_ast_t.stmt list) :Clang_ast_t.stmt list = 
-          let rec auc stmt : Clang_ast_t.stmt list = 
+        let rec preProcess (li:Clang_ast_t.stmt list) : Clang_ast_t.stmt list = 
+          let rec auc stmt : Clang_ast_t.stmt = 
             match stmt with 
-            | (Clang_ast_t.ContinueStmt _) 
-            | (BreakStmt _) -> xs 
+            | (Clang_ast_t.ContinueStmt (stmt_info, _)) 
+            | (BreakStmt (stmt_info, _)) -> CompoundStmt (stmt_info, xs)  
             |  IfStmt(stmt_info, x::rest, if_stmt_info) -> 
-              let rest' = flattenList (List.map rest ~f:(fun stmt -> auc stmt)) in 
-              [IfStmt(stmt_info, x::rest', if_stmt_info)]
+              let rest' = (List.map rest ~f:(fun stmt -> auc stmt)) in 
+              IfStmt(stmt_info, x::rest', if_stmt_info)
             | CompoundStmt (stmt_info, stmt_list) -> 
-              let rest' = flattenList (List.map stmt_list ~f:(fun stmt -> auc stmt)) in 
-              [CompoundStmt (stmt_info, rest')]
-            | _ -> [stmt]
+              let rest' = (List.map stmt_list ~f:(fun stmt -> auc stmt)) in 
+              CompoundStmt (stmt_info, rest')
+            | _ -> stmt
 
           in 
 
-          flattenList (List.map li ~f:(fun stmt -> auc stmt))
+          (List.map li ~f:(fun stmt -> auc stmt))
 
         in 
 
-        let stmt_list = if List.length xs > 3 then stmt_list else preProcess stmt_list in 
+        let stmt_list = if List.length xs > 10 then stmt_list else preProcess stmt_list in 
         let stmt' = List.append stmt_list xs in 
         let states = helper current' stmt' in 
-        List.map states ~f:(fun (a, b, c, d)-> if c > 1 then (a, b, 0, d) else (a, b, c, d))
+        print_endline ("aiyouahhahhahahhah: " ^ string_of_programStates states);
+        states
         
       else 
         let (fp, _) = stmt_intfor2FootPrint stmt_info in 
@@ -1501,21 +1567,26 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | (IfStmt (stmt_info, [x;y], if_stmt_info)) :: xsifelse -> 
       if peekTheEffectOfStmtsAndItHasEffects [y] then 
         (
+        (*print_endline ("IfStmt 2 true");*)
         let elseBranch = Clang_ast_t.CompoundStmt (stmt_info, []) in 
         let statement' = Clang_ast_t.IfStmt (stmt_info, [x;y;elseBranch], if_stmt_info) in 
         helper current' (statement'::xsifelse))
       else 
         (
+        print_endline ("IfStmt 2 false"); 
         let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y], if_stmt_info)) in 
         let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
         let effectRest = helper new_history xsifelse in 
-        concatenateTwoEffectswithFlag effectLi4X effectRest)
+        concatenateTwoEffectswithFlag effectLi4X effectRest
+        )
 
 
     | (IfStmt (stmt_info, [x;y;z], if_stmt_info)) :: xsifelse -> 
 
       if not (peekTheEffectOfStmtsAndItHasEffects [y;z]) then 
         (
+        (*print_endline ("IfStmt 3 false"); *)
+
         (*print_endline ("no effect");*)
         let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y;z], if_stmt_info)) in 
         let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
@@ -1530,6 +1601,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         )
       else 
         (
+        (* print_endline ("IfStmt 3 true"); *)
+
         let addTail (a:Clang_ast_t.stmt) = 
           match a with
           | CompoundStmt (c_stmt_info, c_stmt_list) ->  Clang_ast_t.CompoundStmt (c_stmt_info, List.append c_stmt_list xsifelse) 
@@ -1544,7 +1617,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       | Some TRUE 
       | Some FALSE -> 
         let temp = helper current'  (x::y::xs) in 
-        print_endline ("dostmt after1: " ^ string_of_programStates temp);
         temp 
       | Some condition -> 
         print_endline ("dostmt " ^ string_of_pure condition);
@@ -1586,6 +1658,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       in 
 
       let stmt_list' = aux [] [] stmt_list in 
+
+      let stmt_list' = List.filter stmt_list' ~f:(fun a -> (peekTheEffectOfStmtsAndItHasPostOrFutureEffects a)) in 
       (*
       print_endline ("number of switch cases: " ^ string_of_int (List.length stmt_list'));
 *)
@@ -1841,7 +1915,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           in 
           res
         )
-      | [y;z] -> 
+      | y::z::_ -> 
         let (locX, _) = maybeIntToListInt (getStmtlocation y) in 
 
         let (locY, _) = maybeIntToListInt (getStmtlocation y) in 
@@ -2006,7 +2080,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       | Some (Neg(Eq(Basic( BVAR varFromX), Basic(BINT 0))))  -> 
         if twoStringSetOverlap [getRoot varFromX] (!varSet) then 
           (
-          print_endline (" `And | `LAnd" ^ (match (stmt2Pure x) with | Some pure -> string_of_pure pure | None -> "") );
+          (*print_endline (" `And | `LAnd" ^ (match (stmt2Pure x) with | Some pure -> string_of_pure pure | None -> "") );*)
           [(Ast_utility.TRUE, Emp, 0, fp)])
         else 
           (let stateX = syh_compute_stmt_postcondition current future x in 
