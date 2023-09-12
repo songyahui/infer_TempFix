@@ -1483,7 +1483,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | DeclStmt (_, [x], handler::handlerRest):: xs  ->
       let _ = List.map (handler::handlerRest) ~f:(fun del -> 
         let localVar = (string_of_decl del) in 
-        print_endline ("DeclStmt1 : " ^ localVar);
         let () = variablesInScope := !variablesInScope @ [localVar] in 
         ()
       ) in 
@@ -1791,7 +1790,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let (fp, _) =  getStmtlocation instr in 
       let varFromX = string_of_stmt x in 
 
-      let ev = if twoStringSetOverlap [getRoot varFromX] (!varSet@(!parametersInScope)) then 
+      let ev = if twoStringSetOverlap [getRoot varFromX] (!varSet@(!variablesInScope)@(!parametersInScope)) then 
         Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
         else Emp
       in 
@@ -2192,7 +2191,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
     let _ = List.map handlers ~f:(fun del -> 
       let localVar = (string_of_decl del) in 
-      print_endline ("DeclStmt2 : " ^ localVar);
       let () = variablesInScope := !variablesInScope @ [localVar] in 
 
       ()
