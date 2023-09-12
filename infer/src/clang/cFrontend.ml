@@ -1812,7 +1812,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let (fp, _) =  getStmtlocation instr in 
       let varFromX = string_of_stmt x in 
 
-      let ev = if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope)) then 
+      let ev = if twoStringSetOverlap [getRoot varFromX] (!varSet@(!parametersInScope)) then 
         Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
         else Emp
       in 
