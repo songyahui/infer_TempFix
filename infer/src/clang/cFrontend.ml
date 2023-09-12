@@ -1076,7 +1076,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     
     
     
-   (* 
+   (*
     print_string ("==> helper: ");
     let _ = List.map li ~f:(fun a-> 
       let (fp, _) = getStmtlocation a in 
@@ -1103,30 +1103,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let () = variablesInScope := !variablesInScope @ [localVar] in 
       helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)
 
-    (*
-    | DeclStmt (stmt_info, x ::rest, [del]) ::xs ->
-      print_endline ("checking DeclStmt: "^(string_of_stmt x));
-      print_endline ("with Hanlder: "^(string_of_decl del));
 
-      if String.compare (string_of_stmt x) "0" ==0 then 
-        let callname = "assignnullsyh" in 
-        let ei = {Clang_ast_t.ei_qual_type={Clang_ast_t.qt_type_ptr=Clang_ast_types.TypePtr.Ptr (0);qt_is_const=false;qt_is_restrict=false;qt_is_trivially_copyable=false;qt_is_volatile=false};ei_value_kind=`RValue;ei_object_kind=`Ordinary} in 
-        let declRefExprStmt = constructADeclRefExprStmt stmt_info ei callname in 
-        let localVar = (string_of_decl del) in 
-        print_endline ("assignning null to " ^ localVar);
-
-        let () = handlerVar := Some (localVar) in 
-        let () = variablesInScope := !variablesInScope @ [localVar] in 
-  
-        helper current' ((Clang_ast_t.CallExpr (stmt_info, [declRefExprStmt], ei))::xs)
-
-
-      else
-        (let effectLi4X = syh_compute_stmt_postcondition current' future (Clang_ast_t.DeclStmt (stmt_info, x ::rest, [del])) in 
-        let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
-        let effectRest = helper new_history xs in 
-        concatenateTwoEffectswithFlag effectLi4X effectRest)
-*)
 
     | (CallExpr (stmt_info, stmt_list, ei)) ::xs 
     | CStyleCastExpr(_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _) ::xs 
@@ -1251,11 +1228,12 @@ let rec syh_compute_stmt_postcondition (current:programStates)
               print_endline (" ================= ");
               let temp = List.fold_left futureLi ~init:[] ~f:(fun acc a ->
                 
+                (*
                 print_endline (getRoot handler);
                 print_endline (string_of_bool (twoStringSetOverlap [getRoot handler] !parametersInScope));
                 print_endline (string_of_effect [a]);
                 print_endline (string_of_bool (existRetEvent (Some [a])));
-                
+                *)
                 if  twoStringSetOverlap [getRoot handler] !parametersInScope && existRetEvent (Some [a]) then 
                   acc 
                 else acc @ [a]
@@ -1505,6 +1483,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | DeclStmt (_, [x], handler::handlerRest):: xs  ->
       let _ = List.map (handler::handlerRest) ~f:(fun del -> 
         let localVar = (string_of_decl del) in 
+        print_endline ("DeclStmt1 : " ^ localVar);
         let () = variablesInScope := !variablesInScope @ [localVar] in 
         ()
       ) in 
@@ -1993,12 +1972,12 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       (*
       print_endline ("dereferenceing ... " ^ varFromX);
       print_endline ("afrer  ... " ^ getMostRoot varFromX);
-      print_endline ("!varSet@(!parametersInScope): " ^ List.fold_left (!varSet@(!parametersInScope)) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
+      print_endline ("!varSet@(!variablesInScope)@(!parametersInScope): " ^ List.fold_left (!varSet@(!variablesInScope)@(!parametersInScope)) ~init:"" ~f:(fun acc a -> acc ^ "," ^ a)) ; 
 
-      print_endline (string_of_bool (twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope))));
+      print_endline (string_of_bool (twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!variablesInScope)@(!parametersInScope))));
 *)
 
-      let ev = if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!parametersInScope)) then 
+      let ev = if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!variablesInScope)@(!parametersInScope)) then 
         Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
         else Emp
       in 
@@ -2016,6 +1995,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
 
 
+    print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.get_stmt_kind_string y ^ string_of_stmt y ); 
 
     (match binop_info.boi_kind with
     | `Assign -> 
@@ -2054,9 +2034,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
     
     
-    (*
-        print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.get_stmt_kind_string y ); 
-*)
+    
+
 
 
       
@@ -2206,23 +2185,16 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     [(TRUE, Emp, 0, fp)]
 
 
-  | DeclStmt (_, [], del::rest) -> 
-    let _ = List.map ( del::rest) ~f:(fun del -> 
-      let localVar = (string_of_decl del) in 
-      let () = variablesInScope := !variablesInScope @ [localVar] in 
-    ()) in 
-    let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
-    [(TRUE, Emp, 0, fp)]
 
-
-      
 
 
   | DeclStmt (_, _, handlers) -> 
 
     let _ = List.map handlers ~f:(fun del -> 
       let localVar = (string_of_decl del) in 
+      print_endline ("DeclStmt2 : " ^ localVar);
       let () = variablesInScope := !variablesInScope @ [localVar] in 
+
       ()
     ) in 
     
