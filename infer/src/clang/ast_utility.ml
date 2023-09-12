@@ -2017,7 +2017,10 @@ let rec compareFootPrint li1 li2 =
 
   
 (*1. to silence the NPE errors, and to use different line number for different projects. *)
-let specificBenchamrks address  = 
+let specificBenchamrks address  functionEnd functionStart = 
   let strLi = String.split_on_chars  address ['/'] in 
-  if twoStringSetOverlap ["lxc";"recutils-1.8"] strLi then true 
+  if twoStringSetOverlap ["lxc"] strLi && (functionEnd - functionStart > 225) then true 
+  else if twoStringSetOverlap ["recutils-1.8"] strLi && (functionEnd - functionStart > 300) then true 
+  else if twoStringSetOverlap ["WavPack";"x264";"snort-2.9.13"] strLi && (functionEnd - functionStart > 180) then true 
+  else if (functionEnd - functionStart > 800) then true
   else false 

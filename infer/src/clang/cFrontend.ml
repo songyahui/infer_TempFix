@@ -1248,12 +1248,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           let futurec = (match futurec with
             | None -> None 
             | Some futureLi -> 
+              print_endline (" ================= ");
               let temp = List.fold_left futureLi ~init:[] ~f:(fun acc a ->
-                (*print_endline (getRoot handler);
+                
+                print_endline (getRoot handler);
                 print_endline (string_of_bool (twoStringSetOverlap [getRoot handler] !parametersInScope));
                 print_endline (string_of_effect [a]);
                 print_endline (string_of_bool (existRetEvent (Some [a])));
-                *)
+                
                 if  twoStringSetOverlap [getRoot handler] !parametersInScope && existRetEvent (Some [a]) then 
                   acc 
                 else acc @ [a]
@@ -1573,7 +1575,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         helper current' (statement'::xsifelse))
       else 
         (
-        print_endline ("IfStmt 2 false"); 
+        (*print_endline ("IfStmt 2 false"); *)
         let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y], if_stmt_info)) in 
         let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
         let effectRest = helper new_history xsifelse in 
@@ -2063,7 +2065,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       (match (stmt2Pure x) with 
       | Some (Eq(Basic( BVAR varFromX), Basic(BINT 0)))  -> 
         if twoStringSetOverlap [getRoot varFromX] (!varSet) then 
-          (print_endline ("`Or | `LOr | `Xor-> " ^ varFromX);
+          (
+          (*print_endline ("`Or | `LOr | `Xor-> " ^ varFromX);*)
           [(Ast_utility.TRUE, Emp, 0, fp)])
         else
           let stateX = syh_compute_stmt_postcondition current future x in 
@@ -2107,10 +2110,11 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
   | GotoStmt (stmt_infogoto, _, {Clang_ast_t.gsi_label= label_name; _}) ->
 
-    (match findLableSpec !gotoStmtSpec label_name with 
+    (
+      (*match findLableSpec !gotoStmtSpec label_name with 
     | Some spec -> spec
     | None ->  
-
+*)
         
     let (fpGOTO, _) = stmt_intfor2FootPrint stmt_infogoto in 
     
@@ -2133,10 +2137,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             else 
             (
               let restStmt = xs (*find_stmtTillNextLable xs []*) in 
-              print_endline ("=============");
+              (*print_endline ("=============");
               print_endline ("The stmt for label :"^ label_name);
               let _ = List.map (stmt_list@ restStmt) ~f:(fun a-> print_string ((Clang_ast_proj.get_stmt_kind_string a)^", ")) in 
-              print_endline ("");
+              print_endline ("");*)
               stmt_list@ restStmt
             ) 
           | _ -> []
@@ -2338,7 +2342,8 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       | Some stmt -> 
       let funcName = named_decl_info.ni_name in 
 
-      if specificBenchamrks source_Addressnow &&(functionEnd - functionStart > 300) then 
+
+      if specificBenchamrks source_Addressnow functionEnd functionStart then 
         let () = currentModule := funcName in 
         (scanForTheFunctionCallsWithoutHandlders [stmt])
       else 
