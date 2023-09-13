@@ -636,6 +636,13 @@ let rec string_of_effect (eff:effect) : string =
   | [] -> ""
   | [(pi, es)] ->  "(" ^ string_of_pure pi ^ " /\\ " ^ string_of_es es ^ ")"
   | (pi, es) :: xs ->  "(" ^ string_of_pure pi ^ " /\\ " ^ string_of_es es ^ ") \\/ " ^ string_of_effect xs
+
+
+let rec string_of_effect_option (eff:effect option) : string = 
+  match eff with 
+  | None -> "no spec"
+  | Some eff -> string_of_effect eff
+
   
 let rec string_of_programStates (eff:programStates) : string = 
   match eff with 
@@ -2021,6 +2028,8 @@ let specificBenchamrks address  functionEnd functionStart =
   let strLi = String.split_on_chars  address ['/'] in 
   if twoStringSetOverlap ["lxc"] strLi && (functionEnd - functionStart > 225) then true 
   else if twoStringSetOverlap ["recutils-1.8";"grub"] strLi && (functionEnd - functionStart > 300) then true 
-  else if twoStringSetOverlap ["WavPack";"x264";"snort-2.9.13"] strLi && (functionEnd - functionStart > 180) then true 
+  else if twoStringSetOverlap ["WavPack";"x264"] strLi && (functionEnd - functionStart > 180) then true 
+  else if twoStringSetOverlap ["snort-2.9.13"] strLi && (functionEnd - functionStart > 218) then true 
+  
   else if (functionEnd - functionStart > 800) then true
   else false 

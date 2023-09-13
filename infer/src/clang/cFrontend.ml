@@ -630,7 +630,7 @@ let insertSpecifications moduleName (newSpec:specification) =
     | _ -> post 
   in 
   match pre, post, future with 
-  | (_, Some _, _ )  -> ()
+  | (_, _, _ )  -> ()
   | (None, None, None ) -> ()
   | _ -> 
     (match findSpecFrom !propogatedSpecs !currentModule with 
@@ -816,7 +816,7 @@ let program_repair ((callee, fp):(string * int list)) (info:((error_info list) *
   let rec existSameRecord recordList ((str, line, spec), start, endNum)  : bool = 
     match recordList with 
     | [] -> false 
-    | ((fname, fp', spec'), s',e'):: recordListxs -> 
+    | ((fname, fp', spec'), s', _):: recordListxs -> 
       if String.compare fname str == 0 && compareFootPrint fp' line 
         && (not (existRetEventESPrime spec')) && comparees spec' spec then 
         (
@@ -826,7 +826,8 @@ let program_repair ((callee, fp):(string * int list)) (info:((error_info list) *
         
         true 
         )
-      else if start ==s' (*&& endNum==e'*) then true else existSameRecord recordListxs ((str, line, spec), start, endNum)
+      (*else if start ==s' (*&& endNum==e'*) then true*)
+      else existSameRecord recordListxs ((str, line, spec), start, endNum)
   in 
   
   let rec aux arg : unit  = 
@@ -1196,6 +1197,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         match !handlerVar with 
         | None -> 
           let postc' = if existRetEff postc then None else postc in 
+
+          (*print_endline ("futurec: " ^ string_of_effect_option  futurec); *)
           let futurec' = 
             if existRetEff futurec then 
               if existRetEvent futurec then 
@@ -1204,6 +1207,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
               else None 
             else futurec
           in 
+          (*print_endline ("futurec': " ^ string_of_effect_option  futurec'); *)
+
           (postc', futurec', "")
           
           (*
@@ -1222,10 +1227,41 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           (*if twoStringSetOverlap [getRoot handler] !parametersInScope && existRetEvent futurec then 
             (instantiateReturn postc handler, None, handler)
           else *)
+
+          let rec checkIsGlobalVar str strLi : bool  = (* true means it is global *)
+          match strLi with 
+          | [] -> true 
+          | x::xs -> (* x=  ptr, and str = ptr.filed *)
+            if String.compare x str == 0  then false 
+            else checkIsGlobalVar str xs
+          in 
+
+          let futurec = 
+            if checkIsGlobalVar (getRoot handler) !variablesInScope then 
+              (match futurec with
+              | None -> None 
+              | Some futureLi -> 
+                let temp = List.fold_left futureLi ~init:[] ~f:(fun acc a ->
+                  
+                  match a with 
+                  | (Eq(Basic(BRET), Basic(BINT 0)), Kleene(NotSingleton(_, [BRET])))  -> 
+                    (* ((ret=0), (!_(ret))^* ) *)
+                    print_endline ("checking  ((ret=0), (!_(ret))^* ) for "^  handler);
+                    acc @[a]
+                  | _ ->  acc  
+                  
+                ) in 
+                if List.length temp == 0 then None 
+                else Some temp
+              )
+              (*  if  handler is global, we still need to check the derefrencing properties *)
+            else futurec
+          in 
+
+
           let futurec = (match futurec with
             | None -> None 
             | Some futureLi -> 
-              print_endline (" ================= ");
               let temp = List.fold_left futureLi ~init:[] ~f:(fun acc a ->
                 
                 (*
@@ -1426,14 +1462,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           
           let currentHandler = string_of_stmt x in 
 
-          
-          let rec checkIsGlobalVar str strLi : bool  = (* true means it is global *)
-            match strLi with 
-            | [] -> true 
-            | x::xs -> (* x=  ptr, and str = ptr.filed *)
-              if String.compare x str == 0  then false 
-              else checkIsGlobalVar str xs
-          in 
 
           let stateX = syh_compute_stmt_postcondition current' future x in 
 
@@ -1449,9 +1477,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
           let rest = 
-            if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
+            (*if checkIsGlobalVar (getRoot currentHandler) !variablesInScope then 
               helper current' xs
             else 
+            *)
               (let () = handlerVar := Some (currentHandler) in 
               helper current' ((Clang_ast_t.CallExpr (stmt_info, stmt_list, ei))::xs)) in 
           concatenateTwoEffectswithFlag stateX rest
@@ -1492,7 +1521,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             match x with
             | DeclStmt _ ->  
               helper current' (x::xs)
-      
             | _ ->          
             (*
             print_endline ("DeclStmt0 " ^  string_of_decl handler ^ " " ^ Clang_ast_proj.get_stmt_kind_string x ); 
@@ -1994,8 +2022,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
 
 
+    (*
     print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.get_stmt_kind_string y ^ string_of_stmt y ); 
-
+*)
     (match binop_info.boi_kind with
     | `Assign -> 
       
@@ -2187,7 +2216,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
 
-  | DeclStmt (_, _, handlers) -> 
+  | DeclStmt (stmt_info, stmt_list, handlers) -> 
+
+    
 
     let _ = List.map handlers ~f:(fun del -> 
       let localVar = (string_of_decl del) in 
@@ -2196,8 +2227,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       ()
     ) in 
     
-    let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
-    [(TRUE, Emp, 0, fp)]
+    let (fp, _) = stmt_intfor2FootPrint stmt_info in 
+    prefixLoction fp (helper current stmt_list)
+
 
 
 
