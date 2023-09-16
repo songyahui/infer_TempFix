@@ -354,7 +354,11 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
   (match stmt_list with 
   | [] -> None 
   | y :: restY -> extractEventFromFUnctionCall y rest)
-| _ -> None 
+| _ -> 
+  print_string ("extractEventFromFUnctionCall" ^ Clang_ast_proj.get_stmt_kind_string x );
+  print_endline ("none");
+
+  None 
 )
 
 let getFirst (a, _) = a
@@ -1315,8 +1319,12 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                 print_endline (string_of_effect [a]);
                 print_endline (string_of_bool (existRetEvent (Some [a])));
                 *)
-                if  twoStringSetOverlap [getRoot handler] !parametersInScope && existRetEvent (Some [a]) then 
-                  acc 
+
+                if  twoStringSetOverlap [getRoot handler] !parametersInScope (*&& existRetEvent (Some [a])*) then 
+                  match a with 
+                  | (Eq(Basic(BRET), Basic(BINT 0)), Kleene(NotSingleton(_, [BRET])))  -> acc @ [a]
+                  | _ -> acc
+                   
                 else acc @ [a]
               ) in 
               if List.length temp == 0 then None 
@@ -1490,6 +1498,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     | BinaryOperator (_, _::(ImplicitCastExpr (_, [(BinaryOperator (stmt_info1, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info))], _, _, _))::_, _, _) :: xs 
     | BinaryOperator (_, _::(ImplicitCastExpr (_, [BinaryOperator (stmt_info1, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info)], _, _, _))::_, _, _) :: xs 
     | BinaryOperator (_, _::(ImplicitCastExpr (_, [BinaryOperator (stmt_info1, x::(CallExpr (stmt_info, stmt_list, ei))::_, expr_info, binop_info)], _, _, _))::_, _, _) :: xs 
+    | BinaryOperator (stmt_info1, x::(ImplicitCastExpr (_, [(ParenExpr (_, [(ConditionalOperator (_, (CallExpr (stmt_info, stmt_list, ei))::_ , _))], _))], _, _, _))::_,expr_info, binop_info) :: xs 
 
     | BinaryOperator (stmt_info1, x::(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
     | BinaryOperator (stmt_info1, x::(CStyleCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))::_, expr_info, binop_info) :: xs 
@@ -1908,6 +1917,11 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
   | IfStmt (stmt_info, stmt_list, if_stmt_info) ->
+  (*
+  let (fp, _) = getStmtlocation instr in 
+  let fp = match fp with | None -> [] | Some l -> [l] in 
+  print_string ((Clang_ast_proj.get_stmt_kind_string instr) ^ string_of_foot_print fp ^ ", ");
+*)
     (*print_endline ("IfElse:" ^ string_of_programStates current ^ "\n"); *)
     
 
@@ -1980,6 +1994,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
 
         | Some (condition, morevar) -> 
+
           let eff4X = syh_compute_stmt_postcondition current future  x in
           let eff4Y = syh_compute_stmt_postcondition current future  y in
           let res = prefixLoction locX 
@@ -2084,11 +2099,15 @@ let rec syh_compute_stmt_postcondition (current:programStates)
   | CallExpr _ -> helper current [instr]
 
 
-  | BinaryOperator (stmt_info, x::y::_, expr_info, binop_info)->
+  | BinaryOperator (stmt_info, x::y::rest, expr_info, binop_info)->
     let (fp, _) = stmt_intfor2FootPrint stmt_info in 
 
 
     (*
+    let (fp, _) = getStmtlocation instr in 
+    let fp = match fp with | None -> [] | Some l -> [l] in 
+    print_string ((Clang_ast_proj.get_stmt_kind_string instr) ^ string_of_foot_print fp ^ ", ");
+  
     print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.get_stmt_kind_string y ^ string_of_stmt y ); 
 *)
     (match binop_info.boi_kind with
