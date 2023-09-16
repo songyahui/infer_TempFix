@@ -250,6 +250,14 @@ let rec string_of_pure_output (p:pure):string =
   | Neg (Eq (t1, t2)) -> "("^(string_of_terms t1) ^ "!=" ^ (string_of_terms t2)^")"
   | Neg p -> "!(" ^ string_of_pure_output p^")"
 
+
+let rec eliminateRetConstrains(p:pure):pure =   
+  match p with
+  | Eq (Basic(BRET), _) -> TRUE
+  | PureOr (p1, p2) -> PureOr (eliminateRetConstrains p1, eliminateRetConstrains p2)
+  | PureAnd (p1, p2) -> PureAnd (eliminateRetConstrains p1, eliminateRetConstrains p2)
+  | _ -> p
+
 let rec varFromTerm (t:terms): string list =   
   match t with
   | Basic (BVAR v) -> [v]
@@ -1570,7 +1578,7 @@ let string_of_inclusion_results (extra_info: string) (info:((error_info list) * 
     "Inclusion Succeed!\n" ^  string_of_binary_tree tree  *)
   else 
     extra_info^ 
-    "Failed!\n" ^  string_of_binary_tree tree   
+    "Failed!\n" (* ^  string_of_binary_tree tree   *)
 
 let string_of_function_sepc (pre, post, future) : string = 
   let pre = match pre with 
@@ -1867,7 +1875,11 @@ let rec returningNULL eff : bool =
 
 
 let isNotProjectFile source_Address' source_Addressnow'  = 
-  String.compare source_Address' source_Addressnow' != 0 
+  (*let strLi = String.split_on_chars source_Addressnow' ['/'] in 
+  if twoStringSetOverlap ["inetutils-1.9.4";"swoole-src";"flex";"p11-kit";"lxc";"recutils-1.8";"grub";"WavPack";"x264";"snort-2.9.13"] strLi then false  
+  else 
+  *)
+    String.compare source_Address' source_Addressnow' != 0 
   (*let source_Address = String.sub source_Address' 0 33 in 
   let source_Addressnow = String.sub source_Addressnow' 0 33 in 
   String.compare source_Address source_Addressnow != 0
@@ -2030,6 +2042,5 @@ let specificBenchamrks address  functionEnd functionStart =
   else if twoStringSetOverlap ["recutils-1.8";"grub"] strLi && (functionEnd - functionStart > 300) then true 
   else if twoStringSetOverlap ["WavPack";"x264"] strLi && (functionEnd - functionStart > 180) then true 
   else if twoStringSetOverlap ["snort-2.9.13"] strLi && (functionEnd - functionStart > 218) then true 
-  
   else if (functionEnd - functionStart > 800) then true
   else false 
