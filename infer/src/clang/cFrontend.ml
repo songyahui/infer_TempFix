@@ -786,7 +786,7 @@ let computeRange intList =
 
 
 
-let program_repair ((callee, fp):(string * int list)) (info:((error_info list) * binary_tree * pathList * pathList)) specifications : (string * string) = 
+let program_repair prefix ((callee, fp):(string * int list)) (info:((error_info list) * binary_tree * pathList * pathList)) specifications : (string * string) = 
   
   let headMsg = ref "" in 
   let repairMsg = ref "" in 
@@ -884,7 +884,7 @@ let program_repair ((callee, fp):(string * int list)) (info:((error_info list) *
         | Some str -> 
           let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
           if String.compare str "" == 0 then " can be deleted." 
-          else  " can be inserted with code " ^  str)
+          else  " can be inserted with code: " ^ prefix ^ str)
          ^ "\n" 
          (*^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n\n"*)
         ) in 
@@ -972,14 +972,15 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                     let (functionStart, _) = !currentFunctionLineNumber in 
                     let start:int  = match fp with 
                     | [] -> functionStart
-                    | x :: _ ->  x 
+                    | x :: _ ->  x + 1
                     in 
                     match futurec with 
                     | None -> []
                     | Some futurec -> 
                     List.map futurec ~f:(fun (pi, es) -> (pi, Emp, start, es)) in 
                   let info :((error_info list) * binary_tree * pathList * pathList) = (error_infos, Leaf, [], []) in 
-                  let (head, patches) = program_repair (calleeName, fp) info !propogatedSpecs in 
+                  let prefix = "int " ^ freshVar ^ " = "^ string_of_event (calleeName, acturelli) ^"; " in 
+                  let (head, patches) = program_repair prefix (calleeName, fp) info !propogatedSpecs in 
                   if String.compare patches "" == 0 then 
                     (modifiyTheassertionCounters();
                     let () = finalReport := !finalReport ^ extra_info in 
@@ -987,9 +988,7 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                   else 
                     let () = finalReport := !finalReport ^ extra_info in 
                     let () = finalReport := !finalReport ^ head in 
-                    let () = finalReport := !finalReport ^ ("[Patches]\n") ^ 
-                    "int " ^ freshVar ^ " = "^ string_of_event (calleeName, acturelli) ^";\n" ^ 
-                    patches ^ "\n" in 
+                    let () = finalReport := !finalReport ^ ("[Patches]\n") ^ patches ^ "\n" in 
                     ()
       
 
@@ -1257,7 +1256,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             "\n~~~~~~~~~ In function: "^ !currentModule ^" ~~~~~~~~~\n" ^
             "Pre-condition checking for \'"^calleeName^"\': " in 
             (*print_endline (string_of_inclusion_results extra_info info); *)
-            let (head, patches) = program_repair (calleeName, fp) info !propogatedSpecs in 
+            let (head, patches) = program_repair "" (calleeName, fp) info !propogatedSpecs in 
             if String.compare patches "" == 0 then 
             ()
             else 
@@ -1475,7 +1474,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                     ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
                     (*print_endline (string_of_inclusion_results extra_info info); *)
                     
-                      let (head, patches) = program_repair (calleeName, fp) singleInfo !propogatedSpecs in 
+                      let (head, patches) = program_repair "" (calleeName, fp) singleInfo !propogatedSpecs in 
                       if String.compare patches "" == 0 then 
                       ()
                       else 
@@ -1501,7 +1500,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                       (*print_endline (string_of_inclusion_results extra_info info); *)
                       
             
-                        let (head, patches) = program_repair (calleeName, fp) singleInfo !propogatedSpecs in 
+                        let (head, patches) = program_repair "" (calleeName, fp) singleInfo !propogatedSpecs in 
                         if String.compare patches "" == 0 then 
                         ()
                         else 
@@ -2575,7 +2574,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
 
 
 
-          (let (head, patches) = program_repair info specifications in 
+          (let (head, patches) = program_repair "" info specifications in 
           if String.compare patches "" == 0 then 
           ()
           else 
