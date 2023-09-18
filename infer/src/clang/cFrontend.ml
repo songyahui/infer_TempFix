@@ -845,7 +845,7 @@ let program_repair ((callee, fp):(string * int list)) (info:((error_info list) *
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
         let (startNum, endNum) = 
-          let startNum' = if lowerError > startNum then lowerError else startNum in 
+          let startNum' = if lowerError > (startNum +2) then lowerError else startNum in 
           let endNum' = if upperError < endNum then upperError else endNum in 
           (startNum', endNum')
         in 
