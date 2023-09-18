@@ -839,9 +839,9 @@ let program_repair ((callee, fp):(string * int list)) (info:((error_info list) *
       let (pathcondition, realspec, (startNum ,endNum),  spec) = arg in 
         (*let startNum = getFirstPostion realspec startNum in *)
 
-        (*
+        
         print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
-*)
+
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
         let (startNum, endNum) = 
@@ -849,9 +849,9 @@ let program_repair ((callee, fp):(string * int list)) (info:((error_info list) *
           let endNum' = if upperError < endNum then upperError else endNum in 
           (startNum', endNum')
         in 
-(*
+
         print_endline ("after:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
-*)
+
 
 
         if existSameRecord !repairRecord ((callee, fp, spec), startNum ,endNum)  then ()
