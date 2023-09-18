@@ -966,8 +966,33 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                   ^ string_of_function_sepc (prec, postc, futurec)^"\n"
                   in 
                   modifiyTheassertionCounters();
-                  let () = finalReport := !finalReport ^ extra_info in 
-                  () 
+                  (* trying to repair the no handler error ... *)
+                  let freshVar = verifier_getAfreeVar "r" in 
+                  let futurec =  instantiateReturn futurec freshVar in 
+                  let error_infos :(error_info list) = 
+                    let (functionStart, _) = !currentFunctionLineNumber in 
+                    let start:int  = match fp with 
+                    | [] -> functionStart
+                    | x :: _ ->  x 
+                    in 
+                    match futurec with 
+                    | None -> []
+                    | Some futurec -> 
+                    List.map futurec ~f:(fun (pi, es) -> (pi, Emp, start, es)) in 
+                  let info :((error_info list) * binary_tree * pathList * pathList) = (error_infos, Leaf, [], []) in 
+                  let (head, patches) = program_repair (calleeName, fp) info !propogatedSpecs in 
+                  if String.compare patches "" == 0 then 
+                    let () = finalReport := !finalReport ^ extra_info in 
+                    () 
+                  else 
+                    let () = finalReport := !finalReport ^ extra_info in 
+                    let () = finalReport := !finalReport ^ head in 
+                    let () = finalReport := !finalReport ^ ("[Patches]\n") ^ patches ^ "\n" in 
+                    ()
+      
+
+                  (* trying to repair the no handler error ... *)
+
                 else () 
               else () 
             | _ -> ()   )
