@@ -963,9 +963,8 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                   let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
                   ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp 
                   ^"\': Failed! because there is no handler ! \n"
-                  ^ string_of_function_sepc (prec, postc, futurec)^"\n"
+                  (*^ string_of_function_sepc (prec, postc, futurec)^"\n"*)
                   in 
-                  modifiyTheassertionCounters();
                   (* trying to repair the no handler error ... *)
                   let freshVar = verifier_getAfreeVar "r" in 
                   let futurec =  instantiateReturn futurec freshVar in 
@@ -982,8 +981,9 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                   let info :((error_info list) * binary_tree * pathList * pathList) = (error_infos, Leaf, [], []) in 
                   let (head, patches) = program_repair (calleeName, fp) info !propogatedSpecs in 
                   if String.compare patches "" == 0 then 
+                    (modifiyTheassertionCounters();
                     let () = finalReport := !finalReport ^ extra_info in 
-                    () 
+                    () )
                   else 
                     let () = finalReport := !finalReport ^ extra_info in 
                     let () = finalReport := !finalReport ^ head in 
