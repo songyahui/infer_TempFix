@@ -1305,15 +1305,22 @@ let bugLocalisation (paths: error_info list): (pure * es * (int * int) * es) lis
       let revrhs = reversees rhs in 
       let (_, functionEnd) = !currentFunctionLineNumber in 
 
+      (*let entailent = showEntailemnt revlhs revrhs in 
+
+      print_endline ("----------bugLocalisation----------\n"^ entailent); 
+    *)
       let (result, tree) = inclusion' pathcondition functionEnd revlhs revrhs [] in 
+
+      (*print_endline (string_of_binary_tree tree);*)
       modifiyTheProofOblgationCounters result; 
 
       (*
       print_string (showEntailemnt revlhs revrhs ^ " " ^ string_of_int (List.length result)^"\n ------- \n");
 *)
+      (*print_endline ("----------End bugLocalisation----------\n");*)
       let temp = List.map result ~f:(fun (pathcondition, a, n, b)-> 
-(*      print_string (showEntailemnt (reversees a) (reversees b) ^ "\n ------- \n");
-*)
+      print_string (showEntailemnt (reversees a) (reversees b) ^ "\n ------- \n");
+
         (*print_endline ("startpoint:" ^ (string_of_int start) ^ " endpoint:" ^ (string_of_int n)); *)
         (pathcondition, reversees a, (start, n), reversees b)) in 
 
@@ -1522,7 +1529,9 @@ let rec findReturnValueES es : string option =
 
 
 let findReturnValueESOrParameter es (currentHandler:string): string option = 
-  match findReturnValueES es with 
+  match normalise_es es with 
+  | Emp -> 
+  (match findReturnValueES es with 
   | Some str -> 
     if String.compare (getRoot str) (getRoot currentHandler) == 0 then Some str 
     else 
@@ -1530,7 +1539,8 @@ let findReturnValueESOrParameter es (currentHandler:string): string option =
       else None 
   | None  -> 
     (* if twoStringSetOverlap [(getRoot currentHandler)] (!parametersInScope) then Some currentHandler 
-    else*) None 
+    else*) None )
+  | _ -> None 
       
 
 let rec findReturnValueProgramStates (eff:programStates) : string option =
@@ -1575,10 +1585,10 @@ let effectwithfootprint2Effect eff =
 let string_of_inclusion_results (extra_info: string) (info:((error_info list) * binary_tree * pathList * pathList)) : string = 
   let (error_paths, tree, correctTraces, errorTraces) = info in 
   if List.length error_paths == 0 then "" (*^
-    "Inclusion Succeed!\n" ^  string_of_binary_tree tree  *)
+     "Inclusion Succeed!\n" ^  string_of_binary_tree tree  *)
   else 
     extra_info^ 
-    "Failed!\n" (* ^  string_of_binary_tree tree   *)
+    "Failed!\n"  (*^  string_of_binary_tree tree   *)
 
 let string_of_function_sepc (pre, post, future) : string = 
   let pre = match pre with 

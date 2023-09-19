@@ -122,37 +122,7 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
     if String.compare memArg "" == 0 then Some (Basic(BVAR(name )))
     else Some (Basic(BVAR(name ^ "." ^ memArg)))
 
-(*
-  | MemberExpr (_, arlist, _, member_expr_info)  -> 
-    let memArg = member_expr_info.mei_name.ni_name in 
-    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
-    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
-    acc ^ (
-      match a with
-      | None -> "_"
-      | Some t -> string_of_terms t ^ "."
-    )) in 
-    Some (Basic(BVAR(name^memArg)))
 
-
-  | ArraySubscriptExpr (_, arlist, _)  -> 
-    let temp = List.map arlist ~f:(fun a -> stmt2Term a) in 
-    (*print_endline (string_of_int (List.length temp)); *)
-    let name  = List.fold_left temp ~init:"" ~f:(fun acc a -> 
-    acc ^ (
-      match a with
-      | None -> "_"
-      | Some t -> 
-        let str = string_of_terms t in 
-        let strLi = String.split_on_chars  str ['-'] in 
-        (match strLi with
-        | [] -> str 
-        | x :: _ -> x)
-        ^ "_"
-    )) in 
-    Some (Basic(BVAR(name)))
-   
-*)
   | UnaryOperator (stmt_info, x::_, expr_info, op_info) ->
     (match op_info.uoi_kind with
     | `Minus -> 
@@ -184,10 +154,16 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
   | StringLiteral (_, _, _, _)
   | CharacterLiteral _ -> Some (Basic(BVAR "char")) 
 
+  | CallExpr (_, stmt_list, ei) -> 
+  (match stmt_list with
+  | [] -> assert false 
+  | x :: _ -> Some (Basic(BVAR(string_of_stmt x)))  
+  )
+
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
 
 
-let rec string_of_decl (dec :Clang_ast_t.decl) : string = 
+and string_of_decl (dec :Clang_ast_t.decl) : string = 
   match dec with 
   | VarDecl (_, ndi, qt, vdi) -> 
     ndi.ni_name ^ "::" ^ Clang_ast_extend.type_ptr_to_string qt.qt_type_ptr
@@ -355,7 +331,7 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
   | [] -> None 
   | y :: restY -> extractEventFromFUnctionCall y rest)
 | _ -> 
-  print_string ("extractEventFromFUnctionCall" ^ Clang_ast_proj.get_stmt_kind_string x );
+  (*print_string ("extractEventFromFUnctionCall" ^ Clang_ast_proj.get_stmt_kind_string x );*)
   print_endline ("none");
 
   None 
@@ -831,7 +807,7 @@ let program_repair prefix ((callee, fp):(string * int list)) (info:((error_info 
         
         true 
         )
-      else if String.compare fname str == 0 && compareFootPrint fp' line && start ==s' && comparees spec' spec (*&& endNum==e'*) then true
+      else if String.compare fname str == 0 && compareFootPrint fp' line && start ==s' (*&& comparees spec' spec *) (*&& endNum==e'*) then true
       else existSameRecord recordListxs ((str, line, spec), start, endNum)
   in 
   
@@ -840,7 +816,7 @@ let program_repair prefix ((callee, fp):(string * int list)) (info:((error_info 
         (*let startNum = getFirstPostion realspec startNum in *)
 
         
-        print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
+        (*print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); *)
 
         let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
@@ -850,7 +826,7 @@ let program_repair prefix ((callee, fp):(string * int list)) (info:((error_info 
           (startNum', endNum')
         in 
 
-        print_endline ("after:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
+        (*print_endline ("after:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); *)
 
 
 
@@ -1491,7 +1467,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                       (print_endline (!currentModule ^ " should have some future condition ");
                       let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
                       let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
-                      (* print_endline (string_of_specification newSpec); *)
+                      print_endline (string_of_specification newSpec); 
                       insertSpecifications !currentModule newSpec
                       )
                     else (
@@ -1612,6 +1588,13 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
     | ForStmt (stmt_info, stmt_list)::xs
     | WhileStmt (stmt_info, stmt_list)::xs -> 
+      let xs = flattenList (List.map xs ~f:(fun a ->  match a with 
+      | ForStmt  (_, stmt_list') 
+      | WhileStmt   (_, stmt_list')  -> stmt_list'
+      | _ -> [a]
+            
+      )) 
+      in 
       if peekTheEffectOfStmtsAndItHasEffects stmt_list then 
 
         let rec preProcess (li:Clang_ast_t.stmt list) : Clang_ast_t.stmt list = 
@@ -1920,7 +1903,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let varFromX = string_of_stmt x in 
 
       let ev = if twoStringSetOverlap [getRoot varFromX] (!varSet@(!variablesInScope)@(!parametersInScope)) then 
-        Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
+        Singleton ((("star", [(BVAR(string_of_stmt x))])), fp) 
         else Emp
       in 
       let fp = match fp with | None -> [] | Some l -> [l] in 
