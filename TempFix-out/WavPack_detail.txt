@@ -1,0 +1,819 @@
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/open_utils.c:
+
+~~~~~~~~~ In function: read_channel_identities ~~~~~~~~~
+Future-condition checking for 'malloc @506': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧wpc.channel_identities=0 /\ deref(wpc.channel_identities)@507 · RET()@511 ~~~> (!_(wpc.channel_identities))^*;
+[Patches]
+ @ line 507 can be inserted with code: if (wpc.channel_identities==0){ return; }
+
+
+~~~~~~~~~ In function: read_wvc_block ~~~~~~~~~
+Future-condition checking for 'malloc @997': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(wps.block2buff!=0) /\ RET()@1024 ~~~> (!free(wps.block2buff))^* · free(wps.block2buff) · (_)^*;
+[Patches]
+ @ line 1024 can be inserted with code: if ((wps.block2buff!=0)){raw_close_stream(wps.block2buff); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/open_utils.c:
+
+~~~~~~~~~ In function: read_channel_identities ~~~~~~~~~
+Future-condition checking for 'malloc @506': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧wpc.channel_identities=0 /\ deref(wpc.channel_identities)@507 · RET()@511 ~~~> (!_(wpc.channel_identities))^*;
+[Patches]
+ @ line 507 can be inserted with code: if (wpc.channel_identities==0){ return; }
+
+
+~~~~~~~~~ In function: read_wvc_block ~~~~~~~~~
+Future-condition checking for 'malloc @997': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(wps.block2buff!=0) /\ RET()@1024 ~~~> (!free(wps.block2buff))^* · free(wps.block2buff) · (_)^*;
+[Patches]
+ @ line 1024 can be inserted with code: if ((wps.block2buff!=0)){raw_close_stream(wps.block2buff); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/open_filename.c:
+
+~~~~~~~~~ In function: WavpackOpenFileInput ~~~~~~~~~
+Future-condition checking for 'malloc @253': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r6∧in2filename=0 /\ deref(in2filename)@255 · free(in2filename)@258 ~~~> (!_(in2filename))^*;
+[Patches]
+ @ line 255 can be inserted with code: if (in2filename==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/open_filename.c:
+
+~~~~~~~~~ In function: WavpackOpenFileInput ~~~~~~~~~
+Future-condition checking for 'malloc @253': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r6∧in2filename=0 /\ deref(in2filename)@255 · free(in2filename)@258 ~~~> (!_(in2filename))^*;
+[Patches]
+ @ line 255 can be inserted with code: if (in2filename==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/open_legacy.c:
+
+~~~~~~~~~ In function: WavpackOpenFileInputEx ~~~~~~~~~
+Future-condition checking for 'malloc @108': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r8∧trans_wvc=0 /\ deref(trans_wvc)@109 · deref(trans_wvc)@110 ~~~> (!_(trans_wvc))^*;
+[Patches]
+ @ line 109 can be inserted with code: if (trans_wvc==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenFileInputEx ~~~~~~~~~
+Future-condition checking for 'malloc @102': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r9∧trans_wv=0 /\ deref(trans_wv)@103 · deref(trans_wv)@104 ~~~> (!_(trans_wv))^*;
+[Patches]
+ @ line 103 can be inserted with code: if (trans_wv==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/open_legacy.c:
+
+~~~~~~~~~ In function: WavpackOpenFileInputEx ~~~~~~~~~
+Future-condition checking for 'malloc @108': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r8∧trans_wvc=0 /\ deref(trans_wvc)@109 · deref(trans_wvc)@110 ~~~> (!_(trans_wvc))^*;
+[Patches]
+ @ line 109 can be inserted with code: if (trans_wvc==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenFileInputEx ~~~~~~~~~
+Future-condition checking for 'malloc @102': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r9∧trans_wv=0 /\ deref(trans_wv)@103 · deref(trans_wv)@104 ~~~> (!_(trans_wv))^*;
+[Patches]
+ @ line 103 can be inserted with code: if (trans_wv==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/open_raw.c:
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @249': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r1∧wphdr=0 /\ deref(wphdr)@250 · deref(wphdr.ckID)@251 · deref(wphdr)@252 · deref(wphdr)@253 · deref(wphdr)@254 · deref(wphdr)@255 · deref(wphdr)@256 · deref(wphdr)@257 ~~~> (!_(wphdr))^*;
+[Patches]
+ @ line 250 can be inserted with code: if (wphdr==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @202': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r5∧wphdr=0 /\ deref(wphdr)@203 · deref(wphdr.ckID)@204 · deref(wphdr)@205 · deref(wphdr)@206 · deref(wphdr)@207 · deref(wphdr)@208 · deref(wphdr)@209 · deref(wphdr)@210 ~~~> (!_(wphdr))^*;
+[Patches]
+ @ line 203 can be inserted with code: if (wphdr==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @154': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r5∧raw_wvc=0 /\ deref(raw_wvc)@155 ~~~> (!_(raw_wvc))^*;
+[Patches]
+ @ line 155 can be inserted with code: if (raw_wvc==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @150': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r11∧raw_wv=0 /\ deref(raw_wv)@151 · star(mcp)@167 · star(mcp)@179 · deref(wphdr)@203 · deref(wphdr.ckID)@204 · deref(wphdr)@205 · deref(wphdr)@206 · deref(wphdr)@207 · deref(wphdr)@208 · deref(wphdr)@209 · deref(wphdr)@210 · deref(raw_wv)@214 ~~~> (!_(raw_wv))^*;
+[Patches]
+ @ line 151 can be inserted with code: if (raw_wv==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @296': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r12∧raw_wvc.segments=0 /\ deref(raw_wvc.segments)@297 · deref(raw_wvc.segments)@298 · deref(raw_wvc.segments)@299 ~~~> (!_(raw_wvc.segments))^*;
+[Patches]
+ @ line 297 can be inserted with code: if (raw_wvc.segments==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @293': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r12∧raw_wvc=0 /\ deref(raw_wvc)@294 · deref(raw_wvc)@295 · deref(raw_wvc)@296 · deref(raw_wvc.segments)@297 · deref(raw_wvc.segments)@298 · deref(raw_wvc.segments)@299 ~~~> (!_(raw_wvc))^*;
+[Patches]
+ @ line 294 can be inserted with code: if (raw_wvc==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @286': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r13∧raw_wv.segments=0 /\ deref(raw_wv.segments)@287 · deref(raw_wv.segments)@288 · deref(raw_wv.segments)@289 ~~~> (!_(raw_wv.segments))^*;
+[Patches]
+ @ line 287 can be inserted with code: if (raw_wv.segments==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @283': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r13∧raw_wv=0 /\ deref(raw_wv)@284 · deref(raw_wv)@285 · deref(raw_wv)@286 · deref(raw_wv.segments)@287 · deref(raw_wv.segments)@288 · deref(raw_wv.segments)@289 ~~~> (!_(raw_wv))^*;
+[Patches]
+ @ line 284 can be inserted with code: if (raw_wv==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/open_raw.c:
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @249': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r1∧wphdr=0 /\ deref(wphdr)@250 · deref(wphdr.ckID)@251 · deref(wphdr)@252 · deref(wphdr)@253 · deref(wphdr)@254 · deref(wphdr)@255 · deref(wphdr)@256 · deref(wphdr)@257 ~~~> (!_(wphdr))^*;
+[Patches]
+ @ line 250 can be inserted with code: if (wphdr==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @202': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r5∧wphdr=0 /\ deref(wphdr)@203 · deref(wphdr.ckID)@204 · deref(wphdr)@205 · deref(wphdr)@206 · deref(wphdr)@207 · deref(wphdr)@208 · deref(wphdr)@209 · deref(wphdr)@210 ~~~> (!_(wphdr))^*;
+[Patches]
+ @ line 203 can be inserted with code: if (wphdr==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @154': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r5∧raw_wvc=0 /\ deref(raw_wvc)@155 ~~~> (!_(raw_wvc))^*;
+[Patches]
+ @ line 155 can be inserted with code: if (raw_wvc==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @150': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r11∧raw_wv=0 /\ deref(raw_wv)@151 · star(mcp)@167 · star(mcp)@179 · deref(wphdr)@203 · deref(wphdr.ckID)@204 · deref(wphdr)@205 · deref(wphdr)@206 · deref(wphdr)@207 · deref(wphdr)@208 · deref(wphdr)@209 · deref(wphdr)@210 · deref(raw_wv)@214 ~~~> (!_(raw_wv))^*;
+[Patches]
+ @ line 151 can be inserted with code: if (raw_wv==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @296': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r12∧raw_wvc.segments=0 /\ deref(raw_wvc.segments)@297 · deref(raw_wvc.segments)@298 · deref(raw_wvc.segments)@299 ~~~> (!_(raw_wvc.segments))^*;
+[Patches]
+ @ line 297 can be inserted with code: if (raw_wvc.segments==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @293': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r12∧raw_wvc=0 /\ deref(raw_wvc)@294 · deref(raw_wvc)@295 · deref(raw_wvc)@296 · deref(raw_wvc.segments)@297 · deref(raw_wvc.segments)@298 · deref(raw_wvc.segments)@299 ~~~> (!_(raw_wvc))^*;
+[Patches]
+ @ line 294 can be inserted with code: if (raw_wvc==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @286': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r13∧raw_wv.segments=0 /\ deref(raw_wv.segments)@287 · deref(raw_wv.segments)@288 · deref(raw_wv.segments)@289 ~~~> (!_(raw_wv.segments))^*;
+[Patches]
+ @ line 287 can be inserted with code: if (raw_wv.segments==0){ return; }
+
+
+~~~~~~~~~ In function: WavpackOpenRawDecoder ~~~~~~~~~
+Future-condition checking for 'malloc @283': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r13∧raw_wv=0 /\ deref(raw_wv)@284 · deref(raw_wv)@285 · deref(raw_wv)@286 · deref(raw_wv.segments)@287 · deref(raw_wv.segments)@288 · deref(raw_wv.segments)@289 ~~~> (!_(raw_wv))^*;
+[Patches]
+ @ line 284 can be inserted with code: if (raw_wv==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/pack_utils.c:
+
+~~~~~~~~~ In function: WavpackPackInit ~~~~~~~~~
+Future-condition checking for 'malloc @540': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧(wps.sample_buffer!=0) /\ RET()@550 ~~~> (!free(wps.sample_buffer))^* · free(wps.sample_buffer) · (_)^*;
+[Patches]
+ @ line 550 can be inserted with code: if ((wps.sample_buffer!=0)){raw_close_stream(wps.sample_buffer); }
+
+
+~~~~~~~~~ In function: pack_streams ~~~~~~~~~
+Future-condition checking for 'malloc @933': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=result∧outbuff=0 /\ deref(outbuff)@975 · deref(wpc)@999 · deref(wpc)@1004 · deref(wpc)@1005 · free(outbuff)@1007 ~~~> (!_(outbuff))^*;
+[Patches]
+ @ line 965 can be inserted with code: if (outbuff==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/pack_utils.c:
+
+~~~~~~~~~ In function: WavpackPackInit ~~~~~~~~~
+Future-condition checking for 'malloc @540': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧(wps.sample_buffer!=0) /\ RET()@550 ~~~> (!free(wps.sample_buffer))^* · free(wps.sample_buffer) · (_)^*;
+[Patches]
+ @ line 550 can be inserted with code: if ((wps.sample_buffer!=0)){raw_close_stream(wps.sample_buffer); }
+
+
+~~~~~~~~~ In function: pack_streams ~~~~~~~~~
+Future-condition checking for 'malloc @933': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=result∧outbuff=0 /\ deref(outbuff)@975 · deref(wpc)@999 · deref(wpc)@1004 · deref(wpc)@1005 · free(outbuff)@1007 ~~~> (!_(outbuff))^*;
+[Patches]
+ @ line 965 can be inserted with code: if (outbuff==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/pack_dsd.c:
+
+~~~~~~~~~ In function: encode_buffer_fast ~~~~~~~~~
+Future-condition checking for 'malloc @324': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=-1∧histogram=0 /\ deref(histogram)@325 · WhileStmt() · free(histogram)@376 ~~~> (!_(histogram))^*;
+[Patches]
+ @ line 325 can be inserted with code: if (histogram==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/pack_dsd.c:
+
+~~~~~~~~~ In function: encode_buffer_fast ~~~~~~~~~
+Future-condition checking for 'malloc @324': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=-1∧histogram=0 /\ deref(histogram)@325 · WhileStmt() · free(histogram)@376 ~~~> (!_(histogram))^*;
+[Patches]
+ @ line 325 can be inserted with code: if (histogram==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/unpack_dsd.c:
+
+~~~~~~~~~ In function: init_dsd_block_fast ~~~~~~~~~
+Future-condition checking for 'malloc @147': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧wps.dsd.probabilities=0 /\ deref(wps.dsd.probabilities)@174 ~~~> (!_(wps.dsd.probabilities))^*;
+[Patches]
+ @ line 149 can be inserted with code: if (wps.dsd.probabilities==0){ return; }
+
+
+~~~~~~~~~ In function: init_dsd_block_fast ~~~~~~~~~
+Future-condition checking for 'malloc @144': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧wps.dsd.value_lookup=0 /\ deref(wps.dsd.value_lookup)@145 ~~~> (!_(wps.dsd.value_lookup))^*;
+[Patches]
+ @ line 145 can be inserted with code: if (wps.dsd.value_lookup==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/src/unpack_dsd.c:
+
+~~~~~~~~~ In function: init_dsd_block_fast ~~~~~~~~~
+Future-condition checking for 'malloc @147': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧wps.dsd.probabilities=0 /\ deref(wps.dsd.probabilities)@174 ~~~> (!_(wps.dsd.probabilities))^*;
+[Patches]
+ @ line 149 can be inserted with code: if (wps.dsd.probabilities==0){ return; }
+
+
+~~~~~~~~~ In function: init_dsd_block_fast ~~~~~~~~~
+Future-condition checking for 'malloc @144': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧wps.dsd.value_lookup=0 /\ deref(wps.dsd.value_lookup)@145 ~~~> (!_(wps.dsd.value_lookup))^*;
+[Patches]
+ @ line 145 can be inserted with code: if (wps.dsd.value_lookup==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/cli/wavpack.c:
+
+~~~~~~~~~ In function: wild_fopen ~~~~~~~~~
+Future-condition checking for 'malloc @1478': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+matchname=0 /\ deref(matchname)@1479 ~~~> (!_(matchname))^*;
+[Patches]
+ @ line 1479 can be inserted with code: if (matchname==0){ return; }
+
+
+~~~~~~~~~ In function: pack_audio ~~~~~~~~~
+Future-condition checking for 'malloc @2276': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧sample_buffer=0 /\ star(sample_buffer.x)@2345 · star(sample_buffer.x)@2346 · free(sample_buffer)@2391 ~~~> (!_(sample_buffer))^*;
+[Patches]
+ @ line 2345 can be inserted with code: if (sample_buffer==0){ return; }
+
+
+~~~~~~~~~ In function: repack_audio ~~~~~~~~~
+Future-condition checking for 'malloc @3241': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!((new_channel_order!=0))∧.ret=0∧sample_buffer=0 /\ star(sample_buffer.x)@3274 · star(sample_buffer.x)@3275 · free(sample_buffer)@3353 · RET()@3365 ~~~> (!_(sample_buffer))^*;
+[Patches]
+ @ line 3274 can be inserted with code: if (!((new_channel_order!=0))∧sample_buffer==0){ return; }
+
+
+~~~~~~~~~ In function: repack_audio ~~~~~~~~~
+Future-condition checking for 'malloc @3230': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new_channel_order=0 /\ deref(new_channel_order)@3233 ~~~> (!_(new_channel_order))^*;
+[Patches]
+ @ line 3233 can be inserted with code: if (new_channel_order==0){ return; }
+
+
+~~~~~~~~~ In function: repack_audio ~~~~~~~~~
+Future-condition checking for 'malloc @3230': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧(new_channel_order!=0) /\ RET()@3332 ~~~> (!free(new_channel_order))^* · free(new_channel_order) · (_)^*;
+[Patches]
+ @ line 3332 can be inserted with code: if ((new_channel_order!=0)){raw_close_stream(new_channel_order); }
+
+
+~~~~~~~~~ In function: repack_audio ~~~~~~~~~
+Future-condition checking for 'malloc @3230': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=2∧(new_channel_order!=0) /\ RET()@3283 ~~~> (!free(new_channel_order))^* · free(new_channel_order) · (_)^*;
+[Patches]
+ @ line 3283 can be inserted with code: if ((new_channel_order!=0)){raw_close_stream(new_channel_order); }
+
+
+~~~~~~~~~ In function: repack_audio ~~~~~~~~~
+Future-condition checking for 'malloc @3223': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!((new_channel_order!=0))∧.ret=0∧(format_buffer!=0) /\ RET()@3365 ~~~> (!free(format_buffer))^* · free(format_buffer) · (_)^*;
+[Patches]
+ @ line 3365 can be inserted with code: if (!((new_channel_order!=0))∧(format_buffer!=0)){raw_close_stream(format_buffer); }
+
+
+~~~~~~~~~ In function: repack_audio ~~~~~~~~~
+Future-condition checking for 'malloc @3223': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!((new_channel_order!=0))∧.ret=2∧(format_buffer!=0) /\ RET()@3357 ~~~> (!free(format_buffer))^* · free(format_buffer) · (_)^*;
+[Patches]
+ @ line 3357 can be inserted with code: if (!((new_channel_order!=0))∧(format_buffer!=0)){raw_close_stream(format_buffer); }
+
+
+~~~~~~~~~ In function: repack_audio ~~~~~~~~~
+Future-condition checking for 'malloc @3223': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧(format_buffer!=0) /\ RET()@3332 ~~~> (!free(format_buffer))^* · free(format_buffer) · (_)^*;
+[Patches]
+ @ line 3332 can be inserted with code: if ((format_buffer!=0)){raw_close_stream(format_buffer); }
+
+
+~~~~~~~~~ In function: reorder_channels ~~~~~~~~~
+Future-condition checking for 'malloc @3375': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(temp!=0) /\ 𝝐 ~~~> (!free(temp))^* · free(temp) · (_)^*;
+[Patches]
+ @ line 3389 can be inserted with code: if ((temp!=0)){raw_close_stream(temp); }
+
+
+~~~~~~~~~ In function: unreorder_channels ~~~~~~~~~
+Future-condition checking for 'malloc @3401': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(temp!=0) /\ 𝝐 ~~~> (!free(temp))^* · free(temp) · (_)^*;
+[Patches]
+ @ line 3409 can be inserted with code: if ((temp!=0)){raw_close_stream(temp); }
+
+
+~~~~~~~~~ In function: unreorder_channels ~~~~~~~~~
+Future-condition checking for 'malloc @3401': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧temp=0 /\ deref(temp)@3407 ~~~> (!_(temp))^*;
+[Patches]
+ @ line 3407 can be inserted with code: if (temp==0){ return; }
+
+
+~~~~~~~~~ In function: verify_audio ~~~~~~~~~
+Future-condition checking for 'malloc @3464': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new_channel_order=0 /\ deref(new_channel_order)@3467 ~~~> (!_(new_channel_order))^*;
+[Patches]
+ @ line 3467 can be inserted with code: if (new_channel_order==0){ return; }
+
+
+~~~~~~~~~ In function: TextToUTF8 ~~~~~~~~~
+Future-condition checking for 'malloc @4123': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧temp=0 /\ deref(temp)@4141 · free(temp)@4172 ~~~> (!_(temp))^*;
+[Patches]
+ @ line 4141 can be inserted with code: if (temp==0){ return; }
+
+
+~~~~~~~~~ In function: TextToUTF8 ~~~~~~~~~
+Future-condition checking for 'malloc @4123': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(temp!=0) /\ RET()@4138 ~~~> (!free(temp))^* · free(temp) · (_)^*;
+[Patches]
+ @ line 4138 can be inserted with code: if ((temp!=0)){raw_close_stream(temp); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/cli/import_id3.c:
+
+~~~~~~~~~ In function: Latin1ToUTF8 ~~~~~~~~~
+Future-condition checking for 'malloc @447': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧temp=0 /\ deref(temp)@455 · free(temp)@473 ~~~> (!_(temp))^*;
+[Patches]
+ @ line 455 can be inserted with code: if (temp==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/cli/wvunpack.c:
+
+~~~~~~~~~ In function: open_output_file ~~~~~~~~~
+Future-condition checking for 'malloc @944': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(testfile!=0)∧(retval!=0)∧.ret=retval∧tempfilename=0 /\ deref(tempfilename)@947 ~~~> (!_(tempfilename))^*;
+[Patches]
+ @ line 947 can be inserted with code: if ((testfile!=0)∧(retval!=0)∧tempfilename==0){ return; }
+
+
+~~~~~~~~~ In function: unpack_audio ~~~~~~~~~
+Future-condition checking for 'malloc @1543': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new_channel_order=0 /\ deref(new_channel_order)@1546 ~~~> (!_(new_channel_order))^*;
+[Patches]
+ @ line 1546 can be inserted with code: if (new_channel_order==0){ return; }
+
+
+~~~~~~~~~ In function: unpack_dsd_audio ~~~~~~~~~
+Future-condition checking for 'malloc @1690': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new_channel_order=0 /\ deref(new_channel_order)@1693 ~~~> (!_(new_channel_order))^*;
+[Patches]
+ @ line 1693 can be inserted with code: if (new_channel_order==0){ return; }
+
+
+~~~~~~~~~ In function: do_tag_extractions ~~~~~~~~~
+Future-condition checking for 'malloc @1826': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=result∧full_filename=0 /\ deref(full_filename)@1827 · deref(filespec_name)@1877 · star(full_filename)@1900 · free(full_filename)@1917 ~~~> (!_(full_filename))^*;
+[Patches]
+ @ line 1827 can be inserted with code: if (full_filename==0){ return; }
+
+
+~~~~~~~~~ In function: unreorder_channels ~~~~~~~~~
+Future-condition checking for 'malloc @2132': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(temp!=0) /\ 𝝐 ~~~> (!free(temp))^* · free(temp) · (_)^*;
+[Patches]
+ @ line 2140 can be inserted with code: if ((temp!=0)){raw_close_stream(temp); }
+
+
+~~~~~~~~~ In function: unreorder_channels ~~~~~~~~~
+Future-condition checking for 'malloc @2132': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧temp=0 /\ deref(temp)@2138 ~~~> (!_(temp))^*;
+[Patches]
+ @ line 2138 can be inserted with code: if (temp==0){ return; }
+
+
+~~~~~~~~~ In function: dump_tag_item_to_file ~~~~~~~~~
+Future-condition checking for 'malloc @2557': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧value=0 /\ deref(value)@2561 · free(value)@2585 · RET()@2593 ~~~> (!_(value))^*;
+[Patches]
+ @ line 2561 can be inserted with code: if (value==0){ return; }
+
+
+~~~~~~~~~ In function: UTF8ToAnsi ~~~~~~~~~
+Future-condition checking for 'malloc @2787': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧temp=0 /\ deref(temp)@2796 · free(temp)@2816 ~~~> (!_(temp))^*;
+[Patches]
+ @ line 2796 can be inserted with code: if (temp==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/cli/wvtag.c:
+
+~~~~~~~~~ In function: do_tag_extractions ~~~~~~~~~
+Future-condition checking for 'malloc @936': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=result∧full_filename=0 /\ deref(full_filename)@937 · deref(filespec_name)@987 · star(full_filename)@1007 · free(full_filename)@1024 ~~~> (!_(full_filename))^*;
+[Patches]
+ @ line 937 can be inserted with code: if (full_filename==0){ return; }
+
+
+~~~~~~~~~ In function: clear_tag_items ~~~~~~~~~
+Future-condition checking for 'malloc @1041': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧item=0 /\ free(item)@1044 · free(item)@1052 ~~~> (!_(item))^*;
+[Patches]
+ @ line 1044 can be inserted with code: if (item==0){ return; }
+
+
+~~~~~~~~~ In function: list_tags_to_file ~~~~~~~~~
+Future-condition checking for 'malloc @1080': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧value=0 /\ deref(value)@1087 · free(value)@1100 ~~~> (!_(value))^*;
+[Patches]
+ @ line 1087 can be inserted with code: if (value==0){ return; }
+
+
+~~~~~~~~~ In function: list_tags_to_file ~~~~~~~~~
+Future-condition checking for 'malloc @1077': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧item=0 /\ free(item)@1101 · free(item)@1149 ~~~> (!_(item))^*;
+[Patches]
+ @ line 1100 can be inserted with code: if (item==0){ return; }
+
+
+~~~~~~~~~ In function: dump_tag_item_to_file ~~~~~~~~~
+Future-condition checking for 'malloc @1196': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧value=0 /\ deref(value)@1200 · free(value)@1224 · RET()@1232 ~~~> (!_(value))^*;
+[Patches]
+ @ line 1200 can be inserted with code: if (value==0){ return; }
+
+
+~~~~~~~~~ In function: calculate_tag_size ~~~~~~~~~
+Future-condition checking for 'malloc @1264': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ape_tag_size∧item=0 /\ free(item)@1268 · free(item)@1277 ~~~> (!_(item))^*;
+[Patches]
+ @ line 1268 can be inserted with code: if (item==0){ return; }
+
+
+~~~~~~~~~ In function: UTF8ToAnsi ~~~~~~~~~
+Future-condition checking for 'malloc @1364': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧temp=0 /\ deref(temp)@1373 · free(temp)@1393 ~~~> (!_(temp))^*;
+[Patches]
+ @ line 1373 can be inserted with code: if (temp==0){ return; }
+
+
+~~~~~~~~~ In function: TextToUTF8 ~~~~~~~~~
+Future-condition checking for 'malloc @1511': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧temp=0 /\ deref(temp)@1529 · free(temp)@1560 ~~~> (!_(temp))^*;
+[Patches]
+ @ line 1529 can be inserted with code: if (temp==0){ return; }
+
+
+~~~~~~~~~ In function: TextToUTF8 ~~~~~~~~~
+Future-condition checking for 'malloc @1511': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(temp!=0) /\ RET()@1526 ~~~> (!free(temp))^* · free(temp) · (_)^*;
+[Patches]
+ @ line 1526 can be inserted with code: if ((temp!=0)){raw_close_stream(temp); }
+
+
+~~~~~~~~~ In function: wild_fopen ~~~~~~~~~
+Future-condition checking for 'malloc @1640': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+matchname=0 /\ deref(matchname)@1641 ~~~> (!_(matchname))^*;
+[Patches]
+ @ line 1641 can be inserted with code: if (matchname==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/WavPack/cli/import_id3.c:
+
+~~~~~~~~~ In function: Latin1ToUTF8 ~~~~~~~~~
+Future-condition checking for 'malloc @447': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧temp=0 /\ deref(temp)@455 · free(temp)@473 ~~~> (!_(temp))^*;
+[Patches]
+ @ line 455 can be inserted with code: if (temp==0){ return; }
+

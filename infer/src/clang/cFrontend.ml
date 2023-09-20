@@ -818,13 +818,14 @@ let program_repair prefix ((callee, fp):(string * int list)) (info:((error_info 
         
         (*print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); *)
 
-        let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
+        (*let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
         let (startNum, endNum) = 
           let startNum' = if lowerError > (startNum +2) then lowerError else startNum in 
           let endNum' = if upperError < endNum then upperError else endNum in 
           (startNum', endNum')
         in 
+        *)
 
         (*print_endline ("after:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); *)
 
@@ -1324,6 +1325,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
                 if  twoStringSetOverlap [getRoot handler] !parametersInScope (*&& existRetEvent (Some [a])*) then 
                   match a with 
+                  | (Eq(Basic(BRET), Basic(BINT 0)), Disj (Kleene(NotSingleton(_, [BRET])), _))
                   | (Eq(Basic(BRET), Basic(BINT 0)), Kleene(NotSingleton(_, [BRET])))  -> acc @ [a]
                   | _ -> acc
                    
