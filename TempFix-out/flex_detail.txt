@@ -1,0 +1,560 @@
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/buf.c:
+
+~~~~~~~~~ In function: buf_m4_define ~~~~~~~~~
+Future-condition checking for 'malloc @175': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(str!=0) /\ RET(buf)@181 ~~~> (!free(str))^* · free(str) · (_)^*;
+[Patches]
+ @ line 181 can be inserted with code: if ((str!=0)){free(str); }
+
+
+~~~~~~~~~ In function: buf_m4_undefine ~~~~~~~~~
+Future-condition checking for 'malloc @196': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(str!=0) /\ RET(buf)@202 ~~~> (!free(str))^* · free(str) · (_)^*;
+[Patches]
+ @ line 202 can be inserted with code: if ((str!=0)){free(str); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/filter.c:
+
+~~~~~~~~~ In function: filter_tee_header ~~~~~~~~~
+Future-condition checking for 'fdopen @245': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧to_c=0 /\ fputs(to_c)@275 · fputs(to_c)@276 · fputs(to_c)@277 · fputs(to_c)@278 · fputs(to_c)@279 · fputs(to_c)@284 · fclose(to_c)@310 · fclose(to_c)@315 · RET()@322 ~~~> (!_(to_c))^*;
+[Patches]
+ @ line 275 can be inserted with code: if (to_c==0){ return; }
+
+
+~~~~~~~~~ In function: filter_tee_header ~~~~~~~~~
+Future-condition checking for 'fdopen @245': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧to_c>0∧(to_c!=stdout)∧(to_c!=stdin) /\ RET()@249 ~~~> ((!fclose(to_c))^* · fclose(to_c) · (_)^* \/ (!close(to_cfd))^* · close(to_cfd) · (_)^*);
+[Patches]
+ @ line 249 can be inserted with code: if (to_c>0∧(to_c!=stdout)∧(to_c!=stdin)){close(); if (to_c>0∧(to_c!=stdout)∧(to_c!=stdin)){fclose(to_c); }}
+
+
+~~~~~~~~~ In function: filter_fix_linedirs ~~~~~~~~~
+Future-condition checking for 'regmatch_dup @360': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧fname=0 /\ strcmp(fname)@362 · free(fname)@398 ~~~> (!_(fname))^*;
+[Patches]
+ @ line 362 can be inserted with code: if (fname==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/gen.c:
+
+~~~~~~~~~ In function: mkeoltbl ~~~~~~~~~
+Future-condition checking for 'calloc @114': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@117 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 117 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkeoltbl ~~~~~~~~~
+Future-condition checking for 'calloc @109': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@111 · deref(tbl)@112 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 111 can be inserted with code: if (tbl==0){ return; }
+
+
+~~~~~~~~~ In function: mkctbl ~~~~~~~~~
+Future-condition checking for 'calloc @223': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@286 · deref(tdata)@287 · deref(tdata)@293 · deref(tdata)@294 · deref(tdata)@296 · deref(tdata)@297 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 286 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkctbl ~~~~~~~~~
+Future-condition checking for 'calloc @216': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@218 · deref(tbl)@219 · deref(tbl)@220 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 218 can be inserted with code: if (tbl==0){ return; }
+
+
+~~~~~~~~~ In function: mkssltbl ~~~~~~~~~
+Future-condition checking for 'calloc @319': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@322 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 322 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkssltbl ~~~~~~~~~
+Future-condition checking for 'calloc @312': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@314 · deref(tbl)@315 · deref(tbl)@316 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 314 can be inserted with code: if (tbl==0){ return; }
+
+
+~~~~~~~~~ In function: mkecstbl ~~~~~~~~~
+Future-condition checking for 'calloc @449': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@453 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 453 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkecstbl ~~~~~~~~~
+Future-condition checking for 'calloc @442': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@445 · deref(tbl)@446 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 445 can be inserted with code: if (tbl==0){ return; }
+
+
+~~~~~~~~~ In function: mkftbl ~~~~~~~~~
+Future-condition checking for 'calloc @660': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@667 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 667 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkftbl ~~~~~~~~~
+Future-condition checking for 'calloc @653': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@656 · deref(tbl)@657 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 656 can be inserted with code: if (tbl==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/main.c:
+
+~~~~~~~~~ In function: check_options ~~~~~~~~~
+Future-condition checking for 'calloc @364': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(str!=0)∧m4_path=0 /\ deref(m4_path)@367 · deref(sbuf)@370 · free(m4_path)@374 ~~~> (!_(m4_path))^*;
+[Patches]
+ @ line 367 can be inserted with code: if ((str!=0)∧m4_path==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/misc.c:
+
+~~~~~~~~~ In function: sko_push ~~~~~~~~~
+Future-condition checking for 'realloc @70': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=sko_push∧sko_stack=0 /\ deref(sko_stack)@73 ~~~> (!_(sko_stack))^*;
+[Patches]
+ @ line 73 can be inserted with code: if (sko_stack==0){ return; }
+
+
+~~~~~~~~~ In function: sko_push ~~~~~~~~~
+Future-condition checking for 'malloc @63': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(sko_stack!=0) /\ RET(sko_push)@83 ~~~> (!free(sko_stack))^* · free(sko_stack) · (_)^*;
+[Patches]
+ @ line 83 can be inserted with code: if ((sko_stack!=0)){free(sko_stack); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/regex.c:
+
+~~~~~~~~~ In function: regmatch_strtol ~~~~~~~~~
+Future-condition checking for 'regmatch_dup @143': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!((s!=buf))∧.ret=n∧(s!=0) /\ RET(n)@150 ~~~> (!free(s))^* · free(s) · (_)^*;
+[Patches]
+ @ line 150 can be inserted with code: if (!((s!=buf))∧(s!=0)){free(s); }
+
+
+~~~~~~~~~ In function: regmatch_strtol ~~~~~~~~~
+Future-condition checking for 'regmatch_dup @143': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(s!=buf)∧.ret=n∧s=0 /\ free(s)@148 ~~~> (!_(s))^*;
+[Patches]
+ @ line 148 can be inserted with code: if ((s!=buf)∧s==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/scanflags.c:
+
+~~~~~~~~~ In function: sf_push ~~~~~~~~~
+Future-condition checking for 'realloc @46': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧_sf_stk=0 /\ deref(_sf_stk)@48 ~~~> (!_(_sf_stk))^*;
+[Patches]
+ @ line 48 can be inserted with code: if (_sf_stk==0){ return; }
+
+
+~~~~~~~~~ In function: sf_init ~~~~~~~~~
+Future-condition checking for 'malloc @71': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+_sf_stk=0 /\ deref(_sf_stk)@74 ~~~> (!_(_sf_stk))^*;
+[Patches]
+ @ line 74 can be inserted with code: if (_sf_stk==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/scanopt.c:
+
+~~~~~~~~~ In function: scanopt_init ~~~~~~~~~
+Future-condition checking for 'malloc @141': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=s∧s=0 /\ deref(s)@143 · deref(s)@144 · deref(s)@145 · deref(s)@146 · deref(s)@147 · deref(s)@148 · deref(s)@149 · deref(s)@150 · deref(s)@151 · deref(s)@154 · deref(s)@157 · deref(s)@160 · deref(s)@162 · deref(s)@167 · deref(s)@168 · deref(aux)@170 · deref(s)@179 ~~~> (!_(s))^*;
+[Patches]
+ @ line 143 can be inserted with code: if (s==0){ return; }
+
+
+~~~~~~~~~ In function: scanopt_usage ~~~~~~~~~
+Future-condition checking for 'malloc @253': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧store=0 /\ free(store)@454 · RET()@455 ~~~> (!_(store))^*;
+[Patches]
+ @ line 391 can be inserted with code: if (store==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/buf.c:
+
+~~~~~~~~~ In function: buf_m4_define ~~~~~~~~~
+Future-condition checking for 'malloc @175': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(str!=0) /\ RET(buf)@181 ~~~> (!free(str))^* · free(str) · (_)^*;
+[Patches]
+ @ line 181 can be inserted with code: if ((str!=0)){free(str); }
+
+
+~~~~~~~~~ In function: buf_m4_undefine ~~~~~~~~~
+Future-condition checking for 'malloc @196': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(str!=0) /\ RET(buf)@202 ~~~> (!free(str))^* · free(str) · (_)^*;
+[Patches]
+ @ line 202 can be inserted with code: if ((str!=0)){free(str); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/filter.c:
+
+~~~~~~~~~ In function: filter_tee_header ~~~~~~~~~
+Future-condition checking for 'fdopen @245': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧to_c=0 /\ fputs(to_c)@275 · fputs(to_c)@276 · fputs(to_c)@277 · fputs(to_c)@278 · fputs(to_c)@279 · fputs(to_c)@284 · fclose(to_c)@310 · fclose(to_c)@315 · RET()@322 ~~~> (!_(to_c))^*;
+[Patches]
+ @ line 275 can be inserted with code: if (to_c==0){ return; }
+
+
+~~~~~~~~~ In function: filter_tee_header ~~~~~~~~~
+Future-condition checking for 'fdopen @245': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧to_c>0∧(to_c!=stdout)∧(to_c!=stdin) /\ RET()@249 ~~~> ((!fclose(to_c))^* · fclose(to_c) · (_)^* \/ (!close(to_cfd))^* · close(to_cfd) · (_)^*);
+[Patches]
+ @ line 249 can be inserted with code: if (to_c>0∧(to_c!=stdout)∧(to_c!=stdin)){close(); if (to_c>0∧(to_c!=stdout)∧(to_c!=stdin)){fclose(to_c); }}
+
+
+~~~~~~~~~ In function: filter_fix_linedirs ~~~~~~~~~
+Future-condition checking for 'regmatch_dup @360': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧fname=0 /\ strcmp(fname)@362 · free(fname)@398 ~~~> (!_(fname))^*;
+[Patches]
+ @ line 362 can be inserted with code: if (fname==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/gen.c:
+
+~~~~~~~~~ In function: mkeoltbl ~~~~~~~~~
+Future-condition checking for 'calloc @114': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@117 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 117 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkeoltbl ~~~~~~~~~
+Future-condition checking for 'calloc @109': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@111 · deref(tbl)@112 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 111 can be inserted with code: if (tbl==0){ return; }
+
+
+~~~~~~~~~ In function: mkctbl ~~~~~~~~~
+Future-condition checking for 'calloc @223': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@286 · deref(tdata)@287 · deref(tdata)@293 · deref(tdata)@294 · deref(tdata)@296 · deref(tdata)@297 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 286 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkctbl ~~~~~~~~~
+Future-condition checking for 'calloc @216': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@218 · deref(tbl)@219 · deref(tbl)@220 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 218 can be inserted with code: if (tbl==0){ return; }
+
+
+~~~~~~~~~ In function: mkssltbl ~~~~~~~~~
+Future-condition checking for 'calloc @319': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@322 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 322 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkssltbl ~~~~~~~~~
+Future-condition checking for 'calloc @312': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@314 · deref(tbl)@315 · deref(tbl)@316 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 314 can be inserted with code: if (tbl==0){ return; }
+
+
+~~~~~~~~~ In function: mkecstbl ~~~~~~~~~
+Future-condition checking for 'calloc @449': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@453 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 453 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkecstbl ~~~~~~~~~
+Future-condition checking for 'calloc @442': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@445 · deref(tbl)@446 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 445 can be inserted with code: if (tbl==0){ return; }
+
+
+~~~~~~~~~ In function: mkftbl ~~~~~~~~~
+Future-condition checking for 'calloc @660': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tdata=0 /\ deref(tdata)@667 ~~~> (!_(tdata))^*;
+[Patches]
+ @ line 667 can be inserted with code: if (tdata==0){ return; }
+
+
+~~~~~~~~~ In function: mkftbl ~~~~~~~~~
+Future-condition checking for 'calloc @653': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=tbl∧tbl=0 /\ deref(tbl)@656 · deref(tbl)@657 ~~~> (!_(tbl))^*;
+[Patches]
+ @ line 656 can be inserted with code: if (tbl==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/main.c:
+
+~~~~~~~~~ In function: check_options ~~~~~~~~~
+Future-condition checking for 'calloc @364': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(str!=0)∧m4_path=0 /\ deref(m4_path)@367 · deref(sbuf)@370 · free(m4_path)@374 ~~~> (!_(m4_path))^*;
+[Patches]
+ @ line 367 can be inserted with code: if ((str!=0)∧m4_path==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/misc.c:
+
+~~~~~~~~~ In function: sko_push ~~~~~~~~~
+Future-condition checking for 'realloc @70': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=sko_push∧sko_stack=0 /\ deref(sko_stack)@73 ~~~> (!_(sko_stack))^*;
+[Patches]
+ @ line 73 can be inserted with code: if (sko_stack==0){ return; }
+
+
+~~~~~~~~~ In function: sko_push ~~~~~~~~~
+Future-condition checking for 'malloc @63': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(sko_stack!=0) /\ RET(sko_push)@83 ~~~> (!free(sko_stack))^* · free(sko_stack) · (_)^*;
+[Patches]
+ @ line 83 can be inserted with code: if ((sko_stack!=0)){free(sko_stack); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/regex.c:
+
+~~~~~~~~~ In function: regmatch_strtol ~~~~~~~~~
+Future-condition checking for 'regmatch_dup @143': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!((s!=buf))∧.ret=n∧(s!=0) /\ RET(n)@150 ~~~> (!free(s))^* · free(s) · (_)^*;
+[Patches]
+ @ line 150 can be inserted with code: if (!((s!=buf))∧(s!=0)){free(s); }
+
+
+~~~~~~~~~ In function: regmatch_strtol ~~~~~~~~~
+Future-condition checking for 'regmatch_dup @143': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(s!=buf)∧.ret=n∧s=0 /\ free(s)@148 ~~~> (!_(s))^*;
+[Patches]
+ @ line 148 can be inserted with code: if ((s!=buf)∧s==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/scanflags.c:
+
+~~~~~~~~~ In function: sf_push ~~~~~~~~~
+Future-condition checking for 'realloc @46': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧_sf_stk=0 /\ deref(_sf_stk)@48 ~~~> (!_(_sf_stk))^*;
+[Patches]
+ @ line 48 can be inserted with code: if (_sf_stk==0){ return; }
+
+
+~~~~~~~~~ In function: sf_init ~~~~~~~~~
+Future-condition checking for 'malloc @71': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+_sf_stk=0 /\ deref(_sf_stk)@74 ~~~> (!_(_sf_stk))^*;
+[Patches]
+ @ line 74 can be inserted with code: if (_sf_stk==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/flex/src/scanopt.c:
+
+~~~~~~~~~ In function: scanopt_init ~~~~~~~~~
+Future-condition checking for 'malloc @141': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=s∧s=0 /\ deref(s)@143 · deref(s)@144 · deref(s)@145 · deref(s)@146 · deref(s)@147 · deref(s)@148 · deref(s)@149 · deref(s)@150 · deref(s)@151 · deref(s)@154 · deref(s)@157 · deref(s)@160 · deref(s)@162 · deref(s)@167 · deref(s)@168 · deref(aux)@170 · deref(s)@179 ~~~> (!_(s))^*;
+[Patches]
+ @ line 143 can be inserted with code: if (s==0){ return; }
+
+
+~~~~~~~~~ In function: scanopt_usage ~~~~~~~~~
+Future-condition checking for 'malloc @253': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧store=0 /\ free(store)@454 · RET()@455 ~~~> (!_(store))^*;
+[Patches]
+ @ line 391 can be inserted with code: if (store==0){ return; }
+
