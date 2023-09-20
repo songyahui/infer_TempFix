@@ -1,0 +1,1166 @@
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/swoole_server.c:
+
+~~~~~~~~~ In function: zim_swoole_server___construct ~~~~~~~~~
+Future-condition checking for 'malloc @1271': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(ports!=0)∧(serv!=0) /\ 𝝐 ~~~> (!free(serv))^* · free(serv) · (_)^*;
+[Patches]
+ @ line 1325 can be inserted with code: if ((ports!=0)∧(serv!=0)){free(serv); }
+
+
+~~~~~~~~~ In function: zim_swoole_server___construct ~~~~~~~~~
+Future-condition checking for 'malloc @1271': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(ports!=0)∧serv=0 /\ deref(serv)@1289 · deref(serv)@1291 · COMSUME(serv)@1319 ~~~> (!_(serv))^*;
+[Patches]
+ @ line 1289 can be inserted with code: if ((ports!=0)∧serv==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_server___construct ~~~~~~~~~
+Future-condition checking for 'malloc @1271': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(serv!=0) /\ RET()@1303 ~~~> (!free(serv))^* · free(serv) · (_)^*;
+[Patches]
+ @ line 1303 can be inserted with code: if ((serv!=0)){free(serv); }
+
+
+~~~~~~~~~ In function: zim_swoole_server___construct ~~~~~~~~~
+Future-condition checking for 'malloc @1271': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(serv!=0) /\ RET()@1277 ~~~> (!free(serv))^* · free(serv) · (_)^*;
+[Patches]
+ @ line 1277 can be inserted with code: if ((serv!=0)){free(serv); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/swoole_lock.c:
+
+~~~~~~~~~ In function: zim_swoole_lock___construct ~~~~~~~~~
+Future-condition checking for 'open @99': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=1∧fd>0 /\ RET()@126 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 126 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: zim_swoole_lock___construct ~~~~~~~~~
+Future-condition checking for 'open @99': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@123 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 123 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/swoole_client.c:
+
+~~~~~~~~~ In function: client_execute_callback ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @101': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧cb=0 /\ deref(cb)@107 ~~~> (!_(cb))^*;
+[Patches]
+ @ line 107 can be inserted with code: if (cb==0){ return; }
+
+
+~~~~~~~~~ In function: client_onReceive ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @296': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧cb=0 /\ deref(cb)@297 ~~~> (!_(cb))^*;
+[Patches]
+ @ line 297 can be inserted with code: if (cb==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/swoole_event.c:
+
+~~~~~~~~~ In function: zif_swoole_event_add ~~~~~~~~~
+Future-condition checking for 'swReactor_get @380': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧socket=0 /\ deref(socket)@381 · deref(socket)@382 · RET()@384 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 381 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: zif_swoole_event_set ~~~~~~~~~
+Future-condition checking for 'swReactor_get @454': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧socket=0 /\ deref(socket)@455 · deref(socket)@462 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 455 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: zif_swoole_event_del ~~~~~~~~~
+Future-condition checking for 'swReactor_get @553': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧socket=0 /\ deref(socket)@554 · deref(socket)@558 · deref(socket)@560 · RET()@564 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 554 can be inserted with code: if (socket==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/swoole_async.c:
+
+~~~~~~~~~ In function: zif_swoole_async_read ~~~~~~~~~
+Future-condition checking for 'open @348': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@371 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 371 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: zif_swoole_async_read ~~~~~~~~~
+Future-condition checking for 'open @348': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@364 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 364 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: zif_swoole_async_read ~~~~~~~~~
+Future-condition checking for 'open @348': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@359 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 359 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: zif_swoole_async_readfile ~~~~~~~~~
+Future-condition checking for 'open @528': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@549 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 549 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: zif_swoole_async_readfile ~~~~~~~~~
+Future-condition checking for 'open @528': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@543 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 543 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: zif_swoole_async_readfile ~~~~~~~~~
+Future-condition checking for 'open @528': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@538 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 538 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/swoole_http_client.c:
+
+~~~~~~~~~ In function: http_client_execute ~~~~~~~~~
+Future-condition checking for 'open @381': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=-1∧fd>0 /\ RET()@400 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 400 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: http_client_execute ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @372': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r3∧hcc=0 /\ deref(hcc)@374 · deref(hcc)@379 · deref(http)@408 · deref(http)@419 · deref(cli)@461 · deref(hcc)@462 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 374 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: http_client_onMessage ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @594': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧hcc=0 /\ deref(hcc)@595 · RET()@611 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 595 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: http_client_onReceive ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @660': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧hcc=0 /\ deref(hcc)@661 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 661 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: http_client_send_http_request ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @803': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧hcc=0 /\ deref(hcc)@805 · deref(hcc)@806 · deref(hcc)@819 · deref(hcc)@827 · deref(http)@875 · deref(hcc)@882 · deref(hcc)@915 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 805 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_http_client_setHeaders ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @1283': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧hcc=0 /\ deref(hcc)@1284 · deref(hcc)@1285 · RET()@1286 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 1284 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_http_client_setCookies ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @1297': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧hcc=0 /\ deref(hcc)@1298 · deref(hcc)@1299 · RET()@1301 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 1298 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_http_client_setData ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @1312': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧hcc=0 /\ deref(hcc)@1313 · deref(hcc)@1314 · RET()@1315 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 1313 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_http_client_addFile ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @1372': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧hcc=0 /\ deref(hcc)@1374 · RET()@1397 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 1374 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_http_client_setMethod ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @1409': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧hcc=0 /\ deref(hcc)@1410 · RET()@1411 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 1410 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_http_client_on ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @1477': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧hcc=0 /\ deref(hcc)@1499 · deref(hcc)@1500 · RET()@1507 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 1499 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_http_client_download ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @1783': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧hcc=0 /\ deref(hcc)@1785 · deref(hcc)@1786 · deref(hcc)@1787 · RET()@1789 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 1785 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_http_client_post ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @1811': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧hcc=0 /\ deref(hcc)@1813 · deref(hcc)@1814 · RET()@1816 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 1813 can be inserted with code: if (hcc==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_http_client_upgrade ~~~~~~~~~
+Future-condition checking for 'swoole_get_property @1831': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧hcc=0 /\ deref(hcc)@1832 · deref(hcc)@1839 ~~~> (!_(hcc))^*;
+[Patches]
+ @ line 1832 can be inserted with code: if (hcc==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/swoole_mysql.c:
+
+~~~~~~~~~ In function: zim_swoole_mysql_connect ~~~~~~~~~
+Future-condition checking for 'swReactor_get @894': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧_socket=0 /\ deref(_socket)@895 · deref(_socket)@896 · RET()@898 ~~~> (!_(_socket))^*;
+[Patches]
+ @ line 895 can be inserted with code: if (_socket==0){ return; }
+
+
+~~~~~~~~~ In function: zim_swoole_mysql_close ~~~~~~~~~
+Future-condition checking for 'swReactor_get @1009': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧socket=0 /\ deref(socket)@1010 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 1010 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: swoole_mysql_onRead ~~~~~~~~~
+Future-condition checking for 'swReactor_get @1386': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧_socket=0 /\ deref(_socket)@1387 · RET()@1393 ~~~> (!_(_socket))^*;
+[Patches]
+ @ line 1387 can be inserted with code: if (_socket==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/swoole_mmap.c:
+
+~~~~~~~~~ In function: zim_swoole_mmap_open ~~~~~~~~~
+Future-condition checking for 'open @172': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@206 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 206 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: zim_swoole_mmap_open ~~~~~~~~~
+Future-condition checking for 'open @172': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@190 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 190 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: zim_swoole_mmap_open ~~~~~~~~~
+Future-condition checking for 'open @172': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧.ret=0∧fd>0 /\ RET()@185 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 185 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/core/base.c:
+
+~~~~~~~~~ In function: swoole_system_random ~~~~~~~~~
+Future-condition checking for 'open @379': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(dev_random_fd<0)∧dev_random_fd>0 /\ RET()@394 ~~~> (!close(dev_random_fd))^* · close(dev_random_fd) · (_)^*;
+[Patches]
+ @ line 394 can be inserted with code: if (!(dev_random_fd<0)∧dev_random_fd>0){close(dev_random_fd); }
+
+
+~~~~~~~~~ In function: swoole_system_random ~~~~~~~~~
+Future-condition checking for 'open @379': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(dev_random_fd<0)∧.ret=-1∧dev_random_fd>0 /\ RET()@392 ~~~> (!close(dev_random_fd))^* · close(dev_random_fd) · (_)^*;
+[Patches]
+ @ line 392 can be inserted with code: if (!(dev_random_fd<0)∧dev_random_fd>0){close(dev_random_fd); }
+
+
+~~~~~~~~~ In function: swoole_file_get_contents ~~~~~~~~~
+Future-condition checking for 'open @554': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(fd<0)∧fd>0 /\ RET(NULL)@563 ~~~> (!close(fd))^* · close(fd) · (_)^*;
+[Patches]
+ @ line 563 can be inserted with code: if (!(fd<0)∧fd>0){close(fd); }
+
+
+~~~~~~~~~ In function: swoole_gethostbyname ~~~~~~~~~
+Future-condition checking for 'malloc @916': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(cache!=0) /\ RET()@958 ~~~> (!free(cache))^* · free(cache) · (_)^*;
+[Patches]
+ @ line 958 can be inserted with code: if ((cache!=0)){free(cache); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/core/log.c:
+
+~~~~~~~~~ In function: swLog_put ~~~~~~~~~
+Future-condition checking for 'localtime @73': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧p=0 /\ deref(p)@74 ~~~> (!_(p))^*;
+[Patches]
+ @ line 74 can be inserted with code: if (p==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/core/hashmap.c:
+
+~~~~~~~~~ In function: swHashMap_new ~~~~~~~~~
+Future-condition checking for 'malloc @126': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(root.hh.tbl.buckets!=0) /\ RET(hmap)@137 ~~~> (!free(root.hh.tbl.buckets))^* · free(root.hh.tbl.buckets) · (_)^*;
+[Patches]
+ @ line 137 can be inserted with code: if ((root.hh.tbl.buckets!=0)){free(root.hh.tbl.buckets); }
+
+
+~~~~~~~~~ In function: swHashMap_new ~~~~~~~~~
+Future-condition checking for 'malloc @114': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(root.hh.tbl!=0) /\ RET(hmap)@137 ~~~> (!free(root.hh.tbl))^* · free(root.hh.tbl) · (_)^*;
+[Patches]
+ @ line 137 can be inserted with code: if ((root.hh.tbl!=0)){free(root.hh.tbl); }
+
+
+~~~~~~~~~ In function: swHashMap_new ~~~~~~~~~
+Future-condition checking for 'malloc @114': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(root.hh.tbl!=0) /\ RET(NULL)@130 ~~~> (!free(root.hh.tbl))^* · free(root.hh.tbl) · (_)^*;
+[Patches]
+ @ line 130 can be inserted with code: if ((root.hh.tbl!=0)){free(root.hh.tbl); }
+
+
+~~~~~~~~~ In function: swHashMap_new ~~~~~~~~~
+Future-condition checking for 'malloc @95': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(hmap!=0) /\ RET(NULL)@130 ~~~> (!free(hmap))^* · free(hmap) · (_)^*;
+[Patches]
+ @ line 130 can be inserted with code: if ((hmap!=0)){free(hmap); }
+
+
+~~~~~~~~~ In function: swHashMap_new ~~~~~~~~~
+Future-condition checking for 'malloc @95': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(hmap!=0) /\ RET(NULL)@118 ~~~> (!free(hmap))^* · free(hmap) · (_)^*;
+[Patches]
+ @ line 118 can be inserted with code: if ((hmap!=0)){free(hmap); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/core/socket.c:
+
+~~~~~~~~~ In function: swSocket_sendfile_sync ~~~~~~~~~
+Future-condition checking for 'open @25': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(file_fd<0)∧.ret=-1∧file_fd>0 /\ RET()@36 ~~~> (!close(file_fd))^* · close(file_fd) · (_)^*;
+[Patches]
+ @ line 36 can be inserted with code: if (!(file_fd<0)∧file_fd>0){close(file_fd); }
+
+
+~~~~~~~~~ In function: swSocket_wait_multi ~~~~~~~~~
+Future-condition checking for 'calloc @122': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧event_list=0 /\ deref(event_list)@137 · deref(event_list)@138 ~~~> (!_(event_list))^*;
+[Patches]
+ @ line 137 can be inserted with code: if (event_list==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/memory/Table.c:
+
+~~~~~~~~~ In function: swTable_new ~~~~~~~~~
+Future-condition checking for 'malloc @63': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(table.iterator!=0) /\ RET(NULL)@72 ~~~> (!free(table.iterator))^* · free(table.iterator) · (_)^*;
+[Patches]
+ @ line 72 can be inserted with code: if ((table.iterator!=0)){free(table.iterator); }
+
+
+~~~~~~~~~ In function: swTableColumn_add ~~~~~~~~~
+Future-condition checking for 'malloc @85': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r1∧(col!=0) /\ RET(r1)@131 ~~~> (!free(col))^* · free(col) · (_)^*;
+[Patches]
+ @ line 131 can be inserted with code: if ((col!=0)){free(col); }
+
+
+~~~~~~~~~ In function: swTableColumn_add ~~~~~~~~~
+Future-condition checking for 'malloc @85': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r1∧col=0 /\ deref(col)@86 · deref(col)@87 · deref(col)@117 · deref(col)@118 · deref(table)@128 · deref(col)@128 ~~~> (!_(col))^*;
+[Patches]
+ @ line 86 can be inserted with code: if (col==0){ return; }
+
+
+~~~~~~~~~ In function: swTableColumn_add ~~~~~~~~~
+Future-condition checking for 'malloc @85': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=-1∧(col!=0) /\ RET()@89 ~~~> (!free(col))^* · free(col) · (_)^*;
+[Patches]
+ @ line 89 can be inserted with code: if ((col!=0)){free(col); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/factory/FactoryThread.c:
+
+~~~~~~~~~ In function: swFactoryThread_dispatch ~~~~~~~~~
+Future-condition checking for 'malloc @164': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(data!=0) /\ RET()@181 ~~~> (!free(data))^* · free(data) · (_)^*;
+[Patches]
+ @ line 181 can be inserted with code: if ((data!=0)){free(data); }
+
+
+~~~~~~~~~ In function: swFactoryThread_dispatch ~~~~~~~~~
+Future-condition checking for 'malloc @164': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(data!=0) /\ RET()@177 ~~~> (!free(data))^* · free(data) · (_)^*;
+[Patches]
+ @ line 177 can be inserted with code: if ((data!=0)){free(data); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/factory/FactoryProcess.c:
+
+~~~~~~~~~ In function: swFactoryProcess_finish ~~~~~~~~~
+Future-condition checking for 'swServer_get_worker @213': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧worker=0 /\ deref(worker)@220 ~~~> (!_(worker))^*;
+[Patches]
+ @ line 218 can be inserted with code: if (worker==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/reactor/ReactorBase.c:
+
+~~~~~~~~~ In function: swReactor_add ~~~~~~~~~
+Future-condition checking for 'swReactor_get @147': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧socket=0 /\ deref(socket)@149 · deref(socket)@150 · deref(socket)@151 · RET()@155 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 149 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: swReactor_del ~~~~~~~~~
+Future-condition checking for 'swReactor_get @160': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧socket=0 /\ deref(socket)@161 · deref(socket)@162 · RET()@163 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 161 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: swReactor_set ~~~~~~~~~
+Future-condition checking for 'swReactor_get @168': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧socket=0 /\ deref(socket)@169 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 169 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: swReactor_close ~~~~~~~~~
+Future-condition checking for 'swReactor_get @253': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r0∧socket=0 /\ deref(socket)@254 · deref(socket)@258 · deref(socket)@262 · deref(socket)@267 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 254 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: swReactor_write ~~~~~~~~~
+Future-condition checking for 'swReactor_get @274': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧socket=0 /\ deref(socket)@275 · deref(socket)@277 · deref(socket)@282 · deref(socket)@287 · deref(buffer)@293 · deref(buffer)@366 · deref(socket)@366 · RET()@385 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 275 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: swReactor_onWrite ~~~~~~~~~
+Future-condition checking for 'swReactor_get @393': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧socket=0 /\ deref(socket)@395 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 395 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: swReactor_wait_write_buffer ~~~~~~~~~
+Future-condition checking for 'swReactor_get @454': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧conn=0 /\ deref(conn)@457 · RET()@463 ~~~> (!_(conn))^*;
+[Patches]
+ @ line 457 can be inserted with code: if (conn==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/reactor/ReactorSelect.c:
+
+~~~~~~~~~ In function: swReactorSelect_add ~~~~~~~~~
+Future-condition checking for 'malloc @96': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧ev=0 /\ deref(ev)@97 · deref(ev)@99 · deref(ev)@100 ~~~> (!_(ev))^*;
+[Patches]
+ @ line 97 can be inserted with code: if (ev==0){ return; }
+
+
+~~~~~~~~~ In function: swReactorSelect_wait ~~~~~~~~~
+Future-condition checking for 'swReactor_get @236': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧event.socket=0 /\ deref(event.socket)@239 · deref(event)@249 · deref(event.socket)@249 · deref(event)@259 · deref(event.socket)@259 ~~~> (!_(event.socket))^*;
+[Patches]
+ @ line 239 can be inserted with code: if (event.socket==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/reactor/ReactorPoll.c:
+
+~~~~~~~~~ In function: swReactorPoll_create ~~~~~~~~~
+Future-condition checking for 'malloc @42': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(object!=0) /\ RET()@60 ~~~> (!free(object))^* · free(object) · (_)^*;
+[Patches]
+ @ line 60 can be inserted with code: if ((object!=0)){free(object); }
+
+
+~~~~~~~~~ In function: swReactorPoll_create ~~~~~~~~~
+Future-condition checking for 'malloc @42': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(object!=0) /\ RET()@54 ~~~> (!free(object))^* · free(object) · (_)^*;
+[Patches]
+ @ line 54 can be inserted with code: if ((object!=0)){free(object); }
+
+
+~~~~~~~~~ In function: swReactorPoll_wait ~~~~~~~~~
+Future-condition checking for 'swReactor_get @243': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧event.socket=0 /\ deref(event.socket)@247 · deref(event.socket)@257 · deref(event.socket)@267 ~~~> (!_(event.socket))^*;
+[Patches]
+ @ line 247 can be inserted with code: if (event.socket==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/reactor/ReactorKqueue.c:
+
+~~~~~~~~~ In function: swReactorKqueue_del ~~~~~~~~~
+Future-condition checking for 'swReactor_get @223': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧socket=0 /\ deref(socket)@225 · deref(socket)@236 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 225 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: swReactorKqueue_wait ~~~~~~~~~
+Future-condition checking for 'swReactor_get @323': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧event.socket=0 /\ deref(event.socket)@326 · deref(event.socket)@336 ~~~> (!_(event.socket))^*;
+[Patches]
+ @ line 326 can be inserted with code: if (event.socket==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/pipe/PipeBase.c:
+
+~~~~~~~~~ In function: swPipeBase_create ~~~~~~~~~
+Future-condition checking for 'malloc @32': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(object!=0) /\ RET()@42 ~~~> (!free(object))^* · free(object) · (_)^*;
+[Patches]
+ @ line 42 can be inserted with code: if ((object!=0)){free(object); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/pipe/PipeEventfd.c:
+
+~~~~~~~~~ In function: swPipeEventfd_create ~~~~~~~~~
+Future-condition checking for 'malloc @35': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(object!=0) /\ RET()@68 ~~~> (!free(object))^* · free(object) · (_)^*;
+[Patches]
+ @ line 68 can be inserted with code: if ((object!=0)){free(object); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/pipe/PipeUnsock.c:
+
+~~~~~~~~~ In function: swPipeUnsock_create ~~~~~~~~~
+Future-condition checking for 'malloc @54': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(object!=0) /\ RET()@65 ~~~> (!free(object))^* · free(object) · (_)^*;
+[Patches]
+ @ line 65 can be inserted with code: if ((object!=0)){free(object); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/network/Server.c:
+
+~~~~~~~~~ In function: swServer_create_worker_buffer ~~~~~~~~~
+Future-condition checking for 'malloc @464': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buffers!=0) /\ RET()@476 ~~~> (!free(buffers))^* · free(buffers) · (_)^*;
+[Patches]
+ @ line 476 can be inserted with code: if ((buffers!=0)){free(buffers); }
+
+
+~~~~~~~~~ In function: swServer_confirm ~~~~~~~~~
+Future-condition checking for 'swServer_connection_verify @878': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+conn=0 /\ deref(conn)@879 · RET()@881 ~~~> (!_(conn))^*;
+[Patches]
+ @ line 879 can be inserted with code: if (conn==0){ return; }
+
+
+~~~~~~~~~ In function: swServer_add_port ~~~~~~~~~
+Future-condition checking for 'swSocket_create @1131': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(sock<0)∧sock>0 /\ RET(NULL)@1140 ~~~> (!close(sock))^* · close(sock) · (_)^*;
+[Patches]
+ @ line 1140 can be inserted with code: if (!(sock<0)∧sock>0){close(sock); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/network/Client.c:
+
+~~~~~~~~~ In function: swClient_create ~~~~~~~~~
+Future-condition checking for 'socket @84': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(sockfd<0)∧cli.socket=0∧.ret=-1∧sockfd>0 /\ RET()@106 ~~~> (!close(sockfd))^* · close(sockfd) · (_)^*;
+[Patches]
+ @ line 106 can be inserted with code: if (!(sockfd<0)∧cli.socket==0∧sockfd>0){close(sockfd); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/network/ReactorThread.c:
+
+~~~~~~~~~ In function: swReactorThread_onPipeReceive ~~~~~~~~~
+Future-condition checking for 'swServer_get_worker @436': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧worker=0 /\ deref(worker)@438 ~~~> (!_(worker))^*;
+[Patches]
+ @ line 438 can be inserted with code: if (worker==0){ return; }
+
+
+~~~~~~~~~ In function: swReactorThread_onWrite ~~~~~~~~~
+Future-condition checking for 'swServer_connection_get @870': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧conn=0 /\ deref(conn)@871 · deref(conn)@876 · deref(conn)@890 · deref(serv)@902 · deref(conn)@902 · deref(chunk)@912 · deref(chunk)@917 · deref(conn)@939 · deref(serv)@944 · deref(conn)@944 · deref(conn)@955 · RET()@959 ~~~> (!_(conn))^*;
+[Patches]
+ @ line 871 can be inserted with code: if (conn==0){ return; }
+
+
+~~~~~~~~~ In function: swReactorThread_loop ~~~~~~~~~
+Future-condition checking for 'malloc @1218': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(serv.connection_list.pipe_fd.object!=0) /\ RET()@1249 ~~~> (!free(serv.connection_list.pipe_fd.object))^* · free(serv.connection_list.pipe_fd.object) · (_)^*;
+[Patches]
+ @ line 1249 can be inserted with code: if ((serv.connection_list.pipe_fd.object!=0)){free(serv.connection_list.pipe_fd.object); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/network/ReactorProcess.c:
+
+~~~~~~~~~ In function: swReactorProcess_loop ~~~~~~~~~
+Future-condition checking for 'swReactor_get @352': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧psock=0 /\ deref(psock)@353 ~~~> (!_(psock))^*;
+[Patches]
+ @ line 353 can be inserted with code: if (psock==0){ return; }
+
+
+~~~~~~~~~ In function: swReactorProcess_reuse_port ~~~~~~~~~
+Future-condition checking for 'swSocket_create @541': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+!(sock<0)∧.ret=-1∧sock>0 /\ RET()@550 ~~~> (!close(sock))^* · close(sock) · (_)^*;
+[Patches]
+ @ line 550 can be inserted with code: if (!(sock<0)∧sock>0){close(sock); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/network/Manager.c:
+
+~~~~~~~~~ In function: swManager_start ~~~~~~~~~
+Future-condition checking for 'calloc @94': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧serv.user_workers=0 /\ deref(serv.user_workers)@103 ~~~> (!_(serv.user_workers))^*;
+[Patches]
+ @ line 103 can be inserted with code: if (serv.user_workers==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/network/Worker.c:
+
+~~~~~~~~~ In function: swWorker_signal_handler ~~~~~~~~~
+Future-condition checking for 'swReactor_get @98': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧socket=0 /\ deref(socket)@99 ~~~> (!_(socket))^*;
+[Patches]
+ @ line 99 can be inserted with code: if (socket==0){ return; }
+
+
+~~~~~~~~~ In function: swWorker_onStart ~~~~~~~~~
+Future-condition checking for 'swServer_get_worker @393': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧worker=0 /\ free(worker)@400 ~~~> (!_(worker))^*;
+[Patches]
+ @ line 399 can be inserted with code: if (worker==0){ return; }
+
+
+~~~~~~~~~ In function: swWorker_onStop ~~~~~~~~~
+Future-condition checking for 'swServer_get_worker @416': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧worker=0 /\ free(worker)@421 ~~~> (!_(worker))^*;
+[Patches]
+ @ line 417 can be inserted with code: if (worker==0){ return; }
+
+
+~~~~~~~~~ In function: swWorker_clean ~~~~~~~~~
+Future-condition checking for 'swServer_get_worker @432': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧worker=0 /\ deref(worker)@435 · deref(worker)@439 ~~~> (!_(worker))^*;
+[Patches]
+ @ line 435 can be inserted with code: if (worker==0){ return; }
+
+
+~~~~~~~~~ In function: swWorker_loop ~~~~~~~~~
+Future-condition checking for 'swReactor_get @505': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧pipe_socket=0 /\ deref(pipe_socket)@506 · RET()@523 ~~~> (!_(pipe_socket))^*;
+[Patches]
+ @ line 506 can be inserted with code: if (pipe_socket==0){ return; }
+
+
+~~~~~~~~~ In function: swWorker_loop ~~~~~~~~~
+Future-condition checking for 'swReactor_get @503': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧pipe_socket=0 /\ deref(pipe_socket)@504 · deref(serv)@506 · deref(pipe_socket)@506 · RET()@523 ~~~> (!_(pipe_socket))^*;
+[Patches]
+ @ line 504 can be inserted with code: if (pipe_socket==0){ return; }
+
+
+~~~~~~~~~ In function: swWorker_loop ~~~~~~~~~
+Future-condition checking for 'swServer_get_worker @469': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(SwooleG.main_reactor!=0)∧.ret=0∧worker=0 /\ deref(worker)@485 · deref(worker)@487 ~~~> (!_(worker))^*;
+[Patches]
+ @ line 483 can be inserted with code: if ((SwooleG.main_reactor!=0)∧worker==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/network/Timer.c:
+
+~~~~~~~~~ In function: swTimer_add ~~~~~~~~~
+Future-condition checking for 'malloc @115': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(tnode!=0) /\ RET(NULL)@125 ~~~> (!free(tnode))^* · free(tnode) · (_)^*;
+[Patches]
+ @ line 125 can be inserted with code: if ((tnode!=0)){free(tnode); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/network/Port.c:
+
+~~~~~~~~~ In function: swPort_onRead_http ~~~~~~~~~
+Future-condition checking for 'malloc @310': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧request=0 /\ deref(request)@319 · deref(request)@330 · deref(buffer)@333 · deref(buffer)@334 · deref(request)@362 · deref(request)@379 · deref(request)@400 · deref(request)@429 · deref(request)@446 ~~~> (!_(request))^*;
+[Patches]
+ @ line 312 can be inserted with code: if (request==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/os/base.c:
+
+~~~~~~~~~ In function: swAioBase_write ~~~~~~~~~
+Future-condition checking for 'malloc @304': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(aio_ev!=0) /\ RET()@325 ~~~> (!free(aio_ev))^* · free(aio_ev) · (_)^*;
+[Patches]
+ @ line 325 can be inserted with code: if ((aio_ev!=0)){free(aio_ev); }
+
+
+~~~~~~~~~ In function: swAioBase_write ~~~~~~~~~
+Future-condition checking for 'malloc @304': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(aio_ev!=0) /\ RET()@320 ~~~> (!free(aio_ev))^* · free(aio_ev) · (_)^*;
+[Patches]
+ @ line 320 can be inserted with code: if ((aio_ev!=0)){free(aio_ev); }
+
+
+~~~~~~~~~ In function: swAio_dns_lookup ~~~~~~~~~
+Future-condition checking for 'malloc @331': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(aio_ev!=0) /\ RET()@352 ~~~> (!free(aio_ev))^* · free(aio_ev) · (_)^*;
+[Patches]
+ @ line 352 can be inserted with code: if ((aio_ev!=0)){free(aio_ev); }
+
+
+~~~~~~~~~ In function: swAio_dns_lookup ~~~~~~~~~
+Future-condition checking for 'malloc @331': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(aio_ev!=0) /\ RET()@347 ~~~> (!free(aio_ev))^* · free(aio_ev) · (_)^*;
+[Patches]
+ @ line 347 can be inserted with code: if ((aio_ev!=0)){free(aio_ev); }
+
+
+~~~~~~~~~ In function: swAioBase_read ~~~~~~~~~
+Future-condition checking for 'malloc @358': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(aio_ev!=0) /\ RET()@380 ~~~> (!free(aio_ev))^* · free(aio_ev) · (_)^*;
+[Patches]
+ @ line 380 can be inserted with code: if ((aio_ev!=0)){free(aio_ev); }
+
+
+~~~~~~~~~ In function: swAioBase_read ~~~~~~~~~
+Future-condition checking for 'malloc @358': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(aio_ev!=0) /\ RET()@375 ~~~> (!free(aio_ev))^* · free(aio_ev) · (_)^*;
+[Patches]
+ @ line 375 can be inserted with code: if ((aio_ev!=0)){free(aio_ev); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/src/protocol/Redis.c:
+
+~~~~~~~~~ In function: swRedis_recv ~~~~~~~~~
+Future-condition checking for 'malloc @47': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=-1∧request=0 /\ deref(request)@113 · deref(request)@114 · RET()@177 ~~~> (!_(request))^*;
+[Patches]
+ @ line 111 can be inserted with code: if (request==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/swoole-src/thirdparty/multipart_parser.c:
+
+~~~~~~~~~ In function: multipart_parser_init ~~~~~~~~~
+Future-condition checking for 'calloc @69': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=p∧p=0 /\ deref(p)@76 · deref(p)@78 · deref(p)@80 · deref(p)@81 · deref(p)@82 ~~~> (!_(p))^*;
+[Patches]
+ @ line 76 can be inserted with code: if (p==0){ return; }
+
