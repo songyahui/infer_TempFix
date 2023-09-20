@@ -638,7 +638,7 @@ let rec var_binding (formal:string list) (actual: basic_type list) : bindings =
 let specialCases es = 
   match es with 
   | Kleene (NotSingleton (str, _)) -> 
-    if String.compare str "_" == 0  then true else false 
+    if String.compare str "_" == 0 ||  String.compare str "deref" == 0  then true else false 
   | _ ->  false 
   ;;
 
@@ -818,14 +818,17 @@ let program_repair prefix ((callee, fp):(string * int list)) (info:((error_info 
         
         (*print_endline ("init:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); *)
 
-        (*let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
+        let (functionStart, _) = !currentFunctionLineNumber in 
+        let dotsareOntheErrorPath = List.filter onlyErrorPostions ~f:(fun x -> x >= startNum && x <=endNum) in 
         let (lowerError, upperError) = computeRange dotsareOntheErrorPath in 
         let (startNum, endNum) = 
-          let startNum' = if lowerError > (startNum +2) then lowerError else startNum in 
-          let endNum' = if upperError < endNum then upperError else endNum in 
-          (startNum', endNum')
+          if startNum == functionStart then 
+            let startNum' = if lowerError > (startNum) then lowerError else startNum in 
+            let endNum' = if upperError < endNum then upperError else endNum in 
+            (startNum', endNum')
+          else (startNum, endNum)
         in 
-        *)
+        
 
         (*print_endline ("after:" ^ (string_of_int startNum) ^ ", "^ (string_of_int endNum)); *)
 

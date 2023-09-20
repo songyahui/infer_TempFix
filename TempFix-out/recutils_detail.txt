@@ -1,0 +1,1387 @@
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/lib/malloca.c:
+
+~~~~~~~~~ In function: mmalloca ~~~~~~~~~
+Future-condition checking for 'malloc @52': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(mem!=0) /\ (RET(p)@67 · (!free(p))^* · free(p) · (_)^* \/ RET(p)@67 · (!free(p))^*) ~~~> (!free(mem))^* · free(mem) · (_)^*;
+[Patches]
+ @ line 67 can be inserted with code: if ((mem!=0)){free(mem); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/lib/malloca.c:
+
+~~~~~~~~~ In function: mmalloca ~~~~~~~~~
+Future-condition checking for 'malloc @52': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(mem!=0) /\ (RET(p)@67 · (!free(p))^* · free(p) · (_)^* \/ RET(p)@67 · (!free(p))^*) ~~~> (!free(mem))^* · free(mem) · (_)^*;
+[Patches]
+ @ line 67 can be inserted with code: if ((mem!=0)){free(mem); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/lib/wait-process.c:
+
+~~~~~~~~~ In function: register_slave_subprocess ~~~~~~~~~
+Future-condition checking for 'malloc @147': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new_slaves=0 /\ deref(new_slaves)@156 ~~~> (!deref(new_slaves))^*;
+[Patches]
+ @ line 156 can be inserted with code: if (new_slaves==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/lib/wait-process.c:
+
+~~~~~~~~~ In function: register_slave_subprocess ~~~~~~~~~
+Future-condition checking for 'malloc @147': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new_slaves=0 /\ deref(new_slaves)@156 ~~~> (!deref(new_slaves))^*;
+[Patches]
+ @ line 156 can be inserted with code: if (new_slaves==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/lib/obstack.c:
+
+~~~~~~~~~ In function: _obstack_newchunk ~~~~~~~~~
+Future-condition checking for 'call_chunkfun @200': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new_chunk=0 /\ deref(new_chunk)@204 · deref(h)@205 · deref(new_chunk)@205 · deref(new_chunk)@209 ~~~> (!deref(new_chunk))^*;
+[Patches]
+ @ line 203 can be inserted with code: if (new_chunk==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/lib/obstack.c:
+
+~~~~~~~~~ In function: _obstack_newchunk ~~~~~~~~~
+Future-condition checking for 'call_chunkfun @200': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new_chunk=0 /\ deref(new_chunk)@204 · deref(h)@205 · deref(new_chunk)@205 · deref(new_chunk)@209 ~~~> (!deref(new_chunk))^*;
+[Patches]
+ @ line 203 can be inserted with code: if (new_chunk==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/lib/time_rz.c:
+
+~~~~~~~~~ In function: localtime_rz ~~~~~~~~~
+Future-condition checking for 'set_tz @308': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(old_tz!=0) /\ RET(NULL)@315 ~~~> (!free(old_tz))^* · free(old_tz) · (_)^*;
+[Patches]
+ @ line 315 can be inserted with code: if ((old_tz!=0)){free(old_tz); }
+
+
+~~~~~~~~~ In function: localtime_rz ~~~~~~~~~
+Future-condition checking for 'set_tz @308': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(old_tz!=0) /\ RET(tm)@313 ~~~> (!free(old_tz))^* · free(old_tz) · (_)^*;
+[Patches]
+ @ line 313 can be inserted with code: if ((old_tz!=0)){free(old_tz); }
+
+
+~~~~~~~~~ In function: mktime_z ~~~~~~~~~
+Future-condition checking for 'set_tz @327': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(old_tz!=0) /\ RET()@342 ~~~> (!free(old_tz))^* · free(old_tz) · (_)^*;
+[Patches]
+ @ line 342 can be inserted with code: if ((old_tz!=0)){free(old_tz); }
+
+
+~~~~~~~~~ In function: mktime_z ~~~~~~~~~
+Future-condition checking for 'set_tz @327': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(old_tz!=0) /\ RET(t)@340 ~~~> (!free(old_tz))^* · free(old_tz) · (_)^*;
+[Patches]
+ @ line 340 can be inserted with code: if ((old_tz!=0)){free(old_tz); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/lib/time_rz.c:
+
+~~~~~~~~~ In function: localtime_rz ~~~~~~~~~
+Future-condition checking for 'set_tz @308': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(old_tz!=0) /\ RET(NULL)@315 ~~~> (!free(old_tz))^* · free(old_tz) · (_)^*;
+[Patches]
+ @ line 315 can be inserted with code: if ((old_tz!=0)){free(old_tz); }
+
+
+~~~~~~~~~ In function: localtime_rz ~~~~~~~~~
+Future-condition checking for 'set_tz @308': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(old_tz!=0) /\ RET(tm)@313 ~~~> (!free(old_tz))^* · free(old_tz) · (_)^*;
+[Patches]
+ @ line 313 can be inserted with code: if ((old_tz!=0)){free(old_tz); }
+
+
+~~~~~~~~~ In function: mktime_z ~~~~~~~~~
+Future-condition checking for 'set_tz @327': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(old_tz!=0) /\ RET()@342 ~~~> (!free(old_tz))^* · free(old_tz) · (_)^*;
+[Patches]
+ @ line 342 can be inserted with code: if ((old_tz!=0)){free(old_tz); }
+
+
+~~~~~~~~~ In function: mktime_z ~~~~~~~~~
+Future-condition checking for 'set_tz @327': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(old_tz!=0) /\ RET(t)@340 ~~~> (!free(old_tz))^* · free(old_tz) · (_)^*;
+[Patches]
+ @ line 340 can be inserted with code: if ((old_tz!=0)){free(old_tz); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-mset.c:
+
+~~~~~~~~~ In function: rec_mset_sort ~~~~~~~~~
+Future-condition checking for 'rec_mset_add_sorted @256': Failed! because there is no handler ! 
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(r0!=0) /\ 𝝐 ~~~> (!free(r0))^* · free(r0) · (_)^*;
+[Patches]
+@ line 257 can be inserted with code: int r0 = rec_mset_add_sorted(mset,elem.type,elem.data); if ((r0!=0)){free(r0); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-mset.c:
+
+~~~~~~~~~ In function: rec_mset_sort ~~~~~~~~~
+Future-condition checking for 'rec_mset_add_sorted @256': Failed! because there is no handler ! 
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(r0!=0) /\ 𝝐 ~~~> (!free(r0))^* · free(r0) · (_)^*;
+[Patches]
+@ line 257 can be inserted with code: int r0 = rec_mset_add_sorted(mset,elem.type,elem.data); if ((r0!=0)){free(r0); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-utils.c:
+
+~~~~~~~~~ In function: rec_extract_file ~~~~~~~~~
+Future-condition checking for 'malloc @102': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=rec_file∧rec_file=0 /\ deref(rec_file)@103 · deref(rec_file)@104 ~~~> (!deref(rec_file))^*;
+[Patches]
+ @ line 103 can be inserted with code: if (rec_file==0){ return; }
+
+
+~~~~~~~~~ In function: rec_extract_url ~~~~~~~~~
+Future-condition checking for 'malloc @130': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=rec_url∧rec_url=0 /\ deref(rec_url)@131 · deref(rec_url)@132 ~~~> (!deref(rec_url))^*;
+[Patches]
+ @ line 131 can be inserted with code: if (rec_url==0){ return; }
+
+
+~~~~~~~~~ In function: rec_extract_type ~~~~~~~~~
+Future-condition checking for 'malloc @159': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=rec_type∧rec_type=0 /\ deref(rec_type)@160 · deref(rec_type)@161 ~~~> (!deref(rec_type))^*;
+[Patches]
+ @ line 160 can be inserted with code: if (rec_type==0){ return; }
+
+
+~~~~~~~~~ In function: rec_parse_regexp ~~~~~~~~~
+Future-condition checking for 'malloc @231': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧result=0 /\ deref(result)@232 ~~~> (!deref(result))^*;
+[Patches]
+ @ line 232 can be inserted with code: if (result==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-utils.c:
+
+~~~~~~~~~ In function: rec_extract_file ~~~~~~~~~
+Future-condition checking for 'malloc @102': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=rec_file∧rec_file=0 /\ deref(rec_file)@103 · deref(rec_file)@104 ~~~> (!deref(rec_file))^*;
+[Patches]
+ @ line 103 can be inserted with code: if (rec_file==0){ return; }
+
+
+~~~~~~~~~ In function: rec_extract_url ~~~~~~~~~
+Future-condition checking for 'malloc @130': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=rec_url∧rec_url=0 /\ deref(rec_url)@131 · deref(rec_url)@132 ~~~> (!deref(rec_url))^*;
+[Patches]
+ @ line 131 can be inserted with code: if (rec_url==0){ return; }
+
+
+~~~~~~~~~ In function: rec_extract_type ~~~~~~~~~
+Future-condition checking for 'malloc @159': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=rec_type∧rec_type=0 /\ deref(rec_type)@160 · deref(rec_type)@161 ~~~> (!deref(rec_type))^*;
+[Patches]
+ @ line 160 can be inserted with code: if (rec_type==0){ return; }
+
+
+~~~~~~~~~ In function: rec_parse_regexp ~~~~~~~~~
+Future-condition checking for 'malloc @231': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧result=0 /\ deref(result)@232 ~~~> (!deref(result))^*;
+[Patches]
+ @ line 232 can be inserted with code: if (result==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-record.c:
+
+~~~~~~~~~ In function: rec_record_to_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @432': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=res∧(buf!=0) /\ RET(res)@467 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 467 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_record_to_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @432': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=res∧buf=0 /\ deref(buf)@450 ~~~> (!deref(buf))^*;
+[Patches]
+ @ line 450 can be inserted with code: if (buf==0){ return; }
+
+
+~~~~~~~~~ In function: rec_record_uniq ~~~~~~~~~
+Future-condition checking for 'malloc @663': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧to_remove=0 /\ deref(to_remove)@664 · deref(to_remove)@673 · deref(to_remove)@705 ~~~> (!deref(to_remove))^*;
+[Patches]
+ @ line 664 can be inserted with code: if (to_remove==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-record.c:
+
+~~~~~~~~~ In function: rec_record_to_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @432': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=res∧(buf!=0) /\ RET(res)@467 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 467 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_record_to_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @432': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=res∧buf=0 /\ deref(buf)@450 ~~~> (!deref(buf))^*;
+[Patches]
+ @ line 450 can be inserted with code: if (buf==0){ return; }
+
+
+~~~~~~~~~ In function: rec_record_uniq ~~~~~~~~~
+Future-condition checking for 'malloc @663': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧to_remove=0 /\ deref(to_remove)@664 · deref(to_remove)@673 · deref(to_remove)@705 ~~~> (!deref(to_remove))^*;
+[Patches]
+ @ line 664 can be inserted with code: if (to_remove==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-rset.c:
+
+~~~~~~~~~ In function: rec_rset_dup ~~~~~~~~~
+Future-condition checking for 'malloc @273': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new=0 /\ deref(new)@301 · deref(new)@302 ~~~> (!deref(new))^*;
+[Patches]
+ @ line 301 can be inserted with code: if (new==0){ return; }
+
+
+~~~~~~~~~ In function: rec_rset_rename_field ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @505': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(buf!=0) /\ 𝝐 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 515 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_rset_rename_field ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @505': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧buf=0 /\ deref(buf)@507 ~~~> (!deref(buf))^*;
+[Patches]
+ @ line 507 can be inserted with code: if (buf==0){ return; }
+
+
+~~~~~~~~~ In function: rec_rset_source ~~~~~~~~~
+Future-condition checking for 'rec_mset_get_at @698': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=r2∧record=0 /\ deref(record)@699 ~~~> (!deref(record))^*;
+[Patches]
+ @ line 699 can be inserted with code: if (record==0){ return; }
+
+
+~~~~~~~~~ In function: rec_rset_group ~~~~~~~~~
+Future-condition checking for 'malloc @765': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(deletion_map!=0) /\ RET(NULL)@807 ~~~> (!free(deletion_map))^* · free(deletion_map) · (_)^*;
+[Patches]
+ @ line 807 can be inserted with code: if ((deletion_map!=0)){free(deletion_map); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-db.c:
+
+~~~~~~~~~ In function: rec_db_get_rset_by_type ~~~~~~~~~
+Future-condition checking for 'rec_rset_type @237': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(rtype!=0) /\ RET(rset)@263 · (!deref(rset))^* ~~~> (!free(rtype))^* · free(rtype) · (_)^*;
+[Patches]
+ @ line 263 can be inserted with code: if ((rtype!=0)){free(rtype); }
+
+
+~~~~~~~~~ In function: rec_db_query ~~~~~~~~~
+Future-condition checking for 'rec_db_get_rset_by_type @298': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+rset=0 /\ RET(res)@312 · (!free(res))^* · free(res) · (_)^* ~~~> (!deref(rset))^*;
+[Patches]
+ @ line 312 can be inserted with code: if (rset==0){ return; }
+
+
+~~~~~~~~~ In function: rec_db_delete ~~~~~~~~~
+Future-condition checking for 'rec_db_get_rset_by_type @738': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧rset=0 /\ deref(rset)@746 · RET()@814 ~~~> (!deref(rset))^*;
+[Patches]
+ @ line 746 can be inserted with code: if (rset==0){ return; }
+
+
+~~~~~~~~~ In function: rec_db_set ~~~~~~~~~
+Future-condition checking for 'rec_db_get_rset_by_type @832': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧rset=0 /\ deref(rset)@840 · RET()@959 ~~~> (!deref(rset))^*;
+[Patches]
+ @ line 840 can be inserted with code: if (rset==0){ return; }
+
+
+~~~~~~~~~ In function: rec_db_set_act_delete ~~~~~~~~~
+Future-condition checking for 'malloc @1375': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(deletion_mask!=0) /\ RET()@1456 ~~~> (!free(deletion_mask))^* · free(deletion_mask) · (_)^*;
+[Patches]
+ @ line 1456 can be inserted with code: if ((deletion_mask!=0)){free(deletion_mask); }
+
+
+~~~~~~~~~ In function: rec_db_set_act_delete ~~~~~~~~~
+Future-condition checking for 'malloc @1375': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(deletion_mask!=0) /\ RET()@1437 ~~~> (!free(deletion_mask))^* · free(deletion_mask) · (_)^*;
+[Patches]
+ @ line 1437 can be inserted with code: if ((deletion_mask!=0)){free(deletion_mask); }
+
+
+~~~~~~~~~ In function: rec_db_process_fex ~~~~~~~~~
+Future-condition checking for 'malloc @1671': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(agg_field_name!=0) /\ RET(NULL)@1696 ~~~> (!free(agg_field_name))^* · free(agg_field_name) · (_)^*;
+[Patches]
+ @ line 1696 can be inserted with code: if ((agg_field_name!=0)){free(agg_field_name); }
+
+
+~~~~~~~~~ In function: rec_db_process_fex ~~~~~~~~~
+Future-condition checking for 'malloc @1671': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(agg_field_name!=0) /\ RET(NULL)@1687 ~~~> (!free(agg_field_name))^* · free(agg_field_name) · (_)^*;
+[Patches]
+ @ line 1687 can be inserted with code: if ((agg_field_name!=0)){free(agg_field_name); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-db.c:
+
+~~~~~~~~~ In function: rec_db_get_rset_by_type ~~~~~~~~~
+Future-condition checking for 'rec_rset_type @237': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(rtype!=0) /\ RET(rset)@263 · (!deref(rset))^* ~~~> (!free(rtype))^* · free(rtype) · (_)^*;
+[Patches]
+ @ line 263 can be inserted with code: if ((rtype!=0)){free(rtype); }
+
+
+~~~~~~~~~ In function: rec_db_query ~~~~~~~~~
+Future-condition checking for 'rec_db_get_rset_by_type @298': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+rset=0 /\ RET(res)@312 · (!free(res))^* · free(res) · (_)^* ~~~> (!deref(rset))^*;
+[Patches]
+ @ line 312 can be inserted with code: if (rset==0){ return; }
+
+
+~~~~~~~~~ In function: rec_db_delete ~~~~~~~~~
+Future-condition checking for 'rec_db_get_rset_by_type @738': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧rset=0 /\ deref(rset)@746 · RET()@814 ~~~> (!deref(rset))^*;
+[Patches]
+ @ line 746 can be inserted with code: if (rset==0){ return; }
+
+
+~~~~~~~~~ In function: rec_db_set ~~~~~~~~~
+Future-condition checking for 'rec_db_get_rset_by_type @832': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=1∧rset=0 /\ deref(rset)@840 · RET()@959 ~~~> (!deref(rset))^*;
+[Patches]
+ @ line 840 can be inserted with code: if (rset==0){ return; }
+
+
+~~~~~~~~~ In function: rec_db_set_act_delete ~~~~~~~~~
+Future-condition checking for 'malloc @1375': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(deletion_mask!=0) /\ RET()@1456 ~~~> (!free(deletion_mask))^* · free(deletion_mask) · (_)^*;
+[Patches]
+ @ line 1456 can be inserted with code: if ((deletion_mask!=0)){free(deletion_mask); }
+
+
+~~~~~~~~~ In function: rec_db_set_act_delete ~~~~~~~~~
+Future-condition checking for 'malloc @1375': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(deletion_mask!=0) /\ RET()@1437 ~~~> (!free(deletion_mask))^* · free(deletion_mask) · (_)^*;
+[Patches]
+ @ line 1437 can be inserted with code: if ((deletion_mask!=0)){free(deletion_mask); }
+
+
+~~~~~~~~~ In function: rec_db_process_fex ~~~~~~~~~
+Future-condition checking for 'malloc @1671': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(agg_field_name!=0) /\ RET(NULL)@1696 ~~~> (!free(agg_field_name))^* · free(agg_field_name) · (_)^*;
+[Patches]
+ @ line 1696 can be inserted with code: if ((agg_field_name!=0)){free(agg_field_name); }
+
+
+~~~~~~~~~ In function: rec_db_process_fex ~~~~~~~~~
+Future-condition checking for 'malloc @1671': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(agg_field_name!=0) /\ RET(NULL)@1687 ~~~> (!free(agg_field_name))^* · free(agg_field_name) · (_)^*;
+[Patches]
+ @ line 1687 can be inserted with code: if ((agg_field_name!=0)){free(agg_field_name); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-parser.c:
+
+~~~~~~~~~ In function: rec_parse_field_name ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @228': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(ret)@340 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 340 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_name ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @228': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@282 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 282 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_name_str ~~~~~~~~~
+Future-condition checking for 'rec_parser_new_str @681': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=field_name∧parser=0 /\ deref(parser)@685 ~~~> (!deref(parser))^*;
+[Patches]
+ @ line 685 can be inserted with code: if (parser==0){ return; }
+
+
+~~~~~~~~~ In function: rec_parse_field_value ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @924': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(ret)@1077 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1077 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_value ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @924': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@1056 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1056 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_value ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @924': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@1043 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1043 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_value ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @924': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@1028 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1028 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @1091': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧(buf!=0) /\ RET(ret)@1136 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1136 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @1091': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧buf=0 /\ deref(buf)@1117 ~~~> (!deref(buf))^*;
+[Patches]
+ @ line 1117 can be inserted with code: if (buf==0){ return; }
+
+
+~~~~~~~~~ In function: rec_parse_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @1091': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧(buf!=0) /\ RET()@1121 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1121 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-parser.c:
+
+~~~~~~~~~ In function: rec_parse_field_name ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @228': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(ret)@340 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 340 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_name ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @228': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@282 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 282 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_name_str ~~~~~~~~~
+Future-condition checking for 'rec_parser_new_str @681': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=field_name∧parser=0 /\ deref(parser)@685 ~~~> (!deref(parser))^*;
+[Patches]
+ @ line 685 can be inserted with code: if (parser==0){ return; }
+
+
+~~~~~~~~~ In function: rec_parse_field_value ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @924': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(ret)@1077 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1077 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_value ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @924': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@1056 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1056 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_value ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @924': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@1043 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1043 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_field_value ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @924': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@1028 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1028 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @1091': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧(buf!=0) /\ RET(ret)@1136 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1136 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_parse_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @1091': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧buf=0 /\ deref(buf)@1117 ~~~> (!deref(buf))^*;
+[Patches]
+ @ line 1117 can be inserted with code: if (buf==0){ return; }
+
+
+~~~~~~~~~ In function: rec_parse_comment ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @1091': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=0∧(buf!=0) /\ RET()@1121 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 1121 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-int.c:
+
+~~~~~~~~~ In function: rec_int_merge_remote ~~~~~~~~~
+Future-condition checking for 'fdopen @1148': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(remote_rset!=0)∧!((rec_url!=0))∧.ret=res∧external_file>0∧(external_file!=stdout)∧(external_file!=stdin) /\ RET(res)@1251 ~~~> (!fclose(external_file))^* · fclose(external_file) · (_)^*;
+[Patches]
+ @ line 1251 can be inserted with code: if ((remote_rset!=0)∧!((rec_url!=0))∧external_file>0∧(external_file!=stdout)∧(external_file!=stdin)){fclose(external_file); }
+
+
+~~~~~~~~~ In function: rec_int_merge_remote ~~~~~~~~~
+Future-condition checking for 'fopen @1172': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(external_file!=0)∧(remote_rset!=0)∧!((rec_url!=0))∧.ret=res∧external_file>0∧(external_file!=stdout)∧(external_file!=stdin) /\ RET(res)@1251 ~~~> (!fclose(external_file))^* · fclose(external_file) · (_)^*;
+[Patches]
+ @ line 1251 can be inserted with code: if ((external_file!=0)∧(remote_rset!=0)∧!((rec_url!=0))∧external_file>0∧(external_file!=stdout)∧(external_file!=stdin)){fclose(external_file); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-int.c:
+
+~~~~~~~~~ In function: rec_int_merge_remote ~~~~~~~~~
+Future-condition checking for 'fdopen @1148': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(remote_rset!=0)∧!((rec_url!=0))∧.ret=res∧external_file>0∧(external_file!=stdout)∧(external_file!=stdin) /\ RET(res)@1251 ~~~> (!fclose(external_file))^* · fclose(external_file) · (_)^*;
+[Patches]
+ @ line 1251 can be inserted with code: if ((remote_rset!=0)∧!((rec_url!=0))∧external_file>0∧(external_file!=stdout)∧(external_file!=stdin)){fclose(external_file); }
+
+
+~~~~~~~~~ In function: rec_int_merge_remote ~~~~~~~~~
+Future-condition checking for 'fopen @1172': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(external_file!=0)∧(remote_rset!=0)∧!((rec_url!=0))∧.ret=res∧external_file>0∧(external_file!=stdout)∧(external_file!=stdin) /\ RET(res)@1251 ~~~> (!fclose(external_file))^* · fclose(external_file) · (_)^*;
+[Patches]
+ @ line 1251 can be inserted with code: if ((external_file!=0)∧(remote_rset!=0)∧!((rec_url!=0))∧external_file>0∧(external_file!=stdout)∧(external_file!=stdin)){fclose(external_file); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-sex-lex.c:
+
+~~~~~~~~~ In function: sexrestart ~~~~~~~~~
+Future-condition checking for 'sex_create_buffer @1743': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(yyg.yy_buffer_stack.yyg.yy_buffer_stack_top!=0) /\ 𝝐 ~~~> (!free(yyg.yy_buffer_stack.yyg.yy_buffer_stack_top))^* · free(yyg.yy_buffer_stack.yyg.yy_buffer_stack_top) · (_)^*;
+[Patches]
+ @ line 1733 can be inserted with code: if ((yyg.yy_buffer_stack.yyg.yy_buffer_stack_top!=0)){free(yyg.yy_buffer_stack.yyg.yy_buffer_stack_top); }
+
+
+~~~~~~~~~ In function: sex_create_buffer ~~~~~~~~~
+Future-condition checking for 'sexalloc @1824': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(b!=0) /\ RET()@1835 ~~~> (!free(b))^* · free(b) · (_)^*;
+[Patches]
+ @ line 1835 can be inserted with code: if ((b!=0)){free(b); }
+
+
+~~~~~~~~~ In function: sexensure_buffer_stack ~~~~~~~~~
+Future-condition checking for 'sexalloc @2031': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(yyg.yy_buffer_stack!=0) /\ RET()@2041 ~~~> (!free(yyg.yy_buffer_stack))^* · free(yyg.yy_buffer_stack) · (_)^*;
+[Patches]
+ @ line 2041 can be inserted with code: if ((yyg.yy_buffer_stack!=0)){free(yyg.yy_buffer_stack); }
+
+
+~~~~~~~~~ In function: sex_scan_bytes ~~~~~~~~~
+Future-condition checking for 'sexalloc @2134': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(b)@2152 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 2152 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: sex_scan_bytes ~~~~~~~~~
+Future-condition checking for 'sexalloc @2134': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@2145 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 2145 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-sex-lex.c:
+
+~~~~~~~~~ In function: sexrestart ~~~~~~~~~
+Future-condition checking for 'sex_create_buffer @1743': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(yyg.yy_buffer_stack.yyg.yy_buffer_stack_top!=0) /\ 𝝐 ~~~> (!free(yyg.yy_buffer_stack.yyg.yy_buffer_stack_top))^* · free(yyg.yy_buffer_stack.yyg.yy_buffer_stack_top) · (_)^*;
+[Patches]
+ @ line 1733 can be inserted with code: if ((yyg.yy_buffer_stack.yyg.yy_buffer_stack_top!=0)){free(yyg.yy_buffer_stack.yyg.yy_buffer_stack_top); }
+
+
+~~~~~~~~~ In function: sex_create_buffer ~~~~~~~~~
+Future-condition checking for 'sexalloc @1824': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(b!=0) /\ RET()@1835 ~~~> (!free(b))^* · free(b) · (_)^*;
+[Patches]
+ @ line 1835 can be inserted with code: if ((b!=0)){free(b); }
+
+
+~~~~~~~~~ In function: sexensure_buffer_stack ~~~~~~~~~
+Future-condition checking for 'sexalloc @2031': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(yyg.yy_buffer_stack!=0) /\ RET()@2041 ~~~> (!free(yyg.yy_buffer_stack))^* · free(yyg.yy_buffer_stack) · (_)^*;
+[Patches]
+ @ line 2041 can be inserted with code: if ((yyg.yy_buffer_stack!=0)){free(yyg.yy_buffer_stack); }
+
+
+~~~~~~~~~ In function: sex_scan_bytes ~~~~~~~~~
+Future-condition checking for 'sexalloc @2134': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(b)@2152 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 2152 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: sex_scan_bytes ~~~~~~~~~
+Future-condition checking for 'sexalloc @2134': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET()@2145 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 2145 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-fex.c:
+
+~~~~~~~~~ In function: rec_fex_str ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @353': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(result)@414 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 414 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_fex_str ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @353': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(NULL)@377 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 377 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-fex.c:
+
+~~~~~~~~~ In function: rec_fex_str ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @353': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(result)@414 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 414 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+~~~~~~~~~ In function: rec_fex_str ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @353': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(buf!=0) /\ RET(NULL)@377 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 377 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-types.c:
+
+~~~~~~~~~ In function: rec_type_check ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @583': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=res∧(errors!=0) /\ RET(res)@675 ~~~> (!free(errors))^* · free(errors) · (_)^*;
+[Patches]
+ @ line 675 can be inserted with code: if ((errors!=0)){free(errors); }
+
+
+~~~~~~~~~ In function: rec_type_reg_add ~~~~~~~~~
+Future-condition checking for 'realloc @769': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧reg.types=0 /\ deref(reg.types)@774 · deref(reg.types)@775 · deref(reg.types)@776 · deref(reg.types)@777 ~~~> (!deref(reg.types))^*;
+[Patches]
+ @ line 771 can be inserted with code: if (reg.types==0){ return; }
+
+
+~~~~~~~~~ In function: rec_type_reg_add_synonym ~~~~~~~~~
+Future-condition checking for 'realloc @808': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧reg.types=0 /\ deref(reg.types)@813 · deref(reg.types)@814 · deref(reg.types)@815 · deref(reg.types)@816 ~~~> (!deref(reg.types))^*;
+[Patches]
+ @ line 810 can be inserted with code: if (reg.types==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-types.c:
+
+~~~~~~~~~ In function: rec_type_check ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @583': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=res∧(errors!=0) /\ RET(res)@675 ~~~> (!free(errors))^* · free(errors) · (_)^*;
+[Patches]
+ @ line 675 can be inserted with code: if ((errors!=0)){free(errors); }
+
+
+~~~~~~~~~ In function: rec_type_reg_add ~~~~~~~~~
+Future-condition checking for 'realloc @769': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧reg.types=0 /\ deref(reg.types)@774 · deref(reg.types)@775 · deref(reg.types)@776 · deref(reg.types)@777 ~~~> (!deref(reg.types))^*;
+[Patches]
+ @ line 771 can be inserted with code: if (reg.types==0){ return; }
+
+
+~~~~~~~~~ In function: rec_type_reg_add_synonym ~~~~~~~~~
+Future-condition checking for 'realloc @808': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧reg.types=0 /\ deref(reg.types)@813 · deref(reg.types)@814 · deref(reg.types)@815 · deref(reg.types)@816 ~~~> (!deref(reg.types))^*;
+[Patches]
+ @ line 810 can be inserted with code: if (reg.types==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-buf.c:
+
+~~~~~~~~~ In function: rec_buf_new ~~~~~~~~~
+Future-condition checking for 'malloc @61': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new.data=0 /\ RET(new)@72 · (!free(new))^* · free(new) · (_)^* ~~~> (!deref(new.data))^*;
+[Patches]
+ @ line 72 can be inserted with code: if (new.data==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/src/rec-buf.c:
+
+~~~~~~~~~ In function: rec_buf_new ~~~~~~~~~
+Future-condition checking for 'malloc @61': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+new.data=0 /\ RET(new)@72 · (!free(new))^* · free(new) · (_)^* ~~~> (!deref(new.data))^*;
+[Patches]
+ @ line 72 can be inserted with code: if (new.data==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/recutl.c:
+
+~~~~~~~~~ In function: recutl_parse_db_from_file ~~~~~~~~~
+Future-condition checking for 'rec_rset_type @250': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=res∧(rset_type!=0) /\ RET(res)@298 ~~~> (!free(rset_type))^* · free(rset_type) · (_)^*;
+[Patches]
+ @ line 298 can be inserted with code: if ((rset_type!=0)){free(rset_type); }
+
+
+~~~~~~~~~ In function: recutl_parse_db_from_file ~~~~~~~~~
+Future-condition checking for 'rec_rset_type @250': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(rset_type!=0) /\ RET()@254 ~~~> (!free(rset_type))^* · free(rset_type) · (_)^*;
+[Patches]
+ @ line 254 can be inserted with code: if ((rset_type!=0)){free(rset_type); }
+
+
+~~~~~~~~~ In function: recutl_parse_db_from_file ~~~~~~~~~
+Future-condition checking for 'rec_parser_new @245': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=res∧parser=0 /\ deref(parser)@290 ~~~> (!deref(parser))^*;
+[Patches]
+ @ line 290 can be inserted with code: if (parser==0){ return; }
+
+
+~~~~~~~~~ In function: recutl_read_db_from_file ~~~~~~~~~
+Future-condition checking for 'fopen @363': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(in!=0)∧.ret=db∧in>0∧(in!=stdout)∧(in!=stdin) /\ RET(db)@384 ~~~> (!fclose(in))^* · fclose(in) · (_)^*;
+[Patches]
+ @ line 384 can be inserted with code: if ((in!=0)∧in>0∧(in!=stdout)∧(in!=stdin)){fclose(in); }
+
+
+~~~~~~~~~ In function: recutl_write_db_to_file ~~~~~~~~~
+Future-condition checking for 'fdopen @419': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧out>0∧(out!=stdout)∧(out!=stdin) /\ 𝝐 ~~~> ((!fclose(out))^* · fclose(out) · (_)^* \/ (!close(des))^* · close(des) · (_)^*);
+[Patches]
+ @ line 428 can be inserted with code: if (out>0∧(out!=stdout)∧(out!=stdin)){close(); if (out>0∧(out!=stdout)∧(out!=stdin)){fclose(out); }}
+
+
+~~~~~~~~~ In function: recutl_write_db_to_file ~~~~~~~~~
+Future-condition checking for 'fdopen @419': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧out>0∧(out!=stdout)∧(out!=stdin) /\ RET()@438 ~~~> ((!fclose(out))^* · fclose(out) · (_)^* \/ (!close(des))^* · close(des) · (_)^*);
+[Patches]
+ @ line 438 can be inserted with code: if (out>0∧(out!=stdout)∧(out!=stdin)){close(); if (out>0∧(out!=stdout)∧(out!=stdin)){fclose(out); }}
+
+
+~~~~~~~~~ In function: recutl_check_integrity ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @476': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(errors_buf!=0) /\ 𝝐 ~~~> (!free(errors_buf))^* · free(errors_buf) · (_)^*;
+[Patches]
+ @ line 467 can be inserted with code: if ((errors_buf!=0)){free(errors_buf); }
+
+
+~~~~~~~~~ In function: recutl_check_integrity ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @476': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧(errors_buf!=0) /\ RET()@490 ~~~> (!free(errors_buf))^* · free(errors_buf) · (_)^*;
+[Patches]
+ @ line 490 can be inserted with code: if ((errors_buf!=0)){free(errors_buf); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/recinf.c:
+
+~~~~~~~~~ In function: print_info_file ~~~~~~~~~
+Future-condition checking for 'rec_parser_new @130': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧parser=0 /\ deref(parser)@193 ~~~> (!deref(parser))^*;
+[Patches]
+ @ line 193 can be inserted with code: if (parser==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/recsel.c:
+
+~~~~~~~~~ In function: recsel_parse_args ~~~~~~~~~
+Future-condition checking for 'rec_sex_new @199': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧recutl_sex=0 /\ deref(recutl_sex)@199 ~~~> (!deref(recutl_sex))^*;
+[Patches]
+ @ line 199 can be inserted with code: if (recutl_sex==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/recins.c:
+
+~~~~~~~~~ In function: recins_parse_args ~~~~~~~~~
+Future-condition checking for 'rec_sex_new @179': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧recutl_sex=0 /\ deref(recutl_sex)@179 ~~~> (!deref(recutl_sex))^*;
+[Patches]
+ @ line 179 can be inserted with code: if (recutl_sex==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/recdel.c:
+
+~~~~~~~~~ In function: recdel_parse_args ~~~~~~~~~
+Future-condition checking for 'rec_sex_new @192': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧recutl_sex=0 /\ deref(recutl_sex)@192 ~~~> (!deref(recutl_sex))^*;
+[Patches]
+ @ line 192 can be inserted with code: if (recutl_sex==0){ return; }
+
+
+~~~~~~~~~ In function: recdel_parse_args ~~~~~~~~~
+Future-condition checking for 'rec_sex_new @234': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧recutl_sex=0 /\ deref(recutl_sex)@235 ~~~> (!deref(recutl_sex))^*;
+[Patches]
+ @ line 235 can be inserted with code: if (recutl_sex==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/recset.c:
+
+~~~~~~~~~ In function: recset_parse_args ~~~~~~~~~
+Future-condition checking for 'rec_sex_new @196': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+⊤∧recutl_sex=0 /\ deref(recutl_sex)@196 ~~~> (!deref(recutl_sex))^*;
+[Patches]
+ @ line 196 can be inserted with code: if (recutl_sex==0){ return; }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/recfix.c:
+
+~~~~~~~~~ In function: recfix_check_database ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @343': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=ret∧(buf!=0) /\ RET(ret)@351 ~~~> (!free(buf))^* · free(buf) · (_)^*;
+[Patches]
+ @ line 351 can be inserted with code: if ((buf!=0)){free(buf); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/recfmt.c:
+
+~~~~~~~~~ In function: recfmt_get_subst ~~~~~~~~~
+Future-condition checking for 'rec_sex_new @161': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=res∧sex=0 /\ deref(sex)@162 ~~~> (!deref(sex))^*;
+[Patches]
+ @ line 162 can be inserted with code: if (sex==0){ return; }
+
+
+~~~~~~~~~ In function: recfmt_apply_template ~~~~~~~~~
+Future-condition checking for 'rec_buf_new @207': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+.ret=result∧(result_buf!=0) /\ RET(result)@250 ~~~> (!free(result_buf))^* · free(result_buf) · (_)^*;
+[Patches]
+ @ line 250 can be inserted with code: if ((result_buf!=0)){free(result_buf); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/csv2rec.c:
+
+~~~~~~~~~ In function: process_csv ~~~~~~~~~
+Future-condition checking for 'fopen @345': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(in!=0)∧in>0∧(in!=stdout)∧(in!=stdin) /\ RET()@383 ~~~> (!fclose(in))^* · fclose(in) · (_)^*;
+[Patches]
+ @ line 383 can be inserted with code: if ((in!=0)∧in>0∧(in!=stdout)∧(in!=stdin)){fclose(in); }
+
+
+~~~~~~~~~ In function: process_csv ~~~~~~~~~
+Future-condition checking for 'fopen @345': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(in!=0)∧in>0∧(in!=stdout)∧(in!=stdin) /\ RET()@377 ~~~> (!fclose(in))^* · fclose(in) · (_)^*;
+[Patches]
+ @ line 377 can be inserted with code: if ((in!=0)∧in>0∧(in!=stdout)∧(in!=stdin)){fclose(in); }
+
+
+~~~~~~~~~ In function: process_csv ~~~~~~~~~
+Future-condition checking for 'fopen @345': Failed!
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(in!=0)∧in>0∧(in!=stdout)∧(in!=stdin) /\ RET()@359 ~~~> (!fclose(in))^* · fclose(in) · (_)^*;
+[Patches]
+ @ line 359 can be inserted with code: if ((in!=0)∧in>0∧(in!=stdout)∧(in!=stdin)){fclose(in); }
+
+
+In /Users/yahuis/Desktop/repair-benchmark/recutils-1.8/utils/rec2csv.c:
+
+~~~~~~~~~ In function: rec2csv_process_data ~~~~~~~~~
+Future-condition checking for 'rec_rset_type @302': Failed! because there is no handler ! 
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(r3!=0) /\ 𝝐 ~~~> (!free(r3))^* · free(r3) · (_)^*;
+[Patches]
+@ line 303 can be inserted with code: int r3 = rec_rset_type(rset); if ((r3!=0)){free(r3); }
+
+
+~~~~~~~~~ In function: rec2csv_process_data ~~~~~~~~~
+Future-condition checking for 'rec_rset_type @306': Failed! because there is no handler ! 
+
+<======[Bidirectional Bug Localization & Possible Proof Repairs]======>
+
+[Repair Options]
+(r4!=0) /\ 𝝐 ~~~> (!free(r4))^* · free(r4) · (_)^*;
+[Patches]
+@ line 307 can be inserted with code: int r4 = rec_rset_type(rset); if ((r4!=0)){free(r4); }
+

@@ -2053,5 +2053,6 @@ let specificBenchamrks address  functionEnd functionStart =
   else if twoStringSetOverlap ["WavPack";"x264"] strLi && (functionEnd - functionStart > 180) then true 
   else if twoStringSetOverlap ["snort-2.9.13"] strLi && (functionEnd - functionStart > 218) then true 
   else if twoStringSetOverlap ["flex"] strLi && (functionEnd - functionStart > 400) then true 
-  else if (functionEnd - functionStart > 800) then true
+  else if twoStringSetOverlap ["inetutils-1.9.4"] strLi && (functionEnd - functionStart > 280) then true 
+  else if (functionEnd - functionStart > 400) then true
   else false 
