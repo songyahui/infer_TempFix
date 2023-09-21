@@ -206,6 +206,8 @@ let argumentsTerms2basic_types (t: (terms option) list): (basic_type list) =
   List.fold_left t ~init:[] ~f:(fun acc a ->
     match a with 
     | Some (Basic (BVAR str)) -> List.append acc [(BVAR str)]
+    | Some (Basic (BINT str)) -> List.append acc [(BINT str)]
+
     | _ -> acc 
   )
 
@@ -930,12 +932,11 @@ let rec derivitives (f:fstElem) (eff:es) : es =
     | Event (event1, _) -> 
       let (str1, args1) = event1 in 
       (*print_endline (string_of_event event1 ^ " |- " ^ string_of_event event); *)
-      if (String.compare str1 "CONSUME" == 0 || String.compare str1 str ==0)  && comapreEventArgs args args1 
-      then (Emp)  else Bot
-      (*if String.compare str1 "CONSUME" == 0 && comapreEventArgs args args1 then (Emp) 
+      if String.compare str1 "CONSUMEALL" == 0 then Emp 
       else 
-        if comapreEvents event event1 == true then Emp else Bot 
-        *)
+        if (String.compare str1 "CONSUME" == 0 || String.compare str1 str ==0)  && comapreEventArgs args args1 
+        then (Emp)  
+        else Bot
     | NotEvent event  ->  Bot
     )
     (*grub_gpt_read(dev.disk) event |- !_(dev)   ep  *)
@@ -947,8 +948,7 @@ let rec derivitives (f:fstElem) (eff:es) : es =
       | Wildcard _ -> Bot 
       | Event ((str1, event), _) -> 
         (*print_endline ("fst event = " ^ string_of_event (str1, event));*)
-        if String.compare str1 "CONSUME" == 0 then 
-          Emp
+        if String.compare str1 "CONSUME" == 0 then Emp
         else 
           if (basic_type_common ep event == true) || (comapreEventArgs event ep) then Bot else Emp
       | NotEvent (_, event)  ->  if basic_type_subset ep event   == true then Emp else Bot
@@ -2049,7 +2049,8 @@ let rec compareFootPrint li1 li2 =
 let specificBenchamrks address  functionEnd functionStart = 
   let strLi = String.split_on_chars  address ['/'] in 
   if twoStringSetOverlap ["lxc"] strLi && (functionEnd - functionStart > 225) then true 
-  else if twoStringSetOverlap ["recutils-1.8";"grub"] strLi && (functionEnd - functionStart > 300) then true 
+  else if twoStringSetOverlap ["recutils-1.8"] strLi && (functionEnd - functionStart > 300) then true 
+  else if twoStringSetOverlap ["grub"] strLi && (functionEnd - functionStart > 115) then true 
   else if twoStringSetOverlap ["WavPack";"x264"] strLi && (functionEnd - functionStart > 180) then true 
   else if twoStringSetOverlap ["snort-2.9.13"] strLi && (functionEnd - functionStart > 218) then true 
   else if twoStringSetOverlap ["flex"] strLi && (functionEnd - functionStart > 400) then true 

@@ -93,6 +93,7 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
 
     if String.length int_str > 18 then Some (Basic(BVAR "SYH_BIGINT"))
     else Some (Basic(BINT (int_of_string(int_str))))
+      (*Some (Basic(BINT (int_of_string(int_str))))*)
     
   | DeclRefExpr (stmt_info, _, _, decl_ref_expr_info) -> 
     let (sl1, sl2) = stmt_info.si_source_range in 
@@ -157,7 +158,7 @@ let rec stmt2Term (instr: Clang_ast_t.stmt) : terms option =
   | CallExpr (_, stmt_list, ei) -> 
   (match stmt_list with
   | [] -> assert false 
-  | x :: _ -> Some (Basic(BVAR(string_of_stmt x)))  
+  | x :: rest -> Some (Basic(BVAR(string_of_stmt x ^"_" ^  string_of_stmt_list rest "_" ^ "_")))  
   )
 
   | _ -> Some (Basic(BVAR(Clang_ast_proj.get_stmt_kind_string instr))) 
@@ -322,7 +323,11 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
     | None -> None 
     | Some named_decl_info -> 
       Some (named_decl_info.ni_name, argumentsTerms2basic_types((
-        List.map rest ~f:(fun r -> stmt2Term r))))
+        List.map rest ~f:(fun r -> 
+        (*print_endline ("extractEventFromFUnctionCall " ^ Clang_ast_proj.get_stmt_kind_string r );
+        print_endline (match (stmt2Term r) with | None -> "none" | Some t -> string_of_terms t);
+        *)
+        stmt2Term r))))
     )
   )
 
@@ -638,7 +643,7 @@ let rec var_binding (formal:string list) (actual: basic_type list) : bindings =
 let specialCases es = 
   match es with 
   | Kleene (NotSingleton (str, _)) -> 
-    if String.compare str "_" == 0 ||  String.compare str "deref" == 0  then true else false 
+    if String.compare str "_" == 0 ||  String.compare str "deref" == 0 ||  String.compare str "free" == 0 ||  String.compare str "close" == 0  then true else false 
   | _ ->  false 
   ;;
 
@@ -1368,9 +1373,15 @@ let rec syh_compute_stmt_postcondition (current:programStates)
            (String.compare calleeName "_exit") == 0 ||
            (String.compare calleeName "flexerror") == 0 || 
            (String.compare calleeName "flexfatal") == 0 ||
+           (String.compare calleeName "FLEX_EXIT") == 0 ||
            (String.compare calleeName "recutl_fatal") == 0 
            then 
            let es = Singleton (("RET", []), fp1) in 
+          ([(Ast_utility.TRUE, es, 1, fp)])
+        else if 
+        (String.compare calleeName "DynamicPreprocessorFatalMessage") == 0 || 
+        (String.compare calleeName "FatalError") == 0 then 
+          let es = Singleton (("CONSUMEALL", []), fp1) in 
           ([(Ast_utility.TRUE, es, 1, fp)])
         else helper (current'') xs in
 
@@ -1451,7 +1462,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                 let  _ = List.iter error_paths ~f:(fun (pi,es1, _, es2) -> 
                   match findReturnValueESOrParameter es1 currentHandler with 
                   | None -> (* If there is no return value, then we proceed to repair the future condition *)
-                    let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
+                    let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule (*^ "," ^ calleeName^ string_of_foot_print fp *)
                     ^" ~~~~~~~~~\nFuture-condition checking for \'"^calleeName^ string_of_foot_print fp ^"\': " in 
                     (*print_endline (string_of_inclusion_results extra_info info); *)
                     
