@@ -335,8 +335,17 @@ let rec extractEventFromFUnctionCall (x:Clang_ast_t.stmt) (rest:Clang_ast_t.stmt
   (match stmt_list with 
   | [] -> None 
   | y :: restY -> extractEventFromFUnctionCall y rest)
+
+| BinaryOperator (_, x::_, _, _)
+| ParenExpr (_, x::_, _) -> extractEventFromFUnctionCall x rest
+| (CallExpr (_, stmt_list, _)) -> 
+  (match stmt_list with 
+  | [] -> None 
+  | x::rest -> extractEventFromFUnctionCall x rest
+  )
+
 | _ -> 
-  (*print_string ("extractEventFromFUnctionCall" ^ Clang_ast_proj.get_stmt_kind_string x );*)
+  print_string ("extractEventFromFUnctionCall" ^ Clang_ast_proj.get_stmt_kind_string x );
   print_endline ("none");
 
   None 
@@ -570,16 +579,6 @@ let getStmtlocation (instr: Clang_ast_t.stmt) : (int option * int option) =
     let (sl1, sl2) = stmt_info.si_source_range in 
     (sl1.sl_line , sl2.sl_line)
   | _ -> (None, None) 
-
-let maybeIntToListInt ((s1, s2):(int option * int option )) : (int list * int list)  = 
-  let aux l = match l with | None -> [] | Some l -> [l] 
-  in (aux s1, aux s2)
-
-
-let stmt_intfor2FootPrint (stmt_info:Clang_ast_t.stmt_info): (int list * int list) = 
-  let ((sl1, sl2)) = stmt_info.si_source_range in 
-    (* let (lineLoc:int option) = sl1.sl_line in *)
-  maybeIntToListInt (sl1.sl_line, sl2.sl_line) 
 
 
 (*
@@ -930,15 +929,16 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
     | ArraySubscriptExpr(stmt_info, x::_, _)  
     | MemberExpr (stmt_info, x::_, _, _) -> helper x
     | (CallExpr (stmt_info, stmt_list, ei)) -> 
-      
+      let (fp, _) = getStmtlocation stmt in 
+      let fp = match fp with | None -> [] | Some l -> [l] in 
+
       (match stmt_list with 
       | [] -> ()  
       | x::rest -> 
+          print_endline (string_of_foot_print fp );
           (match extractEventFromFUnctionCall x rest with 
           | None -> () 
           | Some (calleeName, acturelli) -> 
-            let (fp, _) = getStmtlocation stmt in 
-            let fp = match fp with | None -> [] | Some l -> [l] in 
         
             (match findSpecFrom !propogatedSpecs calleeName with
             | (Some ((_, _), _, _, futurec), _, _) ->  
@@ -1183,7 +1183,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
             
-            
+          print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
+
 
             (*
             let () = print_string ("=========================\n") in 
@@ -1197,7 +1198,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
 
-              print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
               (*
               print_endline ("formal Arg = " ^ List.fold_left formalLi ~init:"" ~f:(fun acc a -> acc ^ "," ^a));

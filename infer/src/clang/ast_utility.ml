@@ -2030,6 +2030,16 @@ let creatingDisjunctiveProgramStates (state1:programStates) (state2:programState
   temp
 
 
+let maybeIntToListInt ((s1, s2):(int option * int option )) : (int list * int list)  = 
+  let aux l = match l with | None -> [] | Some l -> [l] 
+  in (aux s1, aux s2)
+
+
+let stmt_intfor2FootPrint (stmt_info:Clang_ast_t.stmt_info): (int list * int list) = 
+  let ((sl1, sl2)) = stmt_info.si_source_range in 
+    (* let (lineLoc:int option) = sl1.sl_line in *)
+  maybeIntToListInt (sl1.sl_line, sl2.sl_line) 
+
 
 let rec findLableSpec li str = 
   match li with 
