@@ -2278,7 +2278,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       else 
       
 
-      if existingPostSpecs funcName then ()
+      if existingPostSpecs funcName || String.compare "FuzzerTestOneInput" funcName == 0 then ()
       else 
       
       let argumentNames = List.map (function_decl_info.fdi_parameters) ~f:(fun a -> string_of_decl a) in 
