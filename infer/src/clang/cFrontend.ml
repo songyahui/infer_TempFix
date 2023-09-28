@@ -604,7 +604,14 @@ let rec findSpecFrom (specs:specification list) (fName: string): (specification 
   ;;
 
 let insertSpecifications moduleName (newSpec:specification) = 
-  let (mnsignature, pre, post, future) = newSpec in 
+  if String.length moduleName < 4 then ()
+  else 
+    let header = String.sub moduleName 0 3 in 
+    if not (twoStringSetOverlap [header] ["SSL";"BN_";"BIO";"i2a"]) then ()
+    else 
+
+
+  (let (mnsignature, pre, post, future) = newSpec in 
   let post = match post with 
     | Some (x::_) -> 
       let (pi, es) = deepSimplifyEffect x in 
@@ -621,7 +628,7 @@ let insertSpecifications moduleName (newSpec:specification) =
     | (Some (a, b,  c, d), prev, rest) -> 
       propogatedSpecs := prev @ [(a, mergeSpec b pre, mergeSpec c post, mergeSpec d future)] @ rest
     | (None, _, _) -> 
-      propogatedSpecs := !propogatedSpecs @ [(mnsignature, pre, post, future)])
+      propogatedSpecs := !propogatedSpecs @ [(mnsignature, pre, post, future)]))
 
 
 let string_of_decl (decl:Clang_ast_t.decl) : string = 
@@ -2388,17 +2395,10 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
              | None -> () 
              | Some (BVAR _) -> ()
              | Some (t) -> 
-                if String.length !currentModule < 4 then ()
-                else 
-                  let header = String.sub !currentModule 0 3 in 
-                  if twoStringSetOverlap [header] ["SSL";"BN_";"BIO";"i2a"] then 
-
-                
                     let (returnFuture:effect) = [(Eq(Basic(BRET), Basic(t)), Singleton(("return", [BRET]), None))] in 
                     let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some returnFuture) in 
                     print_endline ("inserting future: " ^ string_of_effect returnFuture);
                     insertSpecifications !currentModule newSpec
-                  else ()
 
              );
             
