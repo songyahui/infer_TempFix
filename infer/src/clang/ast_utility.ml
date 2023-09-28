@@ -123,6 +123,7 @@ let effects2programStates eff =
 let programStates2effects eff = 
   List.map eff ~f:(fun (p, es, _ , _)-> (p, es))
 
+
 let rec flattenList lili = 
   match lili with 
   | [] -> []
@@ -2067,3 +2068,47 @@ let specificBenchamrks address  functionEnd functionStart =
   else if twoStringSetOverlap ["inetutils-1.9.4"] strLi && (functionEnd - functionStart > 280) then true 
   else if (functionEnd - functionStart > 400) then true
   else false 
+
+
+
+let containingERR_newES es =
+  let rec findERR_new esIn : bool  = 
+    match esIn with 
+    | Singleton ((str, _), _) -> 
+      if String.compare str "ERR_new" == 0 then true else false 
+    | Singleton _ -> false  
+    | Concatenate (a, b) -> if findERR_new a then true else findERR_new b 
+    | Bot | Emp | Any 
+    | NotSingleton _ -> false  
+    | Disj (a, b) -> if findERR_new a then true else findERR_new b 
+    | Kleene (a) -> findERR_new a 
+  in 
+  let rec findRet esIn : basic_type option = 
+    match esIn with 
+    | Singleton ((str, arg::_), _) -> 
+      if String.compare str "RET" == 0 then Some arg else None 
+    | Singleton _ -> None 
+    | Concatenate (a, b) -> findRet b 
+    | Bot | Emp | Any 
+    | NotSingleton _ -> None 
+    | Disj (a, b) -> 
+      (match findRet a with
+      | None -> findRet b
+      | Some arg -> Some arg)
+    | Kleene (a) -> findRet a
+  in 
+  match (findERR_new es, findRet es) with
+  | (true, Some (BNULL)) -> Some (BINT 0)
+  | (true, Some a) -> Some a 
+  | _ -> None 
+
+
+  
+
+let rec containingERR_new eff = 
+  match eff with 
+  | [] -> None 
+  | (pi, es):: xs -> 
+    (match containingERR_newES es with 
+    | None -> containingERR_new xs 
+    | Some v -> Some v )

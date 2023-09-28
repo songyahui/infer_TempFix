@@ -614,7 +614,7 @@ let insertSpecifications moduleName (newSpec:specification) =
     | _ -> post 
   in 
   match pre, post, future with 
-  | (_, _, _ )  -> ()
+  (* | (_, _, _ )  -> () *)
   | (None, None, None ) -> ()
   | _ -> 
     (match findSpecFrom !propogatedSpecs !currentModule with 
@@ -1381,7 +1381,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         else if 
         (String.compare calleeName "DynamicPreprocessorFatalMessage") == 0 || 
         (String.compare calleeName "FatalError") == 0 then 
-          let es = Singleton (("CONSUMEALL", []), fp1) in 
+          let es = Emp (*Singleton (("CONSUMEALL", []), fp1)*) in 
           ([(Ast_utility.TRUE, es, 1, fp)])
         else helper (current'') xs in
 
@@ -1480,11 +1480,12 @@ let rec syh_compute_stmt_postcondition (current:programStates)
                     if String.compare (getRoot str) (getRoot currentHandler) == 0 then 
                       if (isNotFalse pi) then ()
                       else 
-                      (print_endline (!currentModule ^ " should have some future condition ");
+                      (print_endline (!currentModule ^ " should have some future condition ")
+                      (*;
                       let es2 = instantiateAugumentEs es2 [(str, BRET)] in 
                       let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some ([pi, es2])) in 
                       print_endline (string_of_specification newSpec); 
-                      insertSpecifications !currentModule newSpec
+                      insertSpecifications !currentModule newSpec *)
                       )
                     else (
                       let extra_info = "\n~~~~~~~~~ In function: "^ !currentModule 
@@ -1602,54 +1603,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             concatenateTwoEffectswithFlag effectLi4X effectRest
           )
 
-    | ForStmt (stmt_info, stmt_list)::xs
-    | WhileStmt (stmt_info, stmt_list)::xs -> 
-      let xs = flattenList (List.map xs ~f:(fun a ->  match a with 
-      | ForStmt  (_, stmt_list') 
-      | WhileStmt   (_, stmt_list')  -> stmt_list'
-      | _ -> [a]
-            
-      )) 
-      in 
-      if peekTheEffectOfStmtsAndItHasEffects stmt_list then 
-
-        let rec preProcess (li:Clang_ast_t.stmt list) : Clang_ast_t.stmt list = 
-          let rec auc stmt : Clang_ast_t.stmt = 
-            match stmt with 
-            | (Clang_ast_t.ContinueStmt (stmt_info, _)) 
-            | (BreakStmt (stmt_info, _)) -> CompoundStmt (stmt_info, xs)  
-            |  IfStmt(stmt_info, x::rest, if_stmt_info) -> 
-              let rest' = (List.map rest ~f:(fun stmt -> auc stmt)) in 
-              IfStmt(stmt_info, x::rest', if_stmt_info)
-            | CompoundStmt (stmt_info, stmt_list) -> 
-              let rest' = (List.map stmt_list ~f:(fun stmt -> auc stmt)) in 
-              CompoundStmt (stmt_info, rest')
-            | _ -> stmt
-
-          in 
-
-          (List.map li ~f:(fun stmt -> auc stmt))
-
-        in 
-
-        let stmt_list = if List.length xs > 10 then stmt_list else preProcess stmt_list in 
-        let stmt' = List.append stmt_list xs in 
-        let states = helper current' stmt' in 
-        print_endline ("aiyouahhahhahahhah: " ^ string_of_programStates states);
-        states
-        
-      else 
-        let (fp, _) = stmt_intfor2FootPrint stmt_info in 
-        let states = (helper current stmt_list) in 
-        (*print_endline ("while/for states: " ^ string_of_programStates states);*)
-        let states' =  List.map states ~f:(fun (a, b, c, d)-> if c > 1 then (a, b, 0, d) else (a, b, c, d)) in 
-        (*print_endline ("while/for states': " ^ string_of_programStates states');*)
-
-        let effectLi4X = prefixLoction fp states' in 
-        let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
-        let effectRest = helper new_history xs in 
-        concatenateTwoEffectswithFlag effectLi4X effectRest
-      
+     
       
     | (IfStmt (stmt_info, [x;y], if_stmt_info)) :: xsifelse -> 
     (*
@@ -1707,82 +1661,11 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
         syh_compute_stmt_postcondition current' future statement')
     
-    | DoStmt (stmt_info, [x;y])::xs  ->
-      (match stmt2Pure y with 
-      | None
-      | Some TRUE 
-      | Some FALSE -> 
-        let temp = helper current'  (x::y::xs) in 
-        temp 
-      | Some condition -> 
-        print_endline ("dostmt " ^ string_of_pure condition);
-        let (varFromPure: string list) = varFromPure condition in 
-        if twoStringSetOverlap varFromPure (!varSet) then 
-          (let if_stmt_info = {Clang_ast_t.isi_init=None;isi_cond_var=None;isi_cond=0;isi_then=0;isi_else=None} in 
-          let hd = Clang_ast_t.IfStmt (stmt_info, [y;(Clang_ast_t.CompoundStmt (stmt_info, []));(Clang_ast_t.CompoundStmt (stmt_info, xs))], if_stmt_info) in 
-          let stmt' =  [x;hd] in 
-          helper current'  stmt')
-        else 
-          (print_endline ("out");
-          let temp = helper current'  (x::y::xs) in 
-          print_endline ("dostmt after2: " ^ string_of_programStates temp);
-          temp )
-      )
-    | DoStmt (stmt_info, stmt_list)::xs -> 
-      let stmt' = List.append stmt_list xs in 
-      let temp = helper current'  stmt' in 
-      print_endline ("dostmt after3: " ^ string_of_programStates temp);
-      temp 
-      
 
-    | SwitchStmt (_, _::x::_, _)::xs -> 
-
-      let rec decomposeSwitch stmt = 
-        match stmt with 
-        | Clang_ast_t.CompoundStmt (_, li) -> li
-        | _ -> [stmt]
-      in 
-      let stmt_list = decomposeSwitch x in 
-
-
-      let rec aux (acc:(Clang_ast_t.stmt list) list) (currentList:Clang_ast_t.stmt list) (li:Clang_ast_t.stmt list) : ((Clang_ast_t.stmt list) list) = 
-        match li with 
-        | [] -> List.append acc [currentList]
-        | (CaseStmt a) :: xs -> aux (List.append acc [currentList]) [(Clang_ast_t.CaseStmt a)] xs 
-        | (DefaultStmt a) :: xs -> aux (List.append acc [currentList]) [(Clang_ast_t.DefaultStmt a)] xs 
-        | a :: xs -> 
-          aux acc ((currentList@[a])) xs 
-      in 
-
-      let stmt_list' = aux [] [] stmt_list in 
-
-     (* print_endline ("number of switch cases: " ^ string_of_int (List.length stmt_list'));
-*)
-      let stmt_list' = List.filter stmt_list' ~f:(fun a -> 
-        (*print_string ("######################## ");
-        let _ = List.map a ~f:(fun a-> 
-        let (fp, _) = getStmtlocation a in 
-        let fp = match fp with | None -> [] | Some l -> [l] in 
-        print_string ((Clang_ast_proj.get_stmt_kind_string a) ^ string_of_foot_print fp ^ ", ")) in 
-        print_string ("######################## ");
-  *)
-  
-        (peekTheEffectOfStmtsAndItHasPostOrFutureEffects a)) in 
-      
-      (*print_endline ("number of switch cases: " ^ string_of_int (List.length stmt_list'));
-*)
-    
-      (match stmt_list' with 
-      | [] ->  helper current xs
-      | _ -> 
-        let stateSummary = List.map stmt_list' ~f:(fun x -> helper current (x@xs)) in 
-        let res = flattenList stateSummary  in 
-        print_endline ("Res for switch: \n" ^ string_of_programStates res);
-        res
-      )
-
-
-    
+    | ForStmt (stmt_info, stmt_list)::xs
+    | WhileStmt (stmt_info, stmt_list)::xs
+    | DoStmt (stmt_info, stmt_list)::xs 
+    | SwitchStmt (stmt_info, stmt_list, _)::xs 
     | LabelStmt (stmt_info, stmt_list, _)::xs
     | CompoundStmt (stmt_info, stmt_list)::xs -> 
       let stmt' = List.append stmt_list xs in 
@@ -1810,6 +1693,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     let optionTermToList inp = 
       match inp  with 
       | Some (Basic (BVAR t)) -> [(BVAR t)] 
+      | Some (Basic(BINT n)) -> [(BINT n)] 
       | _ -> [] 
     in 
 
@@ -1887,13 +1771,14 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       in 
 
       
-      let rec consumeAlltheParameters li = 
+      let rec consumeAlltheParameters li = Emp (*
         match li with 
         | [] -> Emp 
         | [x] -> Singleton (("CONSUME", [x]), fp1)
         | x ::xs -> 
           Concatenate (Singleton (("CONSUME", [x]), fp1), 
                        consumeAlltheParameters xs)
+                       *)
       in 
 
       let es = Singleton (("RET", (retTerm1)), fp1) in 
@@ -1919,7 +1804,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
       let varFromX = string_of_stmt x in 
 
       let ev = if twoStringSetOverlap [getRoot varFromX] (!varSet@(!variablesInScope)@(!parametersInScope)) then 
-        Singleton ((("star", [(BVAR(string_of_stmt x))])), fp) 
+        (*Singleton ((("star", [(BVAR(string_of_stmt x))])), fp) *) Emp
         else Emp
       in 
       let fp = match fp with | None -> [] | Some l -> [l] in 
@@ -2111,7 +1996,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 *)
 
       let ev = if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!variablesInScope)@(!parametersInScope)) then 
-        Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
+        (*Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) *) Emp
         else Emp
       in 
       let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
@@ -2159,7 +2044,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         let res  = 
           if twoStringSetOverlap [varFromY] (!varSet) then 
             (
-            let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
+            let ev = Emp (*Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp')*) in 
             (Ast_utility.TRUE, ev, 0, fp))
           else 
             (Ast_utility.TRUE, Emp, 0, fp)
@@ -2515,7 +2400,28 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
           | _ -> 
               let postcondition = (programStates2effects final) in 
 
+              
 
+
+             (match containingERR_new postcondition with
+             | None -> () 
+             | Some (BVAR _) -> ()
+             | Some (t) -> 
+                if String.length !currentModule < 4 then ()
+                else 
+                  let header = String.sub !currentModule 0 3 in 
+                  if twoStringSetOverlap [header] ["SSL";"BN_";"BIO";"i2a"] then 
+
+                
+                    let (returnFuture:effect) = [(Eq(Basic(BRET), Basic(t)), Singleton(("return", [BRET]), None))] in 
+                    let (newSpec:specification) = ((!currentModule, !parametersInScope), None, None, Some returnFuture) in 
+                    print_endline ("inserting future: " ^ string_of_effect returnFuture);
+                    insertSpecifications !currentModule newSpec
+                  else ()
+
+             );
+            
+             (*
               (if returningNULL postcondition 
               then (
                 let (doNotUseFuture:effect) = [(Eq(Basic(BRET), Basic(BINT(0))), Kleene(NotSingleton("_", [(BRET)])))] in 
@@ -2526,13 +2432,14 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
 
               else ());
 
-
+          
               let postcondition = eliminateAllTheRetturn postcondition in 
               (if List.length postcondition == 0 || (String.compare (!currentModule) "open_file"== 0) || (String.compare (!currentModule) "init"== 0) then ()
               else 
                 let (newSpec:specification) = ((!currentModule, !parametersInScope), None, Some postcondition, None) in 
                 insertSpecifications !currentModule newSpec
               );
+              *)
 
               print_endline (source_Address);
               print_endline("\n=====> Actual effects of function: "^ !currentModule ^" ======>" );
