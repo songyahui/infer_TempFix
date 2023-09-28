@@ -1593,64 +1593,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             concatenateTwoEffectswithFlag effectLi4X effectRest
           )
 
-     
-      
-    | (IfStmt (stmt_info, [x;y], if_stmt_info)) :: xsifelse -> 
-    (*
-    let a = (Clang_ast_t.IfStmt (stmt_info, [x;y], if_stmt_info)) in
-    let (fp, _) = getStmtlocation a in 
-    let fp = match fp with | None -> [] | Some l -> [l] in 
-    print_string ((Clang_ast_proj.get_stmt_kind_string a) ^ string_of_foot_print fp ^ ", ");
-*)
-      if peekTheEffectOfStmtsAndItHasEffects [y] then 
-        (
-        (*print_endline ("IfStmt 2 true");*)
-        let elseBranch = Clang_ast_t.CompoundStmt (stmt_info, []) in 
-        let statement' = Clang_ast_t.IfStmt (stmt_info, [x;y;elseBranch], if_stmt_info) in 
-        helper current' (statement'::xsifelse))
-      else 
-        (
-        (*print_endline ("IfStmt 2 false"); *)
-        let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y], if_stmt_info)) in 
-        (*print_endline ("effectLi4X= " ^ string_of_programStates effectLi4X);*)
-        let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
-        let effectRest = helper new_history xsifelse in 
-        (*print_endline ("effectRest= " ^ string_of_programStates effectRest);*)
-
-        concatenateTwoEffectswithFlag effectLi4X effectRest
-        )
-
-
-    | (IfStmt (stmt_info, [x;y;z], if_stmt_info)) :: xsifelse -> 
-
-      if not (peekTheEffectOfStmtsAndItHasEffects [y;z]) then 
-        (
-        (*print_endline ("IfStmt 3 false"); *)
-
-        (*print_endline ("no effect");*)
-        let effectLi4X = syh_compute_stmt_postcondition current' future (IfStmt (stmt_info, [x;y;z], if_stmt_info)) in 
-        let new_history = (concatenateTwoEffectswithFlag current' effectLi4X) in 
-        let effectRest = helper new_history xsifelse in 
-        let res = concatenateTwoEffectswithFlag effectLi4X effectRest in 
-        (*print_endline ("effectLi4X: " ^  string_of_programStates effectLi4X);
-        print_endline ("effectRest: " ^  string_of_programStates effectRest);
-        print_endline ("after if else " ^  string_of_programStates res);
-        *)
-        res
-  
-        )
-      else 
-        (
-        (* print_endline ("IfStmt 3 true"); *)
-
-        let addTail (a:Clang_ast_t.stmt) = 
-          match a with
-          | CompoundStmt (c_stmt_info, c_stmt_list) ->  Clang_ast_t.CompoundStmt (c_stmt_info, List.append c_stmt_list xsifelse) 
-          | _ ->  Clang_ast_t.CompoundStmt (stmt_info, a:: xsifelse)
-        in 
-        let statement' = Clang_ast_t.IfStmt (stmt_info, x::(List.map [y;z] ~f:(fun a -> addTail a)), if_stmt_info) in 
-        syh_compute_stmt_postcondition current' future statement')
-    
 
     | ForStmt (stmt_info, stmt_list)::xs
     | WhileStmt (stmt_info, stmt_list)::xs
