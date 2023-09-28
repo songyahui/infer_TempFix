@@ -945,9 +945,9 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
           print_endline (string_of_foot_print fp );
           (match extractEventFromFUnctionCall x rest with 
           | None -> () 
-          | Some (calleeName, acturelli) -> 
+          | Some (calleeName, acturelli) -> ()
         
-            (match findSpecFrom !propogatedSpecs calleeName with
+            (*match findSpecFrom !propogatedSpecs calleeName with
             | (Some ((_, _), _, _, futurec), _, _) ->  
               if existRetEff futurec then 
                 if existRetEvent futurec && (not (String.compare calleeName "malloc" == 0)) then 
@@ -988,7 +988,7 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
 
                 else () 
               else () 
-            | _ -> ()   )
+            | _ -> ()   *)
           )
  
       )
