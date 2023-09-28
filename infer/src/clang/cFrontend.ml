@@ -1296,26 +1296,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             else checkIsGlobalVar str xs
           in 
 
-          let futurec = 
-            if checkIsGlobalVar (getRoot handler) !variablesInScope then 
-              (match futurec with
-              | None -> None 
-              | Some futureLi -> 
-                let temp = List.fold_left futureLi ~init:[] ~f:(fun acc a ->
-                  
-                  match a with 
-                  | (Eq(Basic(BRET), Basic(BINT 0)), Kleene(NotSingleton(_, [BRET])))  -> 
-                    (* ((ret=0), (!_(ret))^* ) *)
-                    print_endline ("checking  ((ret=0), (!_(ret))^* ) for "^  handler);
-                    acc @[a]
-                  | _ ->  acc  
-                  
-                ) in 
-                if List.length temp == 0 then None 
-                else Some temp
-              )
-              (*  if  handler is global, we still need to check the derefrencing properties *)
-            else futurec
+          let futurec = None
           in 
 
 
