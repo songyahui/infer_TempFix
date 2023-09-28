@@ -1080,6 +1080,7 @@ let rec peekTheEffectOfStmtsAndItHasPostOrFutureEffects (instrList: Clang_ast_t.
 let rec peekTheEffectOfStmtsAndItHasEffects (instrList: Clang_ast_t.stmt list) : bool = 
   let rec helper (stmt:Clang_ast_t.stmt) = 
     match stmt with 
+    (*
     | DeclStmt (_, [CStyleCastExpr(_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _)], [_])
     | DeclStmt (_, [(CallExpr (stmt_info, stmt_list, ei))], [_]) 
     | DeclStmt (_, [(ImplicitCastExpr (_, [(CallExpr (stmt_info, stmt_list, ei))], _, _, _))], [_]) 
@@ -1119,6 +1120,7 @@ let rec peekTheEffectOfStmtsAndItHasEffects (instrList: Clang_ast_t.stmt list) :
     | ImplicitCastExpr (stmt_info, x::_, _, _, _) 
     | ArraySubscriptExpr(stmt_info, x::_, _)  
     | MemberExpr (stmt_info, x::_, _, _) -> helper x
+    *)
     | _ -> false 
 
   in 
