@@ -90,7 +90,7 @@
 
 /*@ fclose(handler):
     Post ((handler=-1), close(handler))
-    Future (TRUE, ((!close(handler))^* \/ (!close(handler))^* · open(handler) · (_)^*))@*/
+    Future (TRUE, ((!fclose(handler))^* \/ (!fclose(handler))^* · fopen(handler) · (_)^*))@*/
 
 /*@ closedir(handler):
     Post (TRUE, close(handler))
@@ -123,9 +123,6 @@
 
 /*@ read(path):
     Post (TRUE, read(path))@*/
-
-
-
 
 
 

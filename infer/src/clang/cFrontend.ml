@@ -1183,7 +1183,6 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             (("none", []), None, None, None)
           | Some (calleeName, acturelli) -> (* arli is the actual argument *)
             
-          print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
 
             (*
@@ -1197,6 +1196,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             match spec with
             | None -> ((calleeName, []), None, None, None)
             | Some ((signiture, formalLi), prec, postc, futurec)-> 
+
+            print_endline ("CallingFunction: " ^ calleeName ^ string_of_foot_print fp );
 
 
               (*
@@ -1617,7 +1618,11 @@ let rec syh_compute_stmt_postcondition (current:programStates)
           let rec auc stmt : Clang_ast_t.stmt = 
             match stmt with 
             | (Clang_ast_t.ContinueStmt (stmt_info, _)) 
-            | (BreakStmt (stmt_info, _)) -> CompoundStmt (stmt_info, xs)  
+            | GotoStmt (stmt_info, _, _) -> 
+              CompoundStmt (stmt_info, stmt::xs)  
+            | (ContinueStmt (stmt_info, _))
+            | (BreakStmt (stmt_info, _)) -> 
+                CompoundStmt (stmt_info, xs)  
             |  IfStmt(stmt_info, x::rest, if_stmt_info) -> 
               let rest' = (List.map rest ~f:(fun stmt -> auc stmt)) in 
               IfStmt(stmt_info, x::rest', if_stmt_info)
@@ -1632,8 +1637,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
         in 
 
-        let stmt_list = if List.length xs > 10 then stmt_list else preProcess stmt_list in 
-        let stmt' = List.append stmt_list xs in 
+        let stmt_list = (*if List.length xs > 10 then stmt_list else*) preProcess stmt_list in 
+        let stmt' = List.append stmt_list [] (*xs*) in 
         let states = helper current' stmt' in 
         print_endline ("aiyouahhahhahahhah: " ^ string_of_programStates states);
         states
@@ -2228,10 +2233,10 @@ let rec syh_compute_stmt_postcondition (current:programStates)
   | GotoStmt (stmt_infogoto, _, {Clang_ast_t.gsi_label= label_name; _}) ->
 
     (
-      (*match findLableSpec !gotoStmtSpec label_name with 
+    match findLableSpec !gotoStmtSpec label_name with 
     | Some spec -> spec
     | None ->  
-*)
+
         
     let (fpGOTO, _) = stmt_intfor2FootPrint stmt_infogoto in 
     
@@ -2273,7 +2278,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     in 
       (
       let stmt_list = findStmt_ListByLable () in 
-      let spec = helper current stmt_list in 
+      let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
+      let spec = if List.length stmt_list == 0 then ([(Ast_utility.TRUE, Emp, 1, fp)]) else helper current stmt_list in 
       let () = gotoStmtSpec := (label_name, spec) :: !gotoStmtSpec in 
       spec
       
@@ -2485,7 +2491,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
       in 
 
       let () = dynamicSpec := [] in       
-      let () = varSet := [] in 
+      let () = varSet := ["fd"] in 
       
       let (defultPrecondition:programStates) = 
         match precondition with
