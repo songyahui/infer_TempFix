@@ -79,5 +79,5 @@
     Post (TRUE, free(handler))@*/
 
 /*@ swoole_set_object(server_object, serv):
-    Post (TRUE, COMSUME(serv))@*/
+    Post (TRUE, CONSUME(serv))@*/
 
