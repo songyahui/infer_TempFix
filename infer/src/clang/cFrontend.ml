@@ -845,7 +845,6 @@ let program_repair prefix ((callee, fp):(string * int list)) (info:((error_info 
 
         (*print_endline ("post:" ^(string_of_int startNum) ^ ", "^ (string_of_int endNum)); 
 *)
-        modifiyTheassertionCounters (); 
 
         (*let startTimeStamp = Unix.gettimeofday() in*)
         let (specifications: specification list) = List.append specifications !dynamicSpec in 
@@ -856,19 +855,21 @@ let program_repair prefix ((callee, fp):(string * int list)) (info:((error_info 
         (*let startTimeStamp01 = Unix.gettimeofday() in*)
 
         let temp = 
-        ("@ line " ^ string_of_int startNum ^ (*^ " to line " ^  string_of_int endNum ^ *)
+        ( (*^ " to line " ^  string_of_int endNum ^ *)
         (match list_of_functionCalls with 
         | None -> 
           let (rr, _) = effect_inclusion [(TRUE, Emp)] [(TRUE, spec)] in 
           if List.length rr == 0 then  
-          let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
-          " can be deleted." 
+            (modifiyTheassertionCounters (); 
+            let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
+            "@ line " ^ string_of_int startNum ^ " can be deleted." )
           else 
-          " Sorry, there is no path from the environment!"
+            ""
         | Some str -> 
+          modifiyTheassertionCounters (); 
           let () = reapiredFailedAssertions := !reapiredFailedAssertions + 1 in 
-          if String.compare str "" == 0 then " can be deleted." 
-          else  " can be inserted with code: " ^ prefix ^ str)
+          if String.compare str "" == 0 then "@ line " ^ string_of_int startNum ^ " can be deleted." 
+          else  "@ line " ^ string_of_int startNum ^ " can be inserted with code: " ^ prefix ^ str)
          ^ "\n" 
          (*^ "[Searching Time] " ^ string_of_float (startTimeStamp01 -. startTimeStamp)^ " seconds.\n\n"*)
         ) in 
