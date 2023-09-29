@@ -2179,7 +2179,7 @@ print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.ge
             (
             let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
             (Ast_utility.TRUE, ev, 0, fp))
-          else if String.compare (varFromX) "0" == 0  then 
+          else if String.compare (varFromY) "0" == 0  then 
             (
             let ev = Singleton ((("CONSUME", [(BVAR(varFromX))])), fp') in 
             (Eq(Basic (BVAR varFromX), Basic(BINT 0)), ev, 0, fp))
