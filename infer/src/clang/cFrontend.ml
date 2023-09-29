@@ -1606,7 +1606,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 
     | ForStmt (stmt_info,  x :: rest)::xs
     | WhileStmt (stmt_info,  x :: rest)::xs -> 
-
+      let xs' =  Clang_ast_t.CompoundStmt (stmt_info, xs@[ReturnStmt (stmt_info, []) ]) in   
       let checkNotTermination () = 
         match stmt2Pure x with 
         | Some TRUE -> true 
@@ -1630,10 +1630,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             match stmt with 
             | (Clang_ast_t.ContinueStmt (stmt_info, _)) 
             | GotoStmt (stmt_info, _, _) -> 
-              CompoundStmt (stmt_info, stmt::xs)  
+              CompoundStmt (stmt_info, stmt::[xs'])  
             | (ContinueStmt (stmt_info, _))
-            | (BreakStmt (stmt_info, _)) -> 
-                CompoundStmt (stmt_info, xs)  
+            | (BreakStmt (stmt_info, _)) -> xs'
             |  IfStmt(stmt_info, x::rest, if_stmt_info) -> 
               let rest' = (List.map rest ~f:(fun stmt -> auc stmt)) in 
               IfStmt(stmt_info, x::rest', if_stmt_info)
@@ -2149,8 +2148,9 @@ let rec syh_compute_stmt_postcondition (current:programStates)
     let fp = match fp with | None -> [] | Some l -> [l] in 
     print_string ((Clang_ast_proj.get_stmt_kind_string instr) ^ string_of_foot_print fp ^ ", ");
   
-    print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.get_stmt_kind_string y ^ string_of_stmt y ); 
 *)
+print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.get_stmt_kind_string y ^ string_of_stmt y ); 
+
     (match binop_info.boi_kind with
     | `Assign -> 
       
@@ -2171,14 +2171,17 @@ let rec syh_compute_stmt_postcondition (current:programStates)
         let stateY = syh_compute_stmt_postcondition current future y in 
         let stateX = syh_compute_stmt_postcondition current future x in 
   
-  
+
         let res  = 
           if twoStringSetOverlap [varFromY] (!varSet) then 
             (
             let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
             (Ast_utility.TRUE, ev, 0, fp))
-          else 
-            (Ast_utility.TRUE, Emp, 0, fp)
+          else if String.compare (string_of_stmt x) "0" == 0  then 
+            (
+            let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt x))])), fp') in 
+            (Ast_utility.TRUE, ev, 0, fp))
+          else (Ast_utility.TRUE, Emp, 0, fp)
         in 
         concatenateTwoEffectswithFlag stateY (concatenateTwoEffectswithFlag stateX [res])
 
