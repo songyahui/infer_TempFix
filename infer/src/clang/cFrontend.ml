@@ -1604,8 +1604,16 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             concatenateTwoEffectswithFlag effectLi4X effectRest
           )
 
-    | ForStmt (stmt_info, stmt_list)::xs
-    | WhileStmt (stmt_info, stmt_list)::xs -> 
+    | ForStmt (stmt_info,  x :: rest)::xs
+    | WhileStmt (stmt_info,  x :: rest)::xs -> 
+
+      let checkNotTermination () = 
+        match stmt2Pure x with 
+        | Some TRUE -> true 
+        | _ -> false 
+      in 
+
+      let stmt_list = x :: rest in 
       let xs = flattenList (List.map xs ~f:(fun a ->  match a with 
       | ForStmt  (_, stmt_list') 
       | WhileStmt   (_, stmt_list')  -> stmt_list'
@@ -1613,6 +1621,8 @@ let rec syh_compute_stmt_postcondition (current:programStates)
             
       )) 
       in 
+      if checkNotTermination() then (helper current stmt_list) 
+      else 
       if peekTheEffectOfStmtsAndItHasEffects stmt_list then 
 
         let rec preProcess (li:Clang_ast_t.stmt list) : Clang_ast_t.stmt list = 
