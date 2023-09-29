@@ -2164,6 +2164,8 @@ print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.ge
       | _ -> 
         let (fp, _) = maybeIntToListInt (getStmtlocation instr) in 
         let (fp', _) = getStmtlocation instr in
+        let varFromX = string_of_stmt x in 
+
         let varFromY = string_of_stmt y in 
         (*print_endline ("BinaryOperator CONSUME: " ^ varFromY);*) 
   
@@ -2177,10 +2179,10 @@ print_endline ("BinaryOperator0 " ^  string_of_stmt x ^ ", " ^ Clang_ast_proj.ge
             (
             let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt y))])), fp') in 
             (Ast_utility.TRUE, ev, 0, fp))
-          else if String.compare (string_of_stmt x) "0" == 0  then 
+          else if String.compare (varFromX) "0" == 0  then 
             (
-            let ev = Singleton ((("CONSUME", [(BVAR(string_of_stmt x))])), fp') in 
-            (Ast_utility.TRUE, ev, 0, fp))
+            let ev = Singleton ((("CONSUME", [(BVAR(varFromX))])), fp') in 
+            (Eq(Basic (BVAR varFromX), Basic(BINT 0)), ev, 0, fp))
           else (Ast_utility.TRUE, Emp, 0, fp)
         in 
         concatenateTwoEffectswithFlag stateY (concatenateTwoEffectswithFlag stateX [res])
