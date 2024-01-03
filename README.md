@@ -27,7 +27,7 @@ eval $(opam env)
 ```
 
 ### Run the projects in experiments 1 and 2
-> Step 1: Put the default spec at the file ["spec.c"](./spec.c).
+> Step 1: Put the default spec in the file ["spec.c"](./spec.c).
  
 > Step 2: Run ```../../git/infer_TempFix/infer/bin/tempFix``` to do the analysis/repair. 
 
@@ -50,7 +50,35 @@ phpize
 
 ## Experiment 3, Generating specs for OpenSSL project. 
 
+### Step1: Checkout the branch for OpenSSL Project Spec generation
+```
+git checkout Infer_OpenSSL
+```
 
+### Get the source code and unzip [OpenSSL](https://github.com/openssl/openssl/releases/tag/openssl-3.1.2)
+```
+cd openssl-3.1.2
+./Configure --prefix=/usr/local/ssl --openssldir=/usr/local/ssl \
+    '-Wl,-rpath,$(LIBRPATH)'
+```
+
+### Add the first two specs in the file ["spec.c"](./spec.c).
+```
+#define SW_CHANNEL_MIN_MEM (1024*64)
+
+/*@ return(arg):
+    Post (TRUE, return(arg))@*/
+
+/*@ ERR_new():
+    Post (TRUE, ERR_new())@*/
+```
+
+### Run the ProveNFix
+```
+../../git/infer_TempFix/infer/bin/tempFix
+```
+
+### Check out generated specs in the file ["spec.c"](./spec.c).
 
 ## Others
 
