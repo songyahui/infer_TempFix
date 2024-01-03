@@ -3,29 +3,26 @@
 # ProveNFix 
 
 ProveNFix is a program analysis and repair tool for temporal properties for C language. 
-ProveNFix is written in [OCaml](https://ocaml.org/), and built on top of the Meta Infer tool. 
- 
+ProveNFix is written in [OCaml](https://ocaml.org/), and built on top of the Meta [Infer](http://fbinfer.com/) tool. 
 
-## Infer ![build](https://github.com/facebook/infer/actions/workflows/install.yml/badge.svg) ![website](https://github.com/facebook/infer/actions/workflows/deploy.yml/badge.svg)
-
-[Infer](http://fbinfer.com/) is a static analysis tool for Java,
-C++, Objective-C, and C. Infer is written in [OCaml](https://ocaml.org/).
-
+[Infer](http://fbinfer.com/) ![build](https://github.com/facebook/infer/actions/workflows/install.yml/badge.svg) ![website](https://github.com/facebook/infer/actions/workflows/deploy.yml/badge.svg) is a static analysis tool for Java,
+C++, Objective-C, and C. Infer is written in [OCaml](https://ocaml.org/). 
 Read Infer's [Getting
 Started](http://fbinfer.com/docs/getting-started) page for
-details on how to install packaged versions of Infer. To build Infer
-from source, see [INSTALL.md](./INSTALL.md).
+details on how to install packaged versions of Infer. 
 
 
 
-## Build
+## Build ProveNFix
 ```
 opam switch create 4.14.0+flambda
 eval $(opam env)  
-./build-infer.sh clang
+git clone https://github.com/songyahui/infer_TempFix.git
+cd infer_TempFix
+./compile
 ```
 
-## Run the projects in experiments 1 and 2
+## Run ProveNFix on the projects in experiments 1 and 2
 ### Step 1: Put the default spec in the file ["spec.c"](./spec.c).
  
 ### Step 2: Run ProveNFix
@@ -50,11 +47,12 @@ phpize
 ./configure
 ```
 
-## Experiment 3: Generating specs for OpenSSL project. 
+## Experiment 3: generating specs for the OpenSSL project
 
-### Step1: Checkout the branch for OpenSSL Project Spec generation
+### Step1: Checkout the ProveNFix branch and re-build
 ```
 git checkout Infer_OpenSSL
+./compile
 ```
 
 ### Get the source code and unzip [OpenSSL](https://github.com/openssl/openssl/releases/tag/openssl-3.1.2)
@@ -84,13 +82,22 @@ cd openssl-3.1.2
 
 ## Experiment 4: Automatically detect double free and use after free
 
-:warning: Stopped here, 
 
+### Step1: Checkout the ProveNFix branch and re-build
+```
+git checkout doubleFreeClose
+./compile
+```
+
+:warning: Stopped here, build the branch in loris 1, and run benchmarks on loris 1
+
+### step...
 ```
 ../../git/infer_TempFix/infer/bin/tempFix
 ```
 
-## Others
+
+# Others 
 
 
 ./build-infer.sh java
