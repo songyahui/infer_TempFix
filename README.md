@@ -17,21 +17,23 @@ details on how to install packaged versions of Infer. To build Infer
 from source, see [INSTALL.md](./INSTALL.md).
 
 
-## Build ProveNFix and Analyses a Project
 
-### Build
+## Build
 ```
 opam switch create 4.14.0+flambda
 eval $(opam env)  
 ./build-infer.sh clang
 ```
 
-### Run the projects in experiments 1 and 2
-> Step 1: Put the default spec in the file ["spec.c"](./spec.c).
+## Run the projects in experiments 1 and 2
+### Step 1: Put the default spec in the file ["spec.c"](./spec.c).
  
-> Step 2: Run ```../../git/infer_TempFix/infer/bin/tempFix``` to do the analysis/repair. 
+### Step 2: Run ProveNFix
+```
+../../git/infer_TempFix/infer/bin/tempFix
+``` 
 
-> Step 3: Check out the analysis/repair results in the file ["TempFix-out/detail.txt"](./TempFix-out/detail.txt)
+### Step 3: Check out the analysis/repair results in the file ["TempFix-out/detail.txt"](./TempFix-out/detail.txt)
 
 Here lists the pre-required commands for the benchmark projects
 
@@ -48,7 +50,7 @@ phpize
 ./configure
 ```
 
-## Experiment 3, Generating specs for OpenSSL project. 
+## Experiment 3: Generating specs for OpenSSL project. 
 
 ### Step1: Checkout the branch for OpenSSL Project Spec generation
 ```
@@ -79,6 +81,14 @@ cd openssl-3.1.2
 ```
 
 ### Check out generated specs in the file ["spec.c"](./spec.c).
+
+## Experiment 4: Automatically detect double free and use after free
+
+:warning: Stopped here, 
+
+```
+../../git/infer_TempFix/infer/bin/tempFix
+```
 
 ## Others
 
