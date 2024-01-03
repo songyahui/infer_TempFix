@@ -25,11 +25,27 @@ eval $(opam env)
 ./build-infer.sh clang
 ```
 
-Run a project 
+### Run a project 
+> Step 1: Put the default spec at the file ["spec.c"](./spec.c).
+ 
+> Step 2: Run ```../../git/infer_TempFix/infer/bin/tempFix``` to do the analysis/repair. 
+
+> Step 3: Check out the analysis/repair results in the file ["TempFix-out/detail.txt"](./TempFix-out/detail.txt)
+
+Here lists the pre-required commands for the benchmark projects
+
+### [Swoole](https://github.com/swoole/swoole-src)
 ```
-../../infer_TempFix/infer/bin/infer run --pulse -- make --keep-going 
+phpize
+./configure
 ```
 
+
+###  [lxc](https://github.com/lxc/lxc), [WavPack](https://github.com/dbry/WavPack), [p11-kit](https://github.com/p11-glue/p11-kit), [flex](https://github.com/westes/flex), [x264](https://github.com/mirror/x264), [recutils-1.8], [inetutils-1.9.4], [snort-2.9.13], [grub](https://github.com/rhboot/grub2)
+```
+./autogen.sh 
+./configure
+```
 
 
 ## Others
@@ -62,10 +78,6 @@ program synthesis using deductions.
 
 infer/bin/infer run -- clang -c ../../repair-benchmark/swoole-src/src/core/base.c
 
-
-1. is that ok to extract the code and analyses it separately 
-2. most likely trace to have the repair. 
-3. related works derived by "Static automated program repair for heap properties"
 
 
 
@@ -118,10 +130,6 @@ curl -sSL "https://github.com/facebook/infer/releases/download/v$VERSION/infer-l
 | sudo tar -C /opt -xJ && \
 sudo ln -s "/opt/infer-linux64-v$VERSION/bin/infer" /usr/local/bin/infer
 
-
-TODO: 
-check all the true bugs and try to fix them. 
-generate future conditions for functions. 
 
 
 
