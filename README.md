@@ -19,13 +19,14 @@ from source, see [INSTALL.md](./INSTALL.md).
 
 ## Build ProveNFix and Analyses a Project
 
+### Build
 ```
 opam switch create 4.14.0+flambda
 eval $(opam env)  
 ./build-infer.sh clang
 ```
 
-### Run a project 
+### Run the projects in experiments 1 and 2
 > Step 1: Put the default spec at the file ["spec.c"](./spec.c).
  
 > Step 2: Run ```../../git/infer_TempFix/infer/bin/tempFix``` to do the analysis/repair. 
@@ -41,11 +42,14 @@ phpize
 ```
 
 
-###  [lxc](https://github.com/lxc/lxc), [WavPack](https://github.com/dbry/WavPack), [p11-kit](https://github.com/p11-glue/p11-kit), [flex](https://github.com/westes/flex), [x264](https://github.com/mirror/x264), [recutils-1.8], [inetutils-1.9.4], [snort-2.9.13], [grub](https://github.com/rhboot/grub2)
+###  [lxc](https://github.com/lxc/lxc), [WavPack](https://github.com/dbry/WavPack), [p11-kit](https://github.com/p11-glue/p11-kit), [flex](https://github.com/westes/flex), [x264](https://github.com/mirror/x264), [recutils-1.8](https://ftp.gnu.org/gnu/recutils/), [inetutils-1.9.4](https://ftp.gnu.org/gnu/inetutils/), [snort-2.9.13](https://www.snort.org/downloads#), [grub](https://github.com/rhboot/grub2)
 ```
 ./autogen.sh 
 ./configure
 ```
+
+## Experiment 3, Generating specs for OpenSSL project. 
+
 
 
 ## Others
