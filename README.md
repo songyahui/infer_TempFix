@@ -100,8 +100,11 @@ cd openssl-3.1.2
 
 ### Check out generated specs in the file ["spec.c"](./spec.c).
 
+----
+Thanks for trying out ProveNFix. In case there are any issues, please contact Yahui Song (yahui_s@nus.edu.s)
 
 
+<!--
 
 # Others 
 
@@ -211,3 +214,4 @@ API-Misuse Detection Driven by Fine-Grained API-Constraint
 Knowledge Graph
 
 
+-->
