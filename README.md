@@ -47,7 +47,27 @@ phpize
 ./configure
 ```
 
-## Experiment 3: generating specs for the OpenSSL project
+## Experiment 3: Automatically detect double free errors
+
+
+### Step1: Checkout the ProveNFix branch and re-build
+```
+git checkout doubleFreeClose
+./compile
+```
+
+### Step 2: Put the default spec (["spec_Temp_grub.c"](./spec_Temp_grub.c), ["spec_Temp_lxc.c"](./spec_Temp_lxc.c), ["spec_Temp_p11.c"](./spec_Temp_p11.c)) in the file ["spec.c"](./spec.c), and run ProveNFix on the projects Grub, lex, and p11-kit respectively. 
+ 
+```
+../../git/infer_TempFix/infer/bin/tempFix
+``` 
+
+### Step 3: Check out the analysis/repair results in the file ["TempFix-out/detail.txt"](./TempFix-out/detail.txt)
+
+
+
+
+## Experiment 4: generating specs for the OpenSSL project
 
 ### Step1: Checkout the ProveNFix branch and re-build
 ```
@@ -80,21 +100,7 @@ cd openssl-3.1.2
 
 ### Check out generated specs in the file ["spec.c"](./spec.c).
 
-## Experiment 4: Automatically detect double free and use after free
 
-
-### Step1: Checkout the ProveNFix branch and re-build
-```
-git checkout doubleFreeClose
-./compile
-```
-
-:warning: Stopped here, build the branch in loris 1, and run benchmarks on loris 1
-
-### step...
-```
-../../git/infer_TempFix/infer/bin/tempFix
-```
 
 
 # Others 
