@@ -2715,7 +2715,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   let loris1_path = (*"/home/yahui/future_condition/infer_TempFix/"  in *) "/home/infer_TempFix/" in 
   let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/" in 
   let path = (*if which_system == 1  then loris1_path else mac_path  in *)
-  (Filename.dirname(Filename.dirname(Filename.dirname(Sys.getcwd ())))) ^ "/" in 
+  (Filename.dirname(Filename.dirname(Filename.dirname(Filename.dirname(Sys.getcwd ()))))) ^ "/" in 
   let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications (path ^ "spec.c") in 
   let output_report =  path ^ "TempFix-out/report.csv" in 
   let output_detail =  path ^ "TempFix-out/detail.txt" in 
