@@ -6,7 +6,8 @@ which_system = 1 if os.getcwd()[0:5] == "/home" else 0
 
 loris1_path = "/home/yahui/future_condition/infer_TempFix/" 
 mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/"
-path = loris1_path if which_system == 1 else mac_path 
+path = (os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.getcwd ()))))) + "/"  
+
 output_report =  path + "TempFix-out/report.csv" 
 output_detail =  path + "TempFix-out/detail.txt" 
 
