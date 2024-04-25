@@ -226,8 +226,8 @@ let string_of_termOption t : string option  =
 
 let rec string_of_pure (p:pure):string =   
   match p with
-    TRUE -> "⊤"
-  | FALSE -> "⊥"
+    TRUE -> "true"
+  | FALSE -> "false"
   | Gt (t1, t2) -> (string_of_terms t1) ^ ">" ^ (string_of_terms t2)
   | Lt (t1, t2) -> (string_of_terms t1) ^ "<" ^ (string_of_terms t2)
   | GtEq (t1, t2) -> (string_of_terms t1) ^ "≥" ^ (string_of_terms t2)
@@ -240,8 +240,8 @@ let rec string_of_pure (p:pure):string =
 
 let rec string_of_pure_output (p:pure):string =   
   match p with
-    TRUE -> "⊤"
-  | FALSE -> "⊥"
+    TRUE -> "true"
+  | FALSE -> "false"
   | Gt (t1, t2) -> (string_of_terms t1) ^ ">" ^ (string_of_terms t2)
   | Lt (t1, t2) -> (string_of_terms t1) ^ "<" ^ (string_of_terms t2)
   | GtEq (t1, t2) -> (string_of_terms t1) ^ ">=" ^ (string_of_terms t2)
@@ -615,7 +615,7 @@ let string_of_event (str, li) =
 let rec string_of_es (eff:es) : string = 
   match eff with 
   | Bot              -> "⏊"
-  | Emp              -> "𝝐"
+  | Emp              -> "emp"
   | Any -> "_" 
   | Singleton (str, l)  -> 
     string_of_event str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)

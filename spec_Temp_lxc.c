@@ -13,7 +13,6 @@
 
 /*@ cgroup_to_absolute_path(path):
     Post (TRUE, malloc(ret))
-    Future (TRUE, (_)^*)@*/
 
 /*@ lxc_append_paths(path):
     Post (TRUE, malloc(ret))@*/
@@ -26,7 +25,6 @@
 
 /*@ hex_encode(path):
     Post (TRUE, malloc(ret))
-    Future (TRUE, (_)^*)@*/
 
 /*@ symlink_for_subject_old_hash(path):
     Post (TRUE, malloc(ret))@*/
