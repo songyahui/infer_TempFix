@@ -12,7 +12,6 @@
 
 /*@ p11_kit_space_strdup(path):
     Post (TRUE, malloc(ret))
-    Future (TRUE, (_)^*)@*/
 
 /*@ format_uri(path):
     Post (TRUE, malloc(ret))@*/
@@ -25,7 +24,6 @@
 
 /*@ hex_encode(path):
     Post (TRUE, malloc(ret))
-    Future (TRUE, (_)^*)@*/
 
 /*@ symlink_for_subject_old_hash(path):
     Post (TRUE, malloc(ret))@*/

@@ -32,10 +32,6 @@
 /*@ strndup(path):
     Post (TRUE, malloc(ret))@*/
 
-/*@ fork():
-    Post ((ret=ret), fork())@*/
 
-/*@ read(path):
-    Post (TRUE, read(path))@*/
 
 
