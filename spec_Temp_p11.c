@@ -16,7 +16,7 @@
 
 /*@ free(handler):
     Post (TRUE, free(handler))
-    Future (TRUE, ((!_(handler))^* \/ (!_(handler))^* · malloc(handler) · (_)^*))@*/
+    Future (TRUE, (!_(handler))^*@*/
 
 /*@ malloc(path):
     Post (TRUE, malloc(ret))@*/

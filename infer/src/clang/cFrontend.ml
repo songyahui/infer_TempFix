@@ -2126,7 +2126,7 @@ let rec syh_compute_stmt_postcondition (current:programStates)
 *)
 
       let ev = if twoStringSetOverlap [getMostRoot varFromX] (!varSet@(!variablesInScope)@(!parametersInScope)) then 
-        Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp) 
+        (*Singleton ((("deref", [(BVAR(string_of_stmt x))])), fp)  *) Emp
         else Emp
       in 
       let () = dynamicSpec := ((string_of_stmt instr, []), None, Some [(TRUE, ev )], None) :: !dynamicSpec in 
