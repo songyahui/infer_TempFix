@@ -4,7 +4,7 @@ import os
 
 which_system = 1 if os.getcwd()[0:5] == "/home" else 0 
 
-loris1_path = "/home/yahui/future_condition/infer_TempFix/" 
+loris1_path = "/home/infer_TempFix/" 
 mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/"
 path = loris1_path if which_system == 1 else mac_path 
 output_report =  path + "TempFix-out/report.csv" 
