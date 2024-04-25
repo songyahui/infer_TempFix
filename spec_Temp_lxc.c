@@ -34,40 +34,6 @@
 /*@ strndup(path):
     Post (TRUE, malloc(ret))@*/
 
-/*@ close(handler):
-    Post ((handler=-1), close(handler))
-    Future (TRUE, ((!close(handler))^* \/ (!close(handler))^* · open(handler) · (_)^*))@*/
-
-/*@ fclose(handler):
-    Post ((handler=-1), close(handler))
-    Future (TRUE, ((!fclose(handler))^* \/ (!fclose(handler))^* · fopen(handler) · (_)^*))@*/
-
-/*@ closedir(handler):
-    Post (TRUE, close(handler))
-    Future (TRUE, ((!close(handler))^* \/ (!close(handler))^* · open(handler) · (_)^*))@*/
-
-/*@ endmntent(handler):
-    Post (TRUE, close(handler))
-    Future (TRUE, ((!close(handler))^* \/ (!close(handler))^* · open(handler) · (_)^*))@*/
-
-/*@ open(path):
-    Post (TRUE, open(ret))@*/
-
-/*@ socket(domain, type, protocol):
-    Post (TRUE, open(ret))@*/
-
-/*@ lxc_abstract_unix_connect(domain, type, protocol):
-    Post (TRUE, open(ret))@*/
-
-/*@ fopen(path):
-    Post ((ret>=0), open(ret))@*/
-
-/*@ opendir(path):
-    Post (TRUE, open(ret))@*/
-
-/*@ rpl_open(path):
-    Post (TRUE, open(ret))@*/
-
 /*@ fork():
     Post ((ret=ret), fork())@*/
 
