@@ -2734,7 +2734,7 @@ let do_source_file (translation_unit_context : CFrontend_config.translation_unit
   (*print_endline ("================ Here is Yahui's Code =================");*)
 
   let which_system = if String.compare (String.sub (Sys.getcwd()) 0 5 ) "/home" == 0 then 1 else 0 in 
-  let loris1_path = "/home/yahui/future_condition/infer_TempFix/"  in 
+  let loris1_path = "/home/infer_TempFix/"  in 
   let mac_path = "/Users/yahuis/Desktop/git/infer_TempFix/" in 
   let path = if which_system == 1  then loris1_path else mac_path  in 
   let (user_sepcifications, lines_of_spec, number_of_protocol) = retriveSpecifications (path ^ "spec.c") in 
