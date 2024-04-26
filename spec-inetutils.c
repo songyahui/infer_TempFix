@@ -4,9 +4,6 @@
 /*@ open(path):
     Future (((ret>0)/\(!(ret=stdout)/\!(ret=stdin))), (!close(ret))^* · close(ret) · (_)^*)@*/
 
-/*@ socket(domain, type, protocol):
-    Future ((ret>0), (!close(ret))^* · close(ret) · (_)^*)@*/
-
 /*@ close(handler):
     Post (TRUE, close(handler))@*/
 
@@ -79,9 +76,6 @@
 @*/
 
 /*@ ping_set_data(a, b, c, d): 
-    Future (!(b=0), (!free(b))^* · free(b) · (_)^* )  @*/
-
-/*@ env_opt_start_info(): 
     Future (!(b=0), (!free(b))^* · free(b) · (_)^* )  @*/
 
   
