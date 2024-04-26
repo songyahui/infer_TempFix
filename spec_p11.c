@@ -68,8 +68,6 @@
 /*@ p11_dict_new(path): 
     Future (!(ret=0), (_)^* · (free(ret) \/  p11_dict_clear(ret)  \/ p11_array_free(ret)) · (_)^* )  @*/
 
-/*@ load_seq_of_oid_str(a, b): 
-    Future (!(ret=0), (_)^* · (free(ret) \/  p11_dict_clear(ret)  \/ p11_array_free(ret)) · (_)^* )  @*/
 
 /*@ p11_url_decode(a, b, c, d, e): 
     Future (!(ret=0), (_)^* · (free(ret) \/  p11_dict_clear(ret)  \/ p11_array_free(ret)) · (_)^* )  @*/
