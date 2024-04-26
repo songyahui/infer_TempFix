@@ -15,9 +15,6 @@
 /*@ fflush(handler):
     Post (TRUE, fclose(handler))@*/
 
-/*@ opendir(path):
-    Future ((ret>0), (!closedir(ret))^* · closedir(ret) · (_)^*)@*/
-
 /*@ closedir(handler):
     Post (TRUE, closedir(handler))@*/
 

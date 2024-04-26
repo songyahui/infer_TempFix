@@ -950,8 +950,10 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                   ^"\': Failed! because there is no handler ! \n"
                   (*^ string_of_function_sepc (prec, postc, futurec)^"\n"*)
                   in 
+                  let () = finalReport := !finalReport ^ extra_info in 
+                  ()
                   (* trying to repair the no handler error ... *)
-                  let freshVar = verifier_getAfreeVar "r" in 
+                  (*let freshVar = verifier_getAfreeVar "r" in 
                   let futurec =  instantiateReturn futurec freshVar in 
                   let error_infos :(error_info list) = 
                     let (functionStart, _) = !currentFunctionLineNumber in 
@@ -976,7 +978,7 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                     let () = finalReport := !finalReport ^ ("[Patches]\n") ^ patches ^ "\n" in 
                     ()
       
-
+*)
                   (* trying to repair the no handler error ... *)
 
                 else () 
