@@ -76,10 +76,6 @@
 /*@ p11_asn1_defs_load(): 
     Future (!(ret=0), (_)^* · (free(ret) \/  p11_dict_clear(ret)  \/ p11_array_free(ret)) · (_)^* )  @*/
 
-
-/*@ p11_asn1_read(a, b, c): 
-    Future (!(ret=0), (_)^* · (free(ret) \/  p11_dict_clear(ret) ) · (_)^* )  @*/
-
 /*@ p11_dict_clear(handler): 
     Post (TRUE, p11_dict_clear(handler))  @*/
 
