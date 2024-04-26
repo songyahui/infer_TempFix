@@ -1,8 +1,5 @@
 #define SW_CHANNEL_MIN_MEM (1024*64)
 
-/*@ open(path):
-    Future (((ret>0)/\(!(ret=stdout)/\!(ret=stdin))), (!close(ret))^* · close(ret) · (_)^*)@*/
-
 /*@ close(handler):
     Post (TRUE, close(handler))@*/
 
@@ -11,9 +8,6 @@
 
 /*@ fclose(handler):
     Post (TRUE, fclose(handler))@*/
-
-/*@ fdopen(path, b):
-    Future (((ret>0)/\(!(ret=stdout)/\!(ret=stdin))), ((!fclose(ret))^* · fclose(ret) · (_)^* \/ (!close(path))^* · close(path) · (_)^*))@*/
 
 /*@ endmntent(handler):
     Post (TRUE, fclose(handler))@*/
