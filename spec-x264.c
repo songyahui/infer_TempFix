@@ -36,11 +36,6 @@
 /*@ rpl_open(path):
     Future ((ret>0), (!close(ret))^* · close(ret) · (_)^*)@*/
 
-
-
-/*@ x264_cli_get_csp(path):
-    Future ((ret=0), (!_(ret))^*)@*/
-
 /*@ malloc(path):
     Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^*) \/ ((ret=0), (!_(ret))^*)@*/
 
