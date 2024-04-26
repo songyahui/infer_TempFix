@@ -230,11 +230,11 @@ let rec string_of_pure (p:pure):string =
   | FALSE -> "⊥"
   | Gt (t1, t2) -> (string_of_terms t1) ^ ">" ^ (string_of_terms t2)
   | Lt (t1, t2) -> (string_of_terms t1) ^ "<" ^ (string_of_terms t2)
-  | GtEq (t1, t2) -> (string_of_terms t1) ^ "≥" ^ (string_of_terms t2)
-  | LtEq (t1, t2) -> (string_of_terms t1) ^ "≤" ^ (string_of_terms t2)
+  | GtEq (t1, t2) -> (string_of_terms t1) ^ ">=" ^ (string_of_terms t2)
+  | LtEq (t1, t2) -> (string_of_terms t1) ^ "<=" ^ (string_of_terms t2)
   | Eq (t1, t2) -> (string_of_terms t1) ^ "=" ^ (string_of_terms t2)
-  | PureOr (p1, p2) -> "("^string_of_pure p1 ^ "∨" ^ string_of_pure p2^")"
-  | PureAnd (p1, p2) -> string_of_pure p1 ^ "∧" ^ string_of_pure p2
+  | PureOr (p1, p2) -> "("^string_of_pure p1 ^ " \\/ " ^ string_of_pure p2^")"
+  | PureAnd (p1, p2) -> string_of_pure p1 ^ " /\\ " ^ string_of_pure p2
   | Neg (Eq (t1, t2)) -> "("^(string_of_terms t1) ^ "!=" ^ (string_of_terms t2)^")"
   | Neg p -> "!(" ^ string_of_pure p^")"
 
@@ -247,8 +247,8 @@ let rec string_of_pure_output (p:pure):string =
   | GtEq (t1, t2) -> (string_of_terms t1) ^ ">=" ^ (string_of_terms t2)
   | LtEq (t1, t2) -> (string_of_terms t1) ^ "<=" ^ (string_of_terms t2)
   | Eq (t1, t2) -> (string_of_terms t1) ^ "==" ^ (string_of_terms t2)
-  | PureOr (p1, p2) -> "("^string_of_pure_output p1 ^ "∨" ^ string_of_pure_output p2^")"
-  | PureAnd (p1, p2) -> string_of_pure_output p1 ^ "∧" ^ string_of_pure_output p2
+  | PureOr (p1, p2) -> "("^string_of_pure_output p1 ^ " \\/ " ^ string_of_pure_output p2^")"
+  | PureAnd (p1, p2) -> string_of_pure_output p1 ^ " /\\ " ^ string_of_pure_output p2
   | Neg (Eq (t1, t2)) -> "("^(string_of_terms t1) ^ "!=" ^ (string_of_terms t2)^")"
   | Neg p -> "!(" ^ string_of_pure_output p^")"
 
@@ -614,8 +614,8 @@ let string_of_event (str, li) =
 
 let rec string_of_es (eff:es) : string = 
   match eff with 
-  | Bot              -> "⏊"
-  | Emp              -> "𝝐"
+  | Bot              -> "false"
+  | Emp              -> "emp"
   | Any -> "_" 
   | Singleton (str, l)  -> 
     string_of_event str ^ (match l with | None -> "" | Some i -> "@"^ string_of_int i)
@@ -1746,7 +1746,6 @@ let rec string_of_es_prime (eff:es) : string =
   | Kleene effIn          ->
       "(" ^ string_of_es_prime effIn ^ ")^*"
 
-  | _ -> "string_of_es error"
 
 let rec string_of_effect_prime (eff:effect) : string = 
   match eff with 

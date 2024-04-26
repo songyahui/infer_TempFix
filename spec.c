@@ -15,11 +15,14 @@
 /*@ fopen(path):
     Future ((ret>0), (!fclose(ret))^* · fclose(ret) · (_)^*)@*/
 
+
 /*@ fclose(handler):
     Post (TRUE, fclose(handler))@*/
 
+
 /*@ fdopen(path, b):
     Future ((ret>0), ((!fclose(ret))^* · fclose(ret) · (_)^* \/ (!close(path))^* · close(path) · (_)^*))@*/
+
 
 /*@ endmntent(handler):
     Post (TRUE, fclose(handler))@*/
