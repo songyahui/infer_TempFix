@@ -226,8 +226,8 @@ let string_of_termOption t : string option  =
 
 let rec string_of_pure (p:pure):string =   
   match p with
-    TRUE -> "⊤"
-  | FALSE -> "⊥"
+    TRUE -> "true"
+  | FALSE -> "false"
   | Gt (t1, t2) -> (string_of_terms t1) ^ ">" ^ (string_of_terms t2)
   | Lt (t1, t2) -> (string_of_terms t1) ^ "<" ^ (string_of_terms t2)
   | GtEq (t1, t2) -> (string_of_terms t1) ^ ">=" ^ (string_of_terms t2)
