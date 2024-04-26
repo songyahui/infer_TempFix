@@ -950,7 +950,13 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                   ^"\': Failed! because there is no handler ! \n"
                   (*^ string_of_function_sepc (prec, postc, futurec)^"\n"*)
                   in 
+                  (modifiyTheassertionCounters();
+                    let () = finalReport := !finalReport ^ extra_info in 
+                    () 
+                  )
+
                   (* trying to repair the no handler error ... *)
+                 (*
                   let freshVar = verifier_getAfreeVar "r" in 
                   let futurec =  instantiateReturn futurec freshVar in 
                   let error_infos :(error_info list) = 
@@ -966,7 +972,7 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                   let info :((error_info list) * binary_tree * pathList * pathList) = (error_infos, Leaf, [], []) in 
                   let prefix = "int " ^ freshVar ^ " = "^ string_of_event (calleeName, acturelli) ^"; " in 
                   let (head, patches) = program_repair prefix (calleeName, fp) info !propogatedSpecs in 
-                  if (*String.compare patches "" == 0 *) true then 
+                  if String.compare patches "" == 0 then 
                     (modifiyTheassertionCounters();
                     let () = finalReport := !finalReport ^ extra_info in 
                     () )
@@ -975,7 +981,7 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                     let () = finalReport := !finalReport ^ head in 
                     let () = finalReport := !finalReport ^ ("[Patches]\n") ^ patches ^ "\n" in 
                     ()
-      
+      *)
 
                   (* trying to repair the no handler error ... *)
 
