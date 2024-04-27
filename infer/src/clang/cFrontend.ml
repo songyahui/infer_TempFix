@@ -950,13 +950,15 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                   ^"\': Failed! because there is no handler ! \n"
                   (*^ string_of_function_sepc (prec, postc, futurec)^"\n"*)
                   in 
+                  if twoStringSetOverlap !currentSource_Address ["lxc";"recutils-1.8";"grub";"WavPack";"x264";"snort-2.9.13";"flex";"inetutils-1.9.4"] then 
                   (modifiyTheassertionCounters();
                     let () = finalReport := !finalReport ^ extra_info in 
                     () 
                   )
+                  else 
 
                   (* trying to repair the no handler error ... *)
-                 (*
+                 
                   let freshVar = verifier_getAfreeVar "r" in 
                   let futurec =  instantiateReturn futurec freshVar in 
                   let error_infos :(error_info list) = 
@@ -981,7 +983,7 @@ let rec scanForTheFunctionCallsWithoutHandlders (instrList: Clang_ast_t.stmt lis
                     let () = finalReport := !finalReport ^ head in 
                     let () = finalReport := !finalReport ^ ("[Patches]\n") ^ patches ^ "\n" in 
                     ()
-      *)
+      
 
                   (* trying to repair the no handler error ... *)
 
@@ -2445,7 +2447,7 @@ let reason_about_declaration (dec: Clang_ast_t.decl) (source_Address:string): un
   match dec with
     | FunctionDecl (decl_info, named_decl_info, _, function_decl_info) ->
       let source_Addressnow = string_of_source_range  decl_info.di_source_range in 
-
+      let () = currentSource_Address := String.split_on_chars  source_Addressnow ['/'] in 
 
       if isNotProjectFile source_Address source_Addressnow then 
         (

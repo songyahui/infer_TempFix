@@ -65,6 +65,8 @@ type effectwithfootprint = (pure * es * int list)
 let (dynamicSpec: (specification list) ref) = ref [] 
 let (propogatedSpecs: (specification list) ref) = ref [] 
 let (currentModule: string ref) = ref ""
+let (currentSource_Address: (string list) ref) = ref []
+
 let (currentModuleBody: (Clang_ast_t.stmt) option  ref) = ref None
 let (checkedMethord: ((string) list)  ref) = ref []
 
