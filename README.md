@@ -13,6 +13,12 @@ details on how to install packaged versions of Infer.
 
 
 
+The repository provides the artifact for the FSE24 paper: **ProveNFix: Temporal Property guided Program Repair**. 
+Our [Benchmarks](https://zenodo.org/records/10695186) are available from Zenodo.
+The [Source Code](https://github.com/songyahui/infer_TempFix) of the tool is available from GitHub. 
+The final version of the [Paper](ProveNFix_Paper.pdf) and the [Appendix](ProveNFix_Appendix.pdf) are publicly accessible. 
+
+
 ## Build ProveNFix
 
 We have a docker image to try out our tool, which is detailed in the [Artifact Evaluation Doc](ProveNFix_Artifact_Evaluation.pdf). 
