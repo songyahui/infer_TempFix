@@ -15,7 +15,13 @@ details on how to install packaged versions of Infer.
 
 ## Build ProveNFix
 ```
-opam switch create 4.14.0+flambda
+apt install menhir 
+apt install cmake 
+apt install z3 
+apt install sqlite3
+apt install opam 
+opam init
+opam switch create 4.14.0
 eval $(opam env)  
 git clone https://github.com/songyahui/infer_TempFix.git
 cd infer_TempFix
