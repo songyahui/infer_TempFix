@@ -14,6 +14,16 @@ details on how to install packaged versions of Infer.
 
 
 ## Build ProveNFix
+
+We have a docker image to try out our tool, which is detailed in the [Artifact Evaluation Doc](ProveNFix_Artifact_Evaluation.pdf). 
+```
+docker pull yahuuuuui/fse24-prove_n_fix:ubuntu
+docker run -i -t yahuuuuui/fse24-prove_n_fix:ubuntu /bin/bash
+```
+The source code repository is placed in "/home/", called "infer_TempFix". 
+The benchmarks are also summarized in the docker env. 
+Alternatively, one could build \toolName from scratch using a Linux system (tested on Ubuntu 22.04.4 LTS), with the following dependencies: 
+
 ```
 apt install menhir 
 apt install cmake 
