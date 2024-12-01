@@ -49,10 +49,11 @@
     Future ((ret=0), (!_(ret))^*)@*/
 
 /*@ malloc(path):
-    Future (!(ret=0), (!free(ret))^* · free(ret) · (_)^*) \/ ((ret=0), (!_(ret))^*)@*/
+    Future (TRUE, (_)^*)@*/
 
 /*@ free(handler):
-    Post (TRUE, free(handler))@*/
+    Post (TRUE, free(handler))
+    Future (TRUE, (!_(handler))^*)@*/
 
 /*@ xz_dec_reset(handler):
     Post (TRUE, free(handler))@*/

@@ -1,16 +1,5 @@
-/*
- * Copyright (c) Facebook, Inc. and its affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
 #include <stdlib.h>
-
-struct st{
-    int flag;
-    int f;
-};
+struct st{ int flag; int f;};
 
 int * foo ( struct st *p )
 { int * q ;
@@ -29,3 +18,4 @@ int main () {
 
 // infer/bin/infer run -- clang -c examples/fig3.c
 // check infer_TempFix/TempFix-out/detail.txt 
+// line 16 can be inserted with code: if (p.f==0){ return; }
